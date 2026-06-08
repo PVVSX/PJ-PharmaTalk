@@ -1,0 +1,11 @@
+{
+  "type": "ทั้งคู่",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาขับลม",
+    "พาราเซตามอล"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

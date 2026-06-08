@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "ภูมิแพ้",
+  "dispensed_medications": [
+    "พาราเซตามอล",
+    "ยาขับลม"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

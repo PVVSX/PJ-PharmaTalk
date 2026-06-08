@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาลดกรด",
+    "ยาละลายเสมหะ"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "พักผ่อนเยอะ ๆ"
+}

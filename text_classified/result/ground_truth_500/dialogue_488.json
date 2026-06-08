@@ -1,0 +1,10 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "ความดัน",
+  "dispensed_medications": [
+    "ยาลดกรด"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

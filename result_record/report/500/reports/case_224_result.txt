@@ -1,0 +1,14 @@
+text → form (classify_gemini_extract)
+เวลาบันทึกรายงาน (local): 2026-04-27T14:29:12
+
+ไฟล์อินพุต:
+  C:\Users\Captan\Desktop\project_updated\result_record\data\บท500_split\case_224.txt
+
+ประสิทธิภาพ / การตั้งค่า:
+  โมเดล Gemini: gemini-2.5-flash
+  เวลาที่ใช้ (วินาที) — เฉพาะขั้น Gemini + ประมวลผลรอบนี้: 4.7532
+  จำนวนท่อน transcript ที่ส่งเข้าโมเดล: 1
+
+ผลลัพธ์:
+  CSV: C:\Users\Captan\Desktop\project_updated\result_record\report\500\gemini_extract.csv
+  ชื่อแถว (ชื่อไฟล์): case_224.txt

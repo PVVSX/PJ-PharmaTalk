@@ -1,0 +1,11 @@
+{
+  "type": "ทั้งคู่",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "ยาละลายเสมหะ",
+    "ยาลดกรด"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "พักผ่อนเยอะ ๆ"
+}

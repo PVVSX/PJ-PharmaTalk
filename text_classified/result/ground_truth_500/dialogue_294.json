@@ -1,0 +1,11 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "พาราเซตามอล",
+    "ยาละลายเสมหะ"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "ถ้าไม่ดีขึ้นไปพบแพทย์"
+}

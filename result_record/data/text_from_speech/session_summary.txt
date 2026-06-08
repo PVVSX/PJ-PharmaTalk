@@ -1,0 +1,44 @@
+=== session 2026-04-27T12:01:27 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 0 | ข้าม (มี transcript): 0 | ผิดพลาด: 10
+เวลารวม (วินาที): 0.12
+=== session 2026-04-27T12:17:45 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 10 | ข้าม (มี transcript): 0 | ผิดพลาด: 0
+เวลารวม (วินาที): 414.50
+=== session 2026-04-27T12:54:42 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 0 | ข้าม (มี transcript): 10 | ผิดพลาด: 0
+เวลารวม (วินาที): 0.00
+=== session 2026-04-27T13:01:05 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 0 | ข้าม (มี transcript): 10 | ผิดพลาด: 0
+เวลารวม (วินาที): 0.00
+=== session 2026-04-27T13:01:13 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 0 | ข้าม (มี transcript): 10 | ผิดพลาด: 0
+เวลารวม (วินาที): 0.00
+=== session 2026-04-27T13:02:35 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 0 | ข้าม (มี transcript): 10 | ผิดพลาด: 0
+เวลารวม (วินาที): 0.00
+=== session 2026-04-27T13:03:48 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 0 | ข้าม (มี transcript): 10 | ผิดพลาด: 0
+เวลารวม (วินาที): 0.00
+=== session 2026-04-27T13:06:47 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 1 | ข้าม (มี transcript): 0 | ผิดพลาด: 9
+เวลารวม (วินาที): 5.54
+=== session 2026-04-27T13:11:57 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 10 | ข้าม (มี transcript): 0 | ผิดพลาด: 0
+เวลารวม (วินาที): 190.38
+=== session 2026-04-27T13:20:41 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 1 | ข้าม (มี transcript): 0 | ผิดพลาด: 9
+เวลารวม (วินาที): 5.57
+=== session 2026-04-27T13:38:38 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+สำเร็จ: 10 | ข้าม (มี transcript): 0 | ผิดพลาด: 0
+เวลารวม (วินาที): 705.76

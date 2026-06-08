@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาแก้แพ้",
+    "ยาลดกรด"
+  ],
+  "medical_notes": "มีอาการต่อเนื่อง",
+  "pharmacist_advice": "ถ้าไม่ดีขึ้นไปพบแพทย์"
+}

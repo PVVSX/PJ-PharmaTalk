@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "ยาแก้แพ้",
+    "ยาละลายเสมหะ"
+  ],
+  "medical_notes": "มีอาการต่อเนื่อง",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

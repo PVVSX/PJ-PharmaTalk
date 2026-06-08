@@ -1,0 +1,11 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "ไม่มี",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาละลายเสมหะ",
+    "พาราเซตามอล"
+  ],
+  "medical_notes": "ควรติดตามอาการ",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

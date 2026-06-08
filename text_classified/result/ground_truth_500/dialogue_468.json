@@ -1,0 +1,11 @@
+{
+  "type": "ทั้งคู่",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "ความดัน",
+  "dispensed_medications": [
+    "ยาแก้แพ้",
+    "ยาขับลม"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

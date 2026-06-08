@@ -1,0 +1,10 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "ภูมิแพ้",
+  "dispensed_medications": [
+    "ยาละลายเสมหะ"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

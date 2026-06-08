@@ -1,0 +1,11 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "ภูมิแพ้",
+  "dispensed_medications": [
+    "ยาแก้แพ้",
+    "ยาลดกรด"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

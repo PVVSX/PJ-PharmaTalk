@@ -1,0 +1,11 @@
+# Requirements for pyannote.audio speaker diarization
+# หมายเหตุ: อาจมี dependency conflicts กับ packages อื่นๆ เช่น nemo-toolkit, mediapipe
+# แนะนำให้ใช้ virtual environment แยกสำหรับ pyannote.audio
+
+pyannote.audio>=3.1.0
+torch>=1.13.0
+torchaudio>=0.13.0
+numpy<2.0.0,>=1.21.0  # จำกัดให้ < 2.0 เพื่อหลีกเลี่ยง conflict กับ mediapipe
+scipy>=1.7.0
+huggingface-hub>=0.16.0
+protobuf<6.0.0,>=5.26.1  # จำกัดให้ < 6.0 เพื่อหลีกเลี่ยง conflict กับ nemo-toolkit และ mediapipe

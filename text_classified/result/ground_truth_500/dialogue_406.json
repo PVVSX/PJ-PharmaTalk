@@ -1,0 +1,11 @@
+{
+  "type": "ทั้งคู่",
+  "drug_allergy": "ไม่มี",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาละลายเสมหะ",
+    "ยาลดกรด"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

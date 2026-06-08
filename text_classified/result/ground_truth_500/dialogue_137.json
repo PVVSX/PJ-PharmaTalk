@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "พาราเซตามอล",
+    "ยาลดกรด"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

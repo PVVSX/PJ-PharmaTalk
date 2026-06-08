@@ -1,0 +1,10 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "พาราเซตามอล"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

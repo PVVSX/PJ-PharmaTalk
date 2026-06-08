@@ -1,0 +1,11 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "ยาแก้แพ้",
+    "ยาลดกรด"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "พักผ่อนเยอะ ๆ"
+}

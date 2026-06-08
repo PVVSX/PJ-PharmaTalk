@@ -1,0 +1,10 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "ภูมิแพ้",
+  "dispensed_medications": [
+    "ยาแก้แพ้"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

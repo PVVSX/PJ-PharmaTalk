@@ -1,0 +1,11 @@
+{
+  "type": "ทั้งคู่",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "ภูมิแพ้",
+  "dispensed_medications": [
+    "ยาลดกรด",
+    "ยาแก้แพ้"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

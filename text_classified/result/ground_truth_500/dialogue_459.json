@@ -1,0 +1,10 @@
+{
+  "type": "ทั้งคู่",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "พาราเซตามอล"
+  ],
+  "medical_notes": "เริ่มมีอาการใหม่",
+  "pharmacist_advice": "พักผ่อนเยอะ ๆ"
+}

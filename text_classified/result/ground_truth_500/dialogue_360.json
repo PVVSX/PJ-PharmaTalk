@@ -1,0 +1,10 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "ความดัน",
+  "dispensed_medications": [
+    "ยาลดกรด"
+  ],
+  "medical_notes": "มีอาการต่อเนื่อง",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

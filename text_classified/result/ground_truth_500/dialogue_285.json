@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาลดกรด",
+    "ยาขับลม"
+  ],
+  "medical_notes": "ควรติดตามอาการ",
+  "pharmacist_advice": "ถ้าไม่ดีขึ้นไปพบแพทย์"
+}

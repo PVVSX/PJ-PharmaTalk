@@ -1,0 +1,11 @@
+{
+  "type": "ทั้งคู่",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "ยาลดกรด",
+    "ยาแก้แพ้"
+  ],
+  "medical_notes": "มีอาการต่อเนื่อง",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

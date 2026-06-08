@@ -1,0 +1,17 @@
+# Core dependencies
+streamlit>=1.28.0
+
+# ASR Model (เลือกอย่างใดอย่างหนึ่ง)
+# Option 1: NeMo Toolkit (แนะนำ)
+nemo_toolkit[asr]>=1.20.0
+
+# Option 2: Typhoon ASR package (fallback)
+# typhoon-asr>=1.0.0
+
+# Audio processing (Audio Input Module)
+pyaudio>=0.2.11  # สำหรับรับเสียงจากไมโครโฟน
+soundfile>=0.12.1  # สำหรับจัดการไฟล์เสียง (MP3, M4A, FLAC, WAV)
+
+# Utilities
+numpy>=1.24.0  # สำหรับการประมวลผลสัญญาณเสียง
+

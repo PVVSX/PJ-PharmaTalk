@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "ภูมิแพ้",
+  "dispensed_medications": [
+    "พาราเซตามอล",
+    "ยาละลายเสมหะ"
+  ],
+  "medical_notes": "มีอาการต่อเนื่อง",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

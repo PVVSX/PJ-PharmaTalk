@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาละลายเสมหะ",
+    "ยาแก้แพ้"
+  ],
+  "medical_notes": "ควรติดตามอาการ",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

@@ -1,0 +1,11 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "แพ้ ibuprofen",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาลดกรด",
+    "ยาละลายเสมหะ"
+  ],
+  "medical_notes": "มีอาการต่อเนื่อง",
+  "pharmacist_advice": "ทานยาตามอาการ"
+}

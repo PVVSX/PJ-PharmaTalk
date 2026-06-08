@@ -1,0 +1,10 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาลดกรด"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "พักผ่อนเยอะ ๆ"
+}

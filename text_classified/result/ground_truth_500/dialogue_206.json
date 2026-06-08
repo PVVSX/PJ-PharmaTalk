@@ -1,0 +1,11 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "แพ้ซัลฟา",
+  "underlying_disease": "ไม่มี",
+  "dispensed_medications": [
+    "ยาแก้แพ้",
+    "ยาลดกรด"
+  ],
+  "medical_notes": "อาการไม่รุนแรง",
+  "pharmacist_advice": "ถ้าไม่ดีขึ้นไปพบแพทย์"
+}

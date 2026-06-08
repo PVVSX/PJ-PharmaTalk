@@ -1,0 +1,10 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "แพ้เพนิซิลลิน",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "พาราเซตามอล"
+  ],
+  "medical_notes": "ควรติดตามอาการ",
+  "pharmacist_advice": "พักผ่อนเยอะ ๆ"
+}

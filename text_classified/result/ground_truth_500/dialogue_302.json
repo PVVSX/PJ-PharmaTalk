@@ -1,0 +1,10 @@
+{
+  "type": "ซื้อยา",
+  "drug_allergy": "ไม่มี",
+  "underlying_disease": "เบาหวาน",
+  "dispensed_medications": [
+    "ยาแก้แพ้"
+  ],
+  "medical_notes": "ควรติดตามอาการ",
+  "pharmacist_advice": "ดื่มน้ำมาก ๆ"
+}

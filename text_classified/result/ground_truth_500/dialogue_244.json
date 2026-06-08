@@ -1,0 +1,11 @@
+{
+  "type": "ปรึกษา",
+  "drug_allergy": "ไม่มี",
+  "underlying_disease": "ภูมิแพ้",
+  "dispensed_medications": [
+    "ยาลดกรด",
+    "ยาละลายเสมหะ"
+  ],
+  "medical_notes": "ควรติดตามอาการ",
+  "pharmacist_advice": "พักผ่อนเยอะ ๆ"
+}
