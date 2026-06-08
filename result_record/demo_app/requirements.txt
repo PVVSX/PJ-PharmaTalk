@@ -1,16 +1,2 @@
-streamlit
-google-generativeai
-google-genai
-reportlab
-Cython
-wheel
-huggingface_hub<0.24
-onnx==1.17.0
-numpy
-scipy
-librosa
-soundfile
-torch
-torchaudio
-pyannote.audio
-nemo_toolkit[asr]
+-r requirements-core.txt
+-r requirements-asr.txt

@@ -1,0 +1,8 @@
+# แอป Streamlit + Gemini + PDF (ติดตั้งเร็ว)
+streamlit
+google-generativeai
+google-genai
+reportlab
+huggingface_hub>=0.26
+numpy
+scipy

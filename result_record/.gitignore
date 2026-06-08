@@ -9,3 +9,9 @@ model_speech_to_text/*.runtime_patched.nemo
 # ผลลัพธ์ runtime จาก demo (เก็บเฉพาะตัวอย่างใน repo)
 patient_info/audio_inputs/*
 !patient_info/audio_inputs/.gitkeep
+patient_info/*.json
+patient_info/*.pdf
+patient_info/emr_records.csv
+
+# venv ทดสอบ
+.venv_test/

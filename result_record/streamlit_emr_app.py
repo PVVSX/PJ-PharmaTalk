@@ -36,12 +36,12 @@ BASE = Path(__file__).resolve().parent
 PATIENT_INFO_DIR = BASE / "patient_info"
 AUDIO_INPUT_DIR = PATIENT_INFO_DIR / "audio_inputs"
 GEMINI_KEY_FILE = BASE / ".gemini_api_key"
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
-# ถ้าโมเดลหลักโหลดหนัก (503) จะลองรายการนี้ตามลำดับ
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+# ถ้าโมเดลหลักโหลดหนัก (503) หรือโควตาเต็ม (429) จะลองรายการนี้ตามลำดับ
 GEMINI_FALLBACK_MODELS = (
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash-lite",
     "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
 )
 GEMINI_MAX_OUTPUT_TOKENS = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS", "4096"))
 GEMINI_THINKING_BUDGET = os.environ.get("GEMINI_THINKING_BUDGET", "0").strip()
@@ -107,6 +107,29 @@ def get_gemini_model_candidates() -> list[str]:
         if name and name not in ordered:
             ordered.append(name)
     return ordered
+
+
+def _gemini_skip_to_next_model(http_code: int, detail: str) -> bool:
+    """True = โมเดลนี้ใช้ไม่ได้ชั่วคราว/ถาวร — ข้ามไปลองโมเดลถัดไป."""
+    if http_code == 404:
+        return True
+    if http_code == 429:
+        lowered = detail.lower()
+        if "limit: 0" in lowered:
+            return True
+        if "perday" in lowered.replace("_", ""):
+            return True
+    return False
+
+
+def _gemini_retry_delay_sec(detail: str, attempt: int) -> float:
+    match = re.search(r'"retryDelay"\s*:\s*"(\d+)s"', detail)
+    if match:
+        return min(float(match.group(1)) + 1.0, 60.0)
+    match = re.search(r"retry in (\d+(?:\.\d+)?)s", detail, flags=re.IGNORECASE)
+    if match:
+        return min(float(match.group(1)) + 1.0, 60.0)
+    return min(GEMINI_RETRY_BASE_SEC * (2**attempt), 12.0)
 
 
 def _legacy_gemini_sdk_available() -> bool:
@@ -244,7 +267,9 @@ def build_emr_prompt(conversation: str, *, retry: bool = False) -> tuple[str, st
     return system_instruction, prompt
 
 
-def call_gemini_with_legacy_sdk(api_key: str, system_instruction: str, prompt: str) -> str:
+def call_gemini_with_legacy_sdk(
+    api_key: str, system_instruction: str, prompt: str, *, model_name: str
+) -> str:
     import google.generativeai as genai
 
     if not hasattr(genai, "GenerativeModel"):
@@ -252,7 +277,7 @@ def call_gemini_with_legacy_sdk(api_key: str, system_instruction: str, prompt: s
 
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
-        model_name=get_gemini_model_name(),
+        model_name=model_name,
         system_instruction=system_instruction,
     )
     response = model.generate_content(
@@ -266,7 +291,9 @@ def call_gemini_with_legacy_sdk(api_key: str, system_instruction: str, prompt: s
     return getattr(response, "text", "") or ""
 
 
-def call_gemini_with_new_sdk(api_key: str, system_instruction: str, prompt: str) -> str:
+def call_gemini_with_new_sdk(
+    api_key: str, system_instruction: str, prompt: str, *, model_name: str
+) -> str:
     try:
         from google import genai
         from google.genai import types
@@ -280,7 +307,7 @@ def call_gemini_with_new_sdk(api_key: str, system_instruction: str, prompt: str)
 
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
-        model=get_gemini_model_name(),
+        model=model_name,
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
@@ -395,7 +422,11 @@ def call_gemini_with_rest_api(
                 ) from exc
 
             if exc.code in retryable_codes and attempt < GEMINI_RETRY_COUNT - 1:
-                time.sleep(min(GEMINI_RETRY_BASE_SEC * (2**attempt), 12))
+                if _gemini_skip_to_next_model(exc.code, detail):
+                    raise RuntimeError(
+                        f"Gemini REST API ({model_name}) error {exc.code}: {detail[:800]}"
+                    ) from exc
+                time.sleep(_gemini_retry_delay_sec(detail, attempt))
                 continue
 
             raise RuntimeError(
@@ -434,10 +465,13 @@ def call_gemini_generate_text(
             errors.append(f"REST ({model_name}): {exc}")
 
     if _legacy_gemini_sdk_available():
-        try:
-            return call_gemini_with_legacy_sdk(api_key, system_instruction, prompt)
-        except Exception as exc:
-            errors.append(f"legacy SDK: {exc}")
+        for model_name in get_gemini_model_candidates():
+            try:
+                return call_gemini_with_legacy_sdk(
+                    api_key, system_instruction, prompt, model_name=model_name
+                )
+            except Exception as exc:
+                errors.append(f"legacy SDK ({model_name}): {exc}")
     else:
         errors.append(
             "legacy SDK: ไม่พร้อมใช้ (Python 3.8 มักติดตั้งได้แค่ google-generativeai รุ่นเก่า "
@@ -445,10 +479,13 @@ def call_gemini_generate_text(
         )
 
     if _new_gemini_sdk_available():
-        try:
-            return call_gemini_with_new_sdk(api_key, system_instruction, prompt)
-        except Exception as exc:
-            errors.append(f"new SDK: {exc}")
+        for model_name in get_gemini_model_candidates():
+            try:
+                return call_gemini_with_new_sdk(
+                    api_key, system_instruction, prompt, model_name=model_name
+                )
+            except Exception as exc:
+                errors.append(f"new SDK ({model_name}): {exc}")
     else:
         errors.append(
             "new SDK: ไม่พบ google-genai (ติดตั้งได้บน Python 3.10+ หรือใช้ REST)"
@@ -456,10 +493,23 @@ def call_gemini_generate_text(
 
     hint = ""
     joined = "\n".join(errors)
-    if "503" in joined or "UNAVAILABLE" in joined or "high demand" in joined.lower():
+    if "429" in joined or "RESOURCE_EXHAUSTED" in joined or "quota" in joined.lower():
+        hint = (
+            "\n\nโควตา Gemini API เต็มหรือ key นี้ไม่มี free tier สำหรับโมเดลที่ลองแล้ว:\n"
+            "  • สร้าง API key ใหม่ที่ https://aistudio.google.com/apikey\n"
+            "  • ลองโมเดลเบา: set GEMINI_MODEL=gemini-2.5-flash-lite\n"
+            "  • ตรวจสอบ usage: https://aistudio.google.com/\n"
+            "  • ถ้าใช้ key เก่า/โปรเจกต์ที่ถูกจำกัด ให้เปลี่ยน key ใน sidebar"
+        )
+    elif "503" in joined or "UNAVAILABLE" in joined or "high demand" in joined.lower():
         hint = (
             "\n\nเซิร์ฟเวอร์ Gemini โหลดหนักชั่วคราว (503) — รอ 1–2 นาทีแล้วกดวิเคราะห์อีกครั้ง "
-            "หรือตั้ง GEMINI_MODEL=gemini-1.5-flash"
+            "หรือตั้ง GEMINI_MODEL=gemini-2.5-flash-lite"
+        )
+    elif "404" in joined and "not found" in joined.lower():
+        hint = (
+            "\n\nโมเดล Gemini บางตัวถูกยกเลิกแล้ว (เช่น gemini-1.5-flash) "
+            "— ใช้ gemini-2.5-flash หรือ gemini-2.5-flash-lite"
         )
 
     raise RuntimeError("เรียก Gemini ไม่สำเร็จ:\n" + joined + hint)
@@ -1040,6 +1090,10 @@ def main() -> None:
     with st.sidebar:
         st.header("การตั้งค่า")
         st.write(f"Model: `{get_gemini_model_name()}`")
+        st.caption(
+            "Fallback: "
+            + ", ".join(f"`{m}`" for m in get_gemini_model_candidates()[1:])
+        )
         api_key_override = st.text_input(
             "Gemini API key (ถ้าต้องการใช้ key ใหม่เฉพาะรอบนี้)",
             type="password",

@@ -1,0 +1,8 @@
+# ASR + Speaker diarization (ขนาดใหญ่ — ครั้งแรกใช้เวลานาน)
+onnx==1.17.0
+librosa
+soundfile
+torch
+torchaudio
+pyannote.audio
+nemo_toolkit[asr]

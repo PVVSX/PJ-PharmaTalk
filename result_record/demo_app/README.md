@@ -7,7 +7,7 @@
 
 ### Windows (ดับเบิลคลิก)
 
-จากโฟลเดอร์โปรเจกต์หลัก รัน `launch_streamlit_emr_app.bat` — เปิด `streamlit_emr_app.py` ที่ `http://localhost:8501` และติดตั้งแพ็กเกจจาก `demo_app/requirements.txt` อัตโนมัติถ้ายังไม่มี Streamlit
+จากโฟลเดอร์โปรเจกต์หลัก รัน `launch_streamlit_emr_app.bat` — สร้าง `.venv` ติดตั้งแพ็กเกจจาก `demo_app/requirements-core.txt` และ `requirements-asr.txt` แล้วเปิด `streamlit_emr_app.py` ที่ `http://localhost:8501`
 
 ### Command line
 
@@ -57,10 +57,11 @@ python -m pip install -r demo_app/requirements.txt
 
 ## Gemini API Key
 
-ค่าเริ่มต้นโมเดล: `gemini-2.0-flash` (เปลี่ยนด้วย `set GEMINI_MODEL=...`)
+ค่าเริ่มต้นโมเดล: `gemini-2.5-flash` (เปลี่ยนด้วย `set GEMINI_MODEL=...`)
 
-ถ้าเจอ **503 / high demand** แอปจะ **ลองใหม่อัตโนมัติ** และสลับไปโมเดลสำรอง (`gemini-1.5-flash` ฯลฯ)  
-บน **Python 3.8** ใช้ **REST API** เป็นหลัก (ไม่ต้องติดตั้ง `google-genai` ใหม่)
+ถ้าเจอ **429 / quota เต็ม** แอปจะลองโมเดลสำรอง (`gemini-2.5-flash-lite`, `gemini-2.0-flash-lite` ฯลฯ)  
+ถ้ายังไม่ได้ ให้สร้าง API key ใหม่ที่ [Google AI Studio](https://aistudio.google.com/apikey)  
+โมเดล `gemini-1.5-flash` ถูกยกเลิกแล้ว — อย่าใช้
 
 ตั้งค่าอย่างใดอย่างหนึ่ง:
 
