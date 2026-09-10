@@ -1,0 +1,422 @@
+/* PharmaTalk CSS - Inspired by Royal College Pharmacy */
+
+/* Import Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+:root {
+  /* Color Palette (Deep Blue/Teal Theme) */
+  --primary: #0F4C75;
+  --primary-hover: #3282B8;
+  --primary-light: #BBE1FA;
+  --bg-color: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --text-main: #1B262C;
+  --text-muted: #64748B;
+  
+  --grey-50: #F8FAFC;
+  --grey-100: #F1F5F9;
+  --grey-200: #E2E8F0;
+  --grey-300: #CBD5E1;
+  --grey-400: #94A3B8;
+  --grey-500: #64748B;
+  --grey-600: #475569;
+  --grey-700: #334155;
+  --grey-800: #1E293B;
+  
+  /* Status Colors */
+  --green-500: #10B981;
+  --green-600: #059669;
+  --amber-500: #F59E0B;
+  --red-500:   #EF4444;
+  --blue-500:  #3B82F6;
+  
+  --elevation-1: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --elevation-2: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+}
+
+/* Base Streamlit Overrides */
+.stApp {
+  background-color: var(--bg-color);
+  font-family: 'Kanit', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .markdown-text-container {
+  font-family: 'Kanit', sans-serif !important;
+  color: var(--text-main);
+}
+
+/* Material Symbols Override */
+span.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded' !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  /* Support for all WebKit browsers. */
+  -webkit-font-smoothing: antialiased;
+  /* Support for Safari and Chrome. */
+  text-rendering: optimizeLegibility;
+  /* Support for Firefox. */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =========================================================================
+   Sidebar Styling
+   ========================================================================= */
+[data-testid="stSidebar"] {
+  background-color: var(--primary) !important;
+  border-right: none !important;
+}
+
+[data-testid="stSidebar"] * {
+  color: #FFFFFF !important;
+}
+
+/* Navigation items */
+[data-testid="stSidebarNavItems"] li a {
+  border-radius: 8px;
+  margin: 4px 16px;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+[data-testid="stSidebarNavItems"] li a:hover {
+  background-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Selected nav item */
+[data-testid="stSidebarNavItems"] li a[aria-current="page"] {
+  background-color: rgba(255,255,255,0.2) !important;
+  font-weight: 600 !important;
+}
+
+/* Sidebar Brand */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-top: -20px;
+}
+
+.sidebar-logo-wrap {
+  width: 48px;
+  height: 48px;
+  background-color: rgba(255,255,255,0.15);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  line-height: 1.2;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background-color: rgba(255,255,255,0.15);
+  margin: 16px 16px;
+}
+
+/* Sidebar Status / Metrics */
+.sidebar-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px;
+  padding: 8px 12px;
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.sidebar-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dot-green { background-color: var(--green-500) !important; }
+.dot-amber { background-color: var(--amber-500) !important; }
+.dot-red   { background-color: var(--red-500) !important; }
+.dot-blue  { background-color: var(--blue-500) !important; }
+
+.sidebar-metrics {
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sidebar-metric {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+
+/* =========================================================================
+   Page Headers
+   ========================================================================= */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--grey-200);
+}
+.page-header-icon {
+  font-size: 2.5rem !important;
+  color: var(--primary);
+  background-color: var(--primary-light);
+  padding: 12px;
+  border-radius: 16px;
+}
+.page-title {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 1.8rem !important;
+  font-weight: 700 !important;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+.page-subtitle {
+  margin: 0 !important;
+  color: var(--grey-500);
+  font-size: 1rem;
+}
+
+/* =========================================================================
+   Cards (Streamlit Containers)
+   ========================================================================= */
+[data-testid="stVerticalBlockBorderWrapper"] {
+  background-color: var(--bg-card);
+  border: 1px solid var(--grey-200) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--elevation-1);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:hover {
+  box-shadow: var(--elevation-2);
+}
+
+.card-accent-bar {
+  height: 4px;
+  width: 100%;
+  margin-top: -1rem;
+  margin-left: -1rem;
+  width: calc(100% + 2rem);
+  margin-bottom: 1rem;
+}
+.accent-blue { background-color: var(--blue-500); }
+.accent-teal { background-color: var(--primary); }
+.accent-amber { background-color: var(--amber-500); }
+.accent-red { background-color: var(--red-500); }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sh-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+.sh-icon span { font-size: 1.2rem; color: #fff; }
+.sh-blue { background-color: var(--blue-500); }
+.sh-teal { background-color: var(--primary); }
+.sh-grey { background-color: var(--grey-500); }
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.section-sub {
+  font-size: 0.85rem;
+  color: var(--grey-500);
+  margin-left: auto;
+  background-color: var(--grey-100);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* =========================================================================
+   Status Pills (Badges)
+   ========================================================================= */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.pill-ok {
+  background-color: #ECFDF5;
+  color: var(--green-600);
+  border-color: #A7F3D0;
+}
+.pill-warn {
+  background-color: #FFFBEB;
+  color: #B45309;
+  border-color: #FDE68A;
+}
+.pill-err {
+  background-color: #FEF2F2;
+  color: #B91C1C;
+  border-color: #FECACA;
+}
+.pill-info {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border-color: #BFDBFE;
+}
+
+/* =========================================================================
+   Specific UI Elements
+   ========================================================================= */
+.tip-box {
+  background-color: #F0F9FF;
+  border-left: 4px solid var(--blue-500);
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95rem;
+  color: var(--grey-800);
+}
+
+.rec-banner {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+.rec-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background-color: #EF4444;
+  animation: blink 1s infinite alternate;
+}
+@keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
+
+.waveform-wrap {
+  background-color: var(--grey-50);
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* Buttons Styling */
+button[kind="primary"] {
+  background-color: var(--primary) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+button[kind="primary"]:hover {
+  background-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+button[kind="secondary"] {
+  border-radius: 8px !important;
+  border: 1px solid var(--grey-300) !important;
+  background-color: white !important;
+  color: var(--grey-700) !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+button[kind="secondary"]:hover {
+  background-color: var(--grey-50) !important;
+  border-color: var(--grey-400) !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--grey-300);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--grey-400);
+}
+
+/* =========================================================================
+   Streamlit Widget Overrides (Contrast Fixes)
+   ========================================================================= */
+/* Input Labels */
+.stTextInput label, .stTextArea label, .stSelectbox label {
+  color: var(--grey-800) !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+}
+
+/* Input Fields (Text, Select) */
+.stTextInput input, .stTextArea textarea, [data-baseweb="select"] > div {
+  background-color: #FFFFFF !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--grey-300) !important;
+  border-radius: 8px !important;
+}
+.stTextInput input:focus, .stTextArea textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px var(--primary-light) !important;
+}
+
+/* Selectbox Dropdown Text */
+ul[role="listbox"] li {
+  color: var(--text-main) !important;
+}
+
+/* Ensure Markdown Text is dark */
+.stMarkdown p, .stMarkdown li, .stMarkdown span {
+  color: var(--grey-800);
+}
+

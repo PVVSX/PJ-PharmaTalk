@@ -5,9 +5,9 @@ Demo App: Automatic Electronic Medical Record (EMR)
 Run:
   streamlit run streamlit_emr_app.py
 
-Gemini API key:
-  - set GEMINI_API_KEY / GOOGLE_API_KEY, or
-  - create .gemini_api_key in this project folder
+Azure OpenAI configuration:
+  - set AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION, AZURE_OPENAI_DEPLOYMENT_NAME, or
+  - create .azure_openai_env in this project folder (KEY=VALUE format)
 
 Saved records:
   patient_info/*.json
@@ -35,18 +35,14 @@ import streamlit as st
 BASE = Path(__file__).resolve().parent
 PATIENT_INFO_DIR = BASE / "patient_info"
 AUDIO_INPUT_DIR = PATIENT_INFO_DIR / "audio_inputs"
-GEMINI_KEY_FILE = BASE / ".gemini_api_key"
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-# ถ้าโมเดลหลักโหลดหนัก (503) หรือโควตาเต็ม (429) จะลองรายการนี้ตามลำดับ
-GEMINI_FALLBACK_MODELS = (
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash",
-)
-GEMINI_MAX_OUTPUT_TOKENS = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS", "4096"))
-GEMINI_THINKING_BUDGET = os.environ.get("GEMINI_THINKING_BUDGET", "0").strip()
-GEMINI_RETRY_COUNT = int(os.environ.get("GEMINI_RETRY_COUNT", "4"))
-GEMINI_RETRY_BASE_SEC = float(os.environ.get("GEMINI_RETRY_BASE_SEC", "2"))
+AZURE_ENV_FILE = BASE / ".azure_openai_env"
+
+# Default values if not in env
+DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
+DEFAULT_AZURE_DEPLOYMENT = "gpt-4o-mini"
+AZURE_MAX_OUTPUT_TOKENS = int(os.environ.get("AZURE_MAX_OUTPUT_TOKENS", "4096"))
+AZURE_RETRY_COUNT = int(os.environ.get("AZURE_RETRY_COUNT", "3"))
+AZURE_RETRY_BASE_SEC = float(os.environ.get("AZURE_RETRY_BASE_SEC", "2"))
 
 EMR_FIELDS = [
     "ประวัติการแพ้ยา",
@@ -63,91 +59,34 @@ def conversation_widget_state_key() -> str:
     return f"conversation_text_{wid}"
 
 
-def read_key_from_file() -> str:
-    if not GEMINI_KEY_FILE.is_file():
-        return ""
+def load_azure_env_from_file() -> None:
+    if not AZURE_ENV_FILE.is_file():
+        return
     try:
-        for line in GEMINI_KEY_FILE.read_text(encoding="utf-8-sig").splitlines():
+        for line in AZURE_ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
             s = line.strip().lstrip("\ufeff")
-            if s and not s.startswith("#"):
-                return s
+            if s and not s.startswith("#") and "=" in s:
+                k, v = s.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
     except OSError:
-        return ""
-    return ""
+        pass
 
 
-def get_gemini_api_key() -> str:
-    try:
-        override = st.session_state.get("gemini_api_key_override", "")
-    except Exception:
-        override = ""
-    if override:
-        return str(override).strip()
-    return (
-        os.environ.get("GEMINI_API_KEY")
-        or os.environ.get("GOOGLE_API_KEY")
-        or read_key_from_file()
+def get_azure_credentials() -> dict[str, str]:
+    load_azure_env_from_file()
+    api_key = (
+        st.session_state.get("azure_api_key_override", "")
+        or os.environ.get("AZURE_OPENAI_API_KEY", "")
     ).strip()
-
-
-def get_gemini_model_name() -> str:
-    return (os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL).strip()
-
-
-def get_gemini_model_candidates() -> list[str]:
-    """โมเดลหลัก + fallback เมื่อเซิร์ฟเวอร์ตอบ 503/429."""
-    primary = get_gemini_model_name()
-    extra_raw = (os.environ.get("GEMINI_FALLBACK_MODELS") or "").strip()
-    if extra_raw:
-        extras = [m.strip() for m in extra_raw.split(",") if m.strip()]
-    else:
-        extras = list(GEMINI_FALLBACK_MODELS)
-    ordered: list[str] = []
-    for name in [primary, *extras]:
-        if name and name not in ordered:
-            ordered.append(name)
-    return ordered
-
-
-def _gemini_skip_to_next_model(http_code: int, detail: str) -> bool:
-    """True = โมเดลนี้ใช้ไม่ได้ชั่วคราว/ถาวร — ข้ามไปลองโมเดลถัดไป."""
-    if http_code == 404:
-        return True
-    if http_code == 429:
-        lowered = detail.lower()
-        if "limit: 0" in lowered:
-            return True
-        if "perday" in lowered.replace("_", ""):
-            return True
-    return False
-
-
-def _gemini_retry_delay_sec(detail: str, attempt: int) -> float:
-    match = re.search(r'"retryDelay"\s*:\s*"(\d+)s"', detail)
-    if match:
-        return min(float(match.group(1)) + 1.0, 60.0)
-    match = re.search(r"retry in (\d+(?:\.\d+)?)s", detail, flags=re.IGNORECASE)
-    if match:
-        return min(float(match.group(1)) + 1.0, 60.0)
-    return min(GEMINI_RETRY_BASE_SEC * (2**attempt), 12.0)
-
-
-def _legacy_gemini_sdk_available() -> bool:
-    try:
-        import google.generativeai as genai
-
-        return hasattr(genai, "GenerativeModel")
-    except ImportError:
-        return False
-
-
-def _new_gemini_sdk_available() -> bool:
-    try:
-        from google import genai  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
+    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip()
+    api_version = os.environ.get("AZURE_OPENAI_API_VERSION", DEFAULT_AZURE_API_VERSION).strip()
+    deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", DEFAULT_AZURE_DEPLOYMENT).strip()
+    return {
+        "api_key": api_key,
+        "endpoint": endpoint,
+        "api_version": api_version,
+        "deployment": deployment,
+    }
 
 
 def extract_json_object(raw: str) -> dict[str, Any]:
@@ -218,13 +157,14 @@ def result_is_too_sparse(result: dict[str, str], conversation: str) -> bool:
 
 
 def analysis_cache_key(conversation: str) -> str:
-    raw = f"{get_gemini_model_name()}\n{conversation}"
+    deployment = get_azure_credentials()["deployment"]
+    raw = f"{deployment}\n{conversation}"
     return hashlib.sha256(raw.encode("utf-8", errors="ignore")).hexdigest()
 
 
-def save_last_gemini_raw(raw_text: str) -> Path:
+def save_last_raw_response(raw_text: str) -> Path:
     ensure_patient_dir()
-    p = PATIENT_INFO_DIR / "last_gemini_raw.txt"
+    p = PATIENT_INFO_DIR / "last_azure_raw.txt"
     p.write_text(raw_text or "", encoding="utf-8")
     return p
 
@@ -267,276 +207,64 @@ def build_emr_prompt(conversation: str, *, retry: bool = False) -> tuple[str, st
     return system_instruction, prompt
 
 
-def call_gemini_with_legacy_sdk(
-    api_key: str, system_instruction: str, prompt: str, *, model_name: str
-) -> str:
-    import google.generativeai as genai
-
-    if not hasattr(genai, "GenerativeModel"):
-        raise AttributeError("google.generativeai ไม่มี GenerativeModel")
-
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name=model_name,
-        system_instruction=system_instruction,
-    )
-    response = model.generate_content(
-        prompt,
-        generation_config={
-            "temperature": 0.1,
-            "max_output_tokens": GEMINI_MAX_OUTPUT_TOKENS,
-            "response_mime_type": "application/json",
-        },
-    )
-    return getattr(response, "text", "") or ""
-
-
-def call_gemini_with_new_sdk(
-    api_key: str, system_instruction: str, prompt: str, *, model_name: str
+def call_azure_openai_generate_text(
+    creds: dict[str, str], system_instruction: str, prompt: str
 ) -> str:
     try:
-        from google import genai
-        from google.genai import types
+        from openai import AzureOpenAI
     except ImportError as exc:
-        raise RuntimeError(
-            "ไม่พบ Gemini SDK ที่ใช้ได้ ให้ติดตั้งอย่างใดอย่างหนึ่ง:\n"
-            "python -m pip install google-genai\n"
-            "หรือ\n"
-            "python -m pip install google-generativeai"
-        ) from exc
+        raise RuntimeError("ไม่พบ openai SDK กรุณาติดตั้งผ่าน: pip install openai") from exc
 
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            temperature=0.1,
-            max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
-            response_mime_type="application/json",
-        ),
+    client = AzureOpenAI(
+        api_key=creds["api_key"],
+        api_version=creds["api_version"],
+        azure_endpoint=creds["endpoint"],
     )
-    return getattr(response, "text", "") or ""
 
-
-def call_gemini_with_rest_api(
-    api_key: str,
-    system_instruction: str,
-    prompt: str,
-    *,
-    model_name: str | None = None,
-) -> str:
-    """เรียก Gemini ผ่าน REST (ใช้ได้บน Python 3.8 โดยไม่ต้อง SDK ใหม่)."""
-    model_name = (model_name or get_gemini_model_name()).strip()
-    model = urllib.parse.quote(model_name, safe="")
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent?key={urllib.parse.quote(api_key)}"
-    )
-    generation_config: dict[str, Any] = {
-        "temperature": 0.1,
-        "candidateCount": 1,
-        "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
-        "responseMimeType": "application/json",
-        "responseSchema": {
-            "type": "OBJECT",
-            "properties": {
-                field: {"type": "STRING"} for field in EMR_FIELDS
-            },
-            "required": EMR_FIELDS,
-        },
-    }
-    if GEMINI_THINKING_BUDGET:
+    for attempt in range(max(1, AZURE_RETRY_COUNT)):
         try:
-            generation_config["thinkingConfig"] = {
-                "thinkingBudget": int(GEMINI_THINKING_BUDGET)
-            }
-        except ValueError:
-            pass
-
-    payload = {
-        "systemInstruction": {
-            "parts": [{"text": system_instruction}],
-        },
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": prompt}],
-            }
-        ],
-        "generationConfig": generation_config,
-    }
-
-    def post_once(body_payload: dict) -> dict:
-        body = json.dumps(body_payload, ensure_ascii=False).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-
-    retryable_codes = {429, 500, 502, 503, 504}
-    data: dict | None = None
-    last_detail = ""
-
-    for attempt in range(max(1, GEMINI_RETRY_COUNT)):
-        try:
-            data = post_once(payload)
-            break
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            last_detail = detail
-
-            if exc.code == 400 and (
-                "thinkingConfig" in detail
-                or "responseSchema" in detail
-                or "unknown field" in detail.lower()
-            ):
-                payload["generationConfig"] = {
-                    "temperature": 0.1,
-                    "candidateCount": 1,
-                    "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS,
-                    "responseMimeType": "application/json",
-                }
-                try:
-                    data = post_once(payload)
-                    break
-                except urllib.error.HTTPError as exc2:
-                    detail = exc2.read().decode("utf-8", errors="replace")
-                    last_detail = detail
-                    exc = exc2
-
-            if exc.code == 403 and "project has been denied access" in detail.lower():
-                raise RuntimeError(
-                    "Gemini API ตอบ 403: โปรเจกต์ของ API key นี้ถูกปฏิเสธสิทธิ์ "
-                    "(Your project has been denied access). "
-                    "ให้สร้าง API key ใหม่จาก Google AI Studio หรือใช้ Google Cloud project อื่น"
-                ) from exc
-            if exc.code == 400 and "API_KEY_INVALID" in detail:
-                raise RuntimeError(
-                    "Gemini API key ไม่ถูกต้อง หรือมีตัวอักษรเกิน/คีย์ถูกปิดใช้งาน "
-                    "ให้ตรวจสอบหรือสร้าง key ใหม่"
-                ) from exc
-
-            if exc.code in retryable_codes and attempt < GEMINI_RETRY_COUNT - 1:
-                if _gemini_skip_to_next_model(exc.code, detail):
-                    raise RuntimeError(
-                        f"Gemini REST API ({model_name}) error {exc.code}: {detail[:800]}"
-                    ) from exc
-                time.sleep(_gemini_retry_delay_sec(detail, attempt))
-                continue
-
-            raise RuntimeError(
-                f"Gemini REST API ({model_name}) error {exc.code}: {detail[:800]}"
-            ) from exc
-
-    if data is None:
-        raise RuntimeError(
-            f"Gemini REST API ({model_name}) ไม่สำเร็จ: {last_detail[:800]}"
-        )
-
-    try:
-        parts = data["candidates"][0]["content"]["parts"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise RuntimeError(
-            "Gemini REST API ไม่คืนข้อความที่อ่านได้: "
-            + json.dumps(data, ensure_ascii=False)[:800]
-        ) from exc
-    return "\n".join(str(p.get("text", "")) for p in parts if isinstance(p, dict)).strip()
-
-
-def call_gemini_generate_text(
-    api_key: str, system_instruction: str, prompt: str
-) -> str:
-    """ลอง REST ทุกโมเดลในรายการ + retry 503; จากนั้นค่อยลอง SDK ถ้ามี."""
-    errors: list[str] = []
-    for model_name in get_gemini_model_candidates():
-        try:
-            return call_gemini_with_rest_api(
-                api_key,
-                system_instruction,
-                prompt,
-                model_name=model_name,
+            response = client.chat.completions.create(
+                model=creds["deployment"],
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=AZURE_MAX_OUTPUT_TOKENS,
+                response_format={"type": "json_object"}
             )
+            content = response.choices[0].message.content
+            return content or ""
         except Exception as exc:
-            errors.append(f"REST ({model_name}): {exc}")
-
-    if _legacy_gemini_sdk_available():
-        for model_name in get_gemini_model_candidates():
-            try:
-                return call_gemini_with_legacy_sdk(
-                    api_key, system_instruction, prompt, model_name=model_name
-                )
-            except Exception as exc:
-                errors.append(f"legacy SDK ({model_name}): {exc}")
-    else:
-        errors.append(
-            "legacy SDK: ไม่พร้อมใช้ (Python 3.8 มักติดตั้งได้แค่ google-generativeai รุ่นเก่า "
-            "— ใช้ REST เป็นหลัก)"
-        )
-
-    if _new_gemini_sdk_available():
-        for model_name in get_gemini_model_candidates():
-            try:
-                return call_gemini_with_new_sdk(
-                    api_key, system_instruction, prompt, model_name=model_name
-                )
-            except Exception as exc:
-                errors.append(f"new SDK ({model_name}): {exc}")
-    else:
-        errors.append(
-            "new SDK: ไม่พบ google-genai (ติดตั้งได้บน Python 3.10+ หรือใช้ REST)"
-        )
-
-    hint = ""
-    joined = "\n".join(errors)
-    if "429" in joined or "RESOURCE_EXHAUSTED" in joined or "quota" in joined.lower():
-        hint = (
-            "\n\nโควตา Gemini API เต็มหรือ key นี้ไม่มี free tier สำหรับโมเดลที่ลองแล้ว:\n"
-            "  • สร้าง API key ใหม่ที่ https://aistudio.google.com/apikey\n"
-            "  • ลองโมเดลเบา: set GEMINI_MODEL=gemini-2.5-flash-lite\n"
-            "  • ตรวจสอบ usage: https://aistudio.google.com/\n"
-            "  • ถ้าใช้ key เก่า/โปรเจกต์ที่ถูกจำกัด ให้เปลี่ยน key ใน sidebar"
-        )
-    elif "503" in joined or "UNAVAILABLE" in joined or "high demand" in joined.lower():
-        hint = (
-            "\n\nเซิร์ฟเวอร์ Gemini โหลดหนักชั่วคราว (503) — รอ 1–2 นาทีแล้วกดวิเคราะห์อีกครั้ง "
-            "หรือตั้ง GEMINI_MODEL=gemini-2.5-flash-lite"
-        )
-    elif "404" in joined and "not found" in joined.lower():
-        hint = (
-            "\n\nโมเดล Gemini บางตัวถูกยกเลิกแล้ว (เช่น gemini-1.5-flash) "
-            "— ใช้ gemini-2.5-flash หรือ gemini-2.5-flash-lite"
-        )
-
-    raise RuntimeError("เรียก Gemini ไม่สำเร็จ:\n" + joined + hint)
+            err_msg = str(exc)
+            if "429" in err_msg and attempt < AZURE_RETRY_COUNT - 1:
+                time.sleep(min(AZURE_RETRY_BASE_SEC * (2**attempt), 12.0))
+                continue
+            raise RuntimeError(f"เรียก Azure OpenAI ไม่สำเร็จ:\n{err_msg}") from exc
+    return ""
 
 
-def call_gemini_extract(conversation: str) -> dict[str, str]:
-    api_key = get_gemini_api_key()
-    if not api_key:
+def call_azure_openai_extract(conversation: str) -> dict[str, str]:
+    creds = get_azure_credentials()
+    if not creds["api_key"] or not creds["endpoint"]:
         raise RuntimeError(
-            "ไม่พบ Gemini API key: ตั้ง GEMINI_API_KEY / GOOGLE_API_KEY "
-            "หรือสร้างไฟล์ .gemini_api_key ในโฟลเดอร์โปรเจกต์"
+            "ไม่พบ Azure OpenAI API key หรือ Endpoint: "
+            "ตั้งค่า AZURE_OPENAI_API_KEY และ AZURE_OPENAI_ENDPOINT ในไฟล์ .azure_openai_env"
         )
 
     system_instruction, prompt = build_emr_prompt(conversation)
-    raw_text = call_gemini_generate_text(api_key, system_instruction, prompt)
+    raw_text = call_azure_openai_generate_text(creds, system_instruction, prompt)
 
     data = extract_emr_fields_from_text(raw_text)
     if data and result_is_too_sparse(data, conversation):
-        # ลองอีกครั้งด้วย prompt ที่ย้ำให้ละเอียดขึ้น แต่ยังจำกัด output ให้ไม่ยาวเกินไป
         system_instruction, prompt = build_emr_prompt(conversation, retry=True)
-        raw_text = call_gemini_generate_text(api_key, system_instruction, prompt)
+        raw_text = call_azure_openai_generate_text(creds, system_instruction, prompt)
         data = extract_emr_fields_from_text(raw_text)
 
     if not data:
-        raw_path = save_last_gemini_raw(raw_text)
+        raw_path = save_last_raw_response(raw_text)
         raise RuntimeError(
-            "Gemini ไม่คืน JSON/รูปแบบข้อความที่อ่านได้ "
+            "Azure OpenAI ไม่คืน JSON/รูปแบบข้อความที่อ่านได้ "
             f"(บันทึก raw response ไว้ที่ {raw_path})"
         )
 
@@ -1089,23 +817,21 @@ def main() -> None:
 
     with st.sidebar:
         st.header("การตั้งค่า")
-        st.write(f"Model: `{get_gemini_model_name()}`")
-        st.caption(
-            "Fallback: "
-            + ", ".join(f"`{m}`" for m in get_gemini_model_candidates()[1:])
-        )
+        st.write(f"Deployment: `{get_azure_credentials()['deployment']}`")
         api_key_override = st.text_input(
-            "Gemini API key (ถ้าต้องการใช้ key ใหม่เฉพาะรอบนี้)",
+            "Azure API Key (เฉพาะรอบนี้)",
             type="password",
-            value=st.session_state.get("gemini_api_key_override", ""),
-            help="ถ้าใส่ช่องนี้ แอปจะใช้ key นี้แทน .gemini_api_key / env",
+            value=st.session_state.get("azure_api_key_override", ""),
+            help="ถ้าใส่ช่องนี้ แอปจะใช้ key นี้แทน .azure_openai_env",
         )
-        st.session_state.gemini_api_key_override = api_key_override.strip()
-        if get_gemini_api_key():
-            st.success("พบ Gemini API key แล้ว")
+        st.session_state.azure_api_key_override = api_key_override.strip()
+        
+        creds = get_azure_credentials()
+        if creds["api_key"] and creds["endpoint"]:
+            st.success("พบ Azure OpenAI API Key แล้ว")
         else:
-            st.warning("ยังไม่พบ Gemini API key")
-            st.caption("ตั้ง GEMINI_API_KEY หรือสร้างไฟล์ .gemini_api_key")
+            st.warning("ยังไม่พบ Azure API Key หรือ Endpoint")
+            st.caption("ตั้งค่าในไฟล์ .azure_openai_env")
         st.divider()
         st.caption(f"บันทึกข้อมูลลง: `{PATIENT_INFO_DIR}`")
 
@@ -1208,9 +934,9 @@ def main() -> None:
                     result = cached
                     st.info("ใช้ผลวิเคราะห์จาก cache")
                 else:
-                    with st.spinner("กำลังวิเคราะห์บทสนทนาด้วย Gemini..."):
+                    with st.spinner("กำลังวิเคราะห์บทสนทนาด้วย Azure OpenAI..."):
                         try:
-                            result = call_gemini_extract(conversation)
+                            result = call_azure_openai_extract(conversation)
                         except Exception as exc:
                             st.session_state.last_analysis_ok = False
                             st.error(str(exc))

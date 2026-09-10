@@ -393,58 +393,44 @@ def _safety_settings_all(threshold):
     ]
 
 
-def _call_gemini_once(system_instruction: str, user_text: str, temperature: float) -> str:
-    """เรียก Gemini หนึ่งครั้ง — ถ้า 429 ให้จับที่ call_gemini ด้านนอกแล้ว retry"""
-    import google.generativeai as genai
-    from google.generativeai.types import HarmBlockThreshold
+def _call_azure_openai_once(system_instruction: str, user_text: str, temperature: float) -> str:
+    from openai import AzureOpenAI
 
-    genai.configure(api_key=get_gemini_api_key())
-    model = genai.GenerativeModel(
-        model_name=get_gemini_model_name(),
-        system_instruction=system_instruction,
+    # Using the same environment variables as streamlit app
+    api_key = os.environ.get("AZURE_OPENAI_API_KEY", "").strip()
+    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip()
+    api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-15-preview").strip()
+    deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o-mini").strip()
+
+    if not api_key or not endpoint:
+        raise ValueError("Missing Azure OpenAI credentials (AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT)")
+
+    client = AzureOpenAI(
+        api_key=api_key,
+        api_version=api_version,
+        azure_endpoint=endpoint,
     )
-    gen_cfg = {
-        "temperature": temperature,
-        "max_output_tokens": 8192,
-    }
 
-    def _one_call(utext: str, threshold) -> tuple:
-        safety = _safety_settings_all(threshold)
-        r = model.generate_content(
-            utext,
-            generation_config=gen_cfg,
-            safety_settings=safety,
-        )
-        return r, _try_get_response_text(r).strip()
-
-    for threshold in (HarmBlockThreshold.BLOCK_ONLY_HIGH, HarmBlockThreshold.BLOCK_NONE):
-        resp, text = _one_call(user_text, threshold)
-        if text:
-            return text
-
-    code = _prompt_block_reason_code(getattr(resp, "prompt_feedback", None))
-    if code == 4:
-        softened = _sanitize_asr_for_prohibited_filter(user_text)
-        wrapped = _wrap_clinical_transcript(softened)
-        for threshold in (HarmBlockThreshold.BLOCK_ONLY_HIGH, HarmBlockThreshold.BLOCK_NONE):
-            resp, text = _one_call(wrapped, threshold)
-            if text:
-                return text
-
-    detail = _gemini_failure_detail(resp)
-    raise RuntimeError(
-        "Gemini ไม่คืนข้อความ (อาจถูกบล็อก safety, เนื้อหาว่าง หรือโมเดลไม่ตอบ). "
-        f"รายละเอียด: {detail}"
+    response = client.chat.completions.create(
+        model=deployment,
+        messages=[
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": user_text}
+        ],
+        temperature=temperature,
+        max_tokens=8192,
+        response_format={"type": "json_object"}
     )
+    return response.choices[0].message.content or ""
 
 
 def call_gemini(system_instruction: str, user_text: str, temperature: float = 0.2) -> str:
     import importlib.util
 
-    if importlib.util.find_spec("google.generativeai") is None:
+    if importlib.util.find_spec("openai") is None:
         raise ImportError(
-            "ไม่มีแพ็กเกจ google.generativeai — ติดตั้งด้วย:\n"
-            "  python -m pip install google-generativeai"
+            "ไม่มีแพ็กเกจ openai — ติดตั้งด้วย:\n"
+            "  python -m pip install openai"
         )
 
     n = _gemini_rate_limit_retries()
@@ -452,12 +438,12 @@ def call_gemini(system_instruction: str, user_text: str, temperature: float = 0.
     last: BaseException | None = None
     for attempt in range(n):
         try:
-            return _call_gemini_once(system_instruction, user_text, temperature)
+            return _call_azure_openai_once(system_instruction, user_text, temperature)
         except Exception as e:
             last = e
-            if not _is_gemini_rate_limit_error(e) or attempt >= n - 1:
+            if "429" not in str(e) or attempt >= n - 1:
                 raise
-            # exponential backoff + jitter กัน thundering herd
+            # exponential backoff + jitter
             wait = min(base * (2**attempt) + random.uniform(0, 3), 300.0)
             print(
                 f"[429/โควตา] รอ {wait:.1f} วินาที แล้วลองใหม่ ({attempt + 1}/{n})…",

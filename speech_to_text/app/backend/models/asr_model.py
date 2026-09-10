@@ -32,43 +32,39 @@ class TyphoonASRRecognizer:
             bool: True if model loaded successfully, False otherwise
         """
         try:
-            # Check if model file exists
-            if not os.path.exists(self.model_path):
-                error_msg = f"ไม่พบไฟล์โมเดล: {self.model_path}"
-                print(f"ERROR: {error_msg}")
-                print("กรุณาตรวจสอบว่าไฟล์โมเดลอยู่ในโฟลเดอร์ backend/typhoon-asr-realtime")
-                return False
-            
-            # Try to load using NeMo
-            try:
-                import nemo.collections.asr as nemo_asr
-                
-                # Load model from .nemo file
-                self.model = nemo_asr.models.ASRModel.restore_from(
-                    restore_path=self.model_path,
-                    map_location=self.device
-                )
-                self.model.eval()
-                self.is_loaded = True
-                print(f"✅ โหลดโมเดลสำเร็จจาก: {os.path.basename(self.model_path)}")
-                return True
-                
-            except ImportError:
-                # Fallback to typhoon-asr package
+            # Check if local model file exists
+            if os.path.exists(self.model_path):
+                # Try to load using NeMo
                 try:
-                    from typhoon_asr import transcribe
-                    if callable(transcribe):
-                        self.is_loaded = True
-                        print("✅ ใช้ typhoon-asr package (fallback mode)")
-                        return True
-                    else:
-                        print("ERROR: Typhoon ASR transcribe function ไม่สามารถเรียกใช้ได้")
-                        return False
-                except ImportError as e:
-                    print(f"ERROR: ไม่พบ NeMo หรือ Typhoon ASR Package: {e}")
-                    print("กรุณาติดตั้งด้วยคำสั่ง: pip install nemo_toolkit[asr] หรือ pip install typhoon-asr")
+                    import nemo.collections.asr as nemo_asr
+                    self.model = nemo_asr.models.ASRModel.restore_from(
+                        restore_path=self.model_path,
+                        map_location=self.device
+                    )
+                    self.model.eval()
+                    self.is_loaded = True
+                    print(f"✅ โหลดโมเดลสำเร็จจาก: {os.path.basename(self.model_path)}")
+                    return True
+                except Exception as e:
+                    print(f"WARNING: ไม่สามารถโหลดโมเดล NeMo ได้: {e}")
+            else:
+                print(f"WARNING: ไม่พบไฟล์โมเดลที่: {self.model_path}")
+                
+            # Fallback to typhoon-asr package
+            try:
+                from typhoon_asr import transcribe
+                if callable(transcribe):
+                    self.is_loaded = True
+                    print("✅ ใช้ typhoon-asr package (fallback mode)")
+                    return True
+                else:
+                    print("ERROR: Typhoon ASR transcribe function ไม่สามารถเรียกใช้ได้")
                     return False
-            
+            except ImportError as e:
+                print(f"ERROR: ไม่พบ NeMo หรือ Typhoon ASR Package: {e}")
+                print("กรุณาติดตั้งด้วยคำสั่ง: pip install nemo_toolkit[asr] หรือ pip install typhoon-asr")
+                return False
+                
         except Exception as e:
             print(f"ERROR: เกิดข้อผิดพลาดในการโหลดโมเดล: {e}")
             return False

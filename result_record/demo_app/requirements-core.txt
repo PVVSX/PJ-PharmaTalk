@@ -1,7 +1,6 @@
-# แอป Streamlit + Gemini + PDF (ติดตั้งเร็ว)
+# แอป Streamlit + Azure OpenAI + PDF (ติดตั้งเร็ว)
 streamlit
-google-generativeai
-google-genai
+openai
 reportlab
 huggingface_hub>=0.26
 numpy

@@ -13,6 +13,9 @@ venv_pyanote/
 # Archives (มีซอร์สโค้ดอยู่แล้ว)
 diarization/archives/
 record/record_app.zip
+record/audio/
+record/stt/
+record/emr/
 
 # Model weights (>100MB — ใช้ Hugging Face / local path แทน)
 text_classified/output_conditions/
