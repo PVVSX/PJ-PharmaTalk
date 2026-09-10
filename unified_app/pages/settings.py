@@ -20,34 +20,7 @@ except ImportError:
 
 
 
-# We need to import the helper functions from app.py
-# Since Streamlit runs pages in a specific way, we can import them from unified_app.app
-# OR we can just redefine them here to keep things clean and avoid circular imports.
-# I'll redefine them to be safe, they are simple file read/writes.
-
-_ENV_FILE = ROOT / "result_record" / ".azure_openai_env"
-
-def _read_env_file() -> dict:
-    vals = {"AZURE_OPENAI_API_KEY": "", "AZURE_OPENAI_ENDPOINT": "",
-            "AZURE_OPENAI_DEPLOYMENT_NAME": "gpt-4o-mini",
-            "AZURE_OPENAI_API_VERSION": "2024-02-15-preview"}
-    if _ENV_FILE.exists():
-        for line in _ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
-            s = line.strip()
-            if s and not s.startswith("#") and "=" in s:
-                k, v = s.split("=", 1)
-                vals[k.strip()] = v.strip()
-    return vals
-
-def _write_env_file(data: dict) -> None:
-    import os
-    _ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
-    lines = ["# Azure OpenAI Settings\n"]
-    for k, v in data.items():
-        lines.append(f"{k}={v}\n")
-    _ENV_FILE.write_text("".join(lines), encoding="utf-8")
-    for k, v in data.items():
-        os.environ[k] = v
+from unified_app.modules.config import read_env_file, write_env_file
 
 from unified_app.modules.stt_typhoon import ASR_AVAILABLE
 from unified_app.modules.emr_azure import check_credentials
@@ -78,14 +51,14 @@ with t4L:
           <span class="section-sub">สำหรับวิเคราะห์ EMR</span>
         </div>""", unsafe_allow_html=True)
         
-        env_vals = _read_env_file()
+        env_vals = read_env_file()
         new_ep   = st.text_input("Endpoint URL", value=env_vals["AZURE_OPENAI_ENDPOINT"], placeholder="https://<resource-name>.openai.azure.com/")
         new_key  = st.text_input("API Key", value=env_vals["AZURE_OPENAI_API_KEY"], type="password")
         new_dep  = st.text_input("Deployment Name", value=env_vals["AZURE_OPENAI_DEPLOYMENT_NAME"], placeholder="gpt-4o-mini")
         new_ver  = st.text_input("API Version", value=env_vals["AZURE_OPENAI_API_VERSION"])
         
         if st.button("บันทึกการตั้งค่า API", icon=":material/save:", type="primary", use_container_width=True):
-            _write_env_file({
+            write_env_file({
                 "AZURE_OPENAI_ENDPOINT": new_ep,
                 "AZURE_OPENAI_API_KEY": new_key,
                 "AZURE_OPENAI_DEPLOYMENT_NAME": new_dep,
