@@ -3,30 +3,19 @@ from pathlib import Path
 
 # Paths
 ROOT = Path(__file__).resolve().parent.parent.parent
-_ENV_FILE = ROOT / "result_record" / ".azure_openai_env"
+KEY_FILE = ROOT / ".gemini_api_key"
 
 def read_env_file() -> dict:
-    """Read current values from .azure_openai_env file."""
-    vals = {
-        "AZURE_OPENAI_API_KEY": "", 
-        "AZURE_OPENAI_ENDPOINT": "",
-        "AZURE_OPENAI_DEPLOYMENT_NAME": "gpt-4o-mini",
-        "AZURE_OPENAI_API_VERSION": "2024-02-15-preview"
+    """Read API config from file."""
+    api_key = ""
+    if KEY_FILE.exists():
+        api_key = KEY_FILE.read_text(encoding="utf-8").strip()
+    return {
+        "GEMINI_API_KEY": api_key,
+        "GEMINI_MODEL_NAME": "gemini-2.5-pro"
     }
-    if _ENV_FILE.exists():
-        for line in _ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
-            s = line.strip()
-            if s and not s.startswith("#") and "=" in s:
-                k, v = s.split("=", 1)
-                vals[k.strip()] = v.strip()
-    return vals
 
 def write_env_file(data: dict) -> None:
-    """Write settings to .azure_openai_env and update current-process env."""
-    _ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
-    lines = ["# Azure OpenAI Settings\n"]
-    for k, v in data.items():
-        lines.append(f"{k}={v}\n")
-    _ENV_FILE.write_text("".join(lines), encoding="utf-8")
-    for k, v in data.items():
-        os.environ[k] = v
+    """No-op since config is hardcoded."""
+    pass
+

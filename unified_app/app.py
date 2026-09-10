@@ -29,7 +29,7 @@ except ImportError:
 
 
 from unified_app.modules.stt_typhoon import ASR_AVAILABLE, TyphoonASRRecognizer, transcribe_audio_bytes
-from unified_app.modules.emr_azure   import EMR_FIELDS, check_credentials, extract_emr
+from unified_app.modules.emr_gemini   import EMR_FIELDS, check_credentials, extract_emr
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONFIG
@@ -104,7 +104,6 @@ wav_count = len(list((RECORD_DIR / "audio").glob("*.wav"))) if (RECORD_DIR / "au
 pages = {
     "เมนูหลัก": [
         st.Page("pages/recorder.py",  title="อัดเสียง",      icon=":material/mic:"),
-        st.Page("pages/stt.py",       title="ถอดเสียง",      icon=":material/description:"),
         st.Page("pages/history.py",   title="ประวัติข้อมูล", icon=":material/history:"),
     ],
     "วิเคราะห์": [
@@ -136,7 +135,6 @@ with st.sidebar:
     # 2. Custom Navigation
     st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 12px 0 12px 16px;'>เมนูหลัก</div>", unsafe_allow_html=True)
     st.page_link("pages/recorder.py", label="อัดเสียง", icon=":material/mic:")
-    st.page_link("pages/stt.py", label="ถอดเสียง", icon=":material/description:")
     st.page_link("pages/history.py", label="ประวัติข้อมูล", icon=":material/history:")
     
     st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 24px 0 12px 16px;'>วิเคราะห์</div>", unsafe_allow_html=True)

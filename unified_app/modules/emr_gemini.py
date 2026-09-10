@@ -1,14 +1,14 @@
 """
-EMR Extraction Module (Azure OpenAI)
-Self-contained extraction logic with its own prompt and OpenAI client.
-No dependency on the old streamlit_emr_app.py.
+EMR Extraction Module (Gemini)
+Self-contained extraction logic with its own prompt and Gemini client.
 """
 import json
-import os
 import re
 import time
-from pathlib import Path
 from typing import Any
+import google.generativeai as genai
+
+from unified_app.modules.config import read_env_file
 
 # ── Constants ────────────────────────────────────────────────────
 EMR_FIELDS = [
@@ -19,52 +19,24 @@ EMR_FIELDS = [
     "คำแนะนำจากเภสัช",
 ]
 
-_ENV_FILE = Path(__file__).resolve().parent.parent.parent / "result_record" / ".azure_openai_env"
-_DEFAULT_API_VERSION = "2024-02-15-preview"
-_DEFAULT_DEPLOYMENT = "gpt-4o-mini"
-_MAX_TOKENS = 4096
 _RETRY_COUNT = 3
 _RETRY_BASE_SEC = 2.0
 
 
-# ── Credentials ──────────────────────────────────────────────────
-def _load_env_file() -> None:
-    """Read .azure_openai_env once and set missing env vars."""
-    if not _ENV_FILE.is_file():
-        return
-    try:
-        for line in _ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
-            s = line.strip().lstrip("\ufeff")
-            if s and not s.startswith("#") and "=" in s:
-                k, v = s.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
-    except OSError:
-        pass
-
-
-def get_credentials() -> dict[str, str]:
-    _load_env_file()
-    return {
-        "api_key": os.environ.get("AZURE_OPENAI_API_KEY", "").strip(),
-        "endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip(),
-        "api_version": os.environ.get("AZURE_OPENAI_API_VERSION", _DEFAULT_API_VERSION).strip(),
-        "deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", _DEFAULT_DEPLOYMENT).strip(),
-    }
-
-
 # ── Prompt ───────────────────────────────────────────────────────
-def _build_prompt(conversation: str, retry: bool = False) -> tuple[str, str]:
+def _build_prompt(conversation: str, retry: bool = False) -> str:
     system = (
-        "คุณเป็นผู้ช่วยเภสัชกรสำหรับสรุปบทสนทนาเป็นเวชระเบียน EMR "
-        "ให้สกัดข้อมูลเฉพาะจากบทสนทนา ห้ามเดาข้อมูลที่ไม่มีในบทสนทนา "
-        "ถ้าไม่พบข้อมูลให้ใส่ '-' และตอบเป็น JSON เท่านั้น"
+        "คุณเป็นผู้ช่วยเภสัชกรสำหรับสรุปบทสนทนาเป็นเวชระเบียน EMR\n"
+        "ให้สกัดข้อมูลเฉพาะจากบทสนทนา ห้ามเดาข้อมูลที่ไม่มีในบทสนทนา\n"
+        "ถ้าไม่พบข้อมูลให้ใส่ '-' และตอบเป็น JSON เท่านั้น\n"
     )
     retry_note = (
         "\nรอบนี้เป็นการวิเคราะห์ซ้ำเพราะรอบแรกข้อมูลน้อยเกินไป: "
         "ให้ตรวจบทสนทนาอย่างละเอียดและเติมช่องบันทึกทางการแพทย์/คำแนะนำจากเภสัชถ้ามีหลักฐานในบทสนทนา\n"
         if retry else ""
     )
-    user_prompt = f"""จากบทสนทนาต่อไปนี้ ให้สรุปเป็น JSON ภาษาไทยตาม key ต่อไปนี้เท่านั้น:
+    user_prompt = f"""{system}
+จากบทสนทนาต่อไปนี้ ให้สรุปเป็น JSON ภาษาไทยตาม key ต่อไปนี้เท่านั้น:
 
 {{
   "ประวัติการแพ้ยา": "...",
@@ -84,7 +56,7 @@ def _build_prompt(conversation: str, retry: bool = False) -> tuple[str, str]:
 {retry_note}
 บทสนทนา:
 {conversation}"""
-    return system, user_prompt
+    return user_prompt
 
 
 # ── JSON extraction helpers ──────────────────────────────────────
@@ -142,48 +114,35 @@ def _is_sparse(result: dict[str, str], conversation: str) -> bool:
     return empty >= 3 or missing_core
 
 
-# ── OpenAI call ──────────────────────────────────────────────────
-def _call_openai(creds: dict, system: str, user: str) -> str:
-    try:
-        from openai import AzureOpenAI
-    except ImportError as exc:
-        raise RuntimeError("ไม่พบ openai SDK กรุณาติดตั้ง: pip install openai") from exc
-
-    client = AzureOpenAI(
-        api_key=creds["api_key"],
-        api_version=creds["api_version"],
-        azure_endpoint=creds["endpoint"],
-    )
-
+# ── API call ──────────────────────────────────────────────────
+def _call_gemini(api_key: str, model_name: str, prompt: str) -> str:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(model_name)
+    
     for attempt in range(max(1, _RETRY_COUNT)):
         try:
-            resp = client.chat.completions.create(
-                model=creds["deployment"],
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                temperature=0.1,
-                max_tokens=_MAX_TOKENS,
-                response_format={"type": "json_object"},
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                )
             )
-            return resp.choices[0].message.content or ""
+            return response.text or ""
         except Exception as exc:
             if "429" in str(exc) and attempt < _RETRY_COUNT - 1:
                 time.sleep(min(_RETRY_BASE_SEC * (2 ** attempt), 12.0))
                 continue
-            raise RuntimeError(f"เรียก Azure OpenAI ไม่สำเร็จ: {exc}") from exc
+            raise RuntimeError(f"เรียก Gemini API ไม่สำเร็จ: {exc}") from exc
     return ""
 
 
 # ── Public API ───────────────────────────────────────────────────
 def check_credentials() -> tuple[bool, str]:
-    """Check if Azure OpenAI credentials are configured."""
-    creds = get_credentials()
-    if not creds["api_key"]:
-        return False, "ไม่พบ API Key (AZURE_OPENAI_API_KEY)"
-    if not creds["endpoint"]:
-        return False, "ไม่พบ Endpoint (AZURE_OPENAI_ENDPOINT)"
+    """Check if Gemini credentials are configured."""
+    config = read_env_file()
+    if not config.get("GEMINI_API_KEY"):
+        return False, "ไม่พบ API Key (GEMINI_API_KEY)"
     return True, "พร้อมใช้งาน"
 
 
@@ -195,23 +154,23 @@ def extract_emr(conversation: str) -> dict[str, str]:
     if not conversation or not conversation.strip():
         return {f: "-" for f in EMR_FIELDS}
 
-    creds = get_credentials()
-    if not creds["api_key"] or not creds["endpoint"]:
-        raise RuntimeError(
-            "ไม่พบ Azure OpenAI API Key หรือ Endpoint\n"
-            "กรุณาไปที่แท็บ 'ตั้งค่า' เพื่อกรอกข้อมูล"
-        )
+    config = read_env_file()
+    api_key = config.get("GEMINI_API_KEY")
+    model_name = config.get("GEMINI_MODEL_NAME", "gemini-1.5-pro")
 
-    system, user = _build_prompt(conversation)
-    raw = _call_openai(creds, system, user)
+    if not api_key:
+        raise RuntimeError("ไม่พบ Gemini API Key")
+
+    prompt = _build_prompt(conversation)
+    raw = _call_gemini(api_key, model_name, prompt)
     data = _parse_fields(raw)
 
     if data and _is_sparse(data, conversation):
-        system2, user2 = _build_prompt(conversation, retry=True)
-        raw2 = _call_openai(creds, system2, user2)
+        prompt2 = _build_prompt(conversation, retry=True)
+        raw2 = _call_gemini(api_key, model_name, prompt2)
         data = _parse_fields(raw2)
 
     if not data:
-        raise RuntimeError("Azure OpenAI ไม่คืนข้อมูลในรูปแบบที่อ่านได้")
+        raise RuntimeError("Gemini ไม่คืนข้อมูลในรูปแบบที่อ่านได้")
 
     return {f: str(data.get(f) or "-").strip() or "-" for f in EMR_FIELDS}

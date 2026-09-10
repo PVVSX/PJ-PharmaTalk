@@ -23,7 +23,7 @@ except ImportError:
 from unified_app.modules.config import read_env_file, write_env_file
 
 from unified_app.modules.stt_typhoon import ASR_AVAILABLE
-from unified_app.modules.emr_azure import check_credentials
+from unified_app.modules.emr_gemini import check_credentials
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONTENT
@@ -40,84 +40,20 @@ st.markdown("""
 
 t4L, t4R = st.columns([1, 1], gap="large")
 
-# ── LEFT: Azure OpenAI Settings ──
+# ── LEFT: Settings ──
 with t4L:
     with st.container(border=True):
         st.markdown("""
         <div class="card-accent-bar accent-amber"></div>
         <div class="section-header">
-          <div class="sh-icon sh-grey"><span class="material-symbols-rounded">key</span></div>
-          <span class="section-title">ตั้งค่า Azure OpenAI</span>
+           <div class="sh-icon sh-grey"><span class="material-symbols-rounded">key</span></div>
+          <span class="section-title">ตั้งค่า Gemini API</span>
           <span class="section-sub">สำหรับวิเคราะห์ EMR</span>
         </div>""", unsafe_allow_html=True)
         
-        env_vals = read_env_file()
-        new_ep   = st.text_input("Endpoint URL", value=env_vals["AZURE_OPENAI_ENDPOINT"], placeholder="https://<resource-name>.openai.azure.com/")
-        new_key  = st.text_input("API Key", value=env_vals["AZURE_OPENAI_API_KEY"], type="password")
-        new_dep  = st.text_input("Deployment Name", value=env_vals["AZURE_OPENAI_DEPLOYMENT_NAME"], placeholder="gpt-4o-mini")
-        new_ver  = st.text_input("API Version", value=env_vals["AZURE_OPENAI_API_VERSION"])
-        
-        if st.button("บันทึกการตั้งค่า API", icon=":material/save:", type="primary", use_container_width=True):
-            write_env_file({
-                "AZURE_OPENAI_ENDPOINT": new_ep,
-                "AZURE_OPENAI_API_KEY": new_key,
-                "AZURE_OPENAI_DEPLOYMENT_NAME": new_dep,
-                "AZURE_OPENAI_API_VERSION": new_ver
-            })
-            st.success("บันทึกข้อมูลเรียบร้อย")
-            st.rerun()
+        st.info("API Key ของ Gemini ถูกตั้งค่าไว้ในระบบเรียบร้อยแล้ว", icon=":material/info:")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    with st.container(border=True):
-        st.markdown("""
-        <div class="card-accent-bar accent-amber"></div>
-        <div class="section-header">
-          <div class="sh-icon sh-grey"><span class="material-symbols-rounded">settings</span></div>
-          <span class="section-title">ตั้งค่าไมโครโฟน</span>
-        </div>""", unsafe_allow_html=True)
 
-        st.selectbox(
-            "Sample Rate",
-            options=[8000, 16000, 22050, 44100, 48000],
-            index=[8000,16000,22050,44100,48000].index(int(st.session_state.cfg_rate)),
-            key="cfg_rate",
-        )
-        st.selectbox(
-            "ช่องสัญญาณ",
-            options=[1, 2],
-            index=int(st.session_state.cfg_channels) - 1,
-            format_func=lambda x: f"{'Mono' if x == 1 else 'Stereo'} ({x}ch)",
-            key="cfg_channels",
-        )
-
-        if PYAUDIO_AVAILABLE:
-            if st.session_state.device_options_cache is None:
-                try:
-                    import pyaudio
-                    pa = pyaudio.PyAudio()
-                    devs = {None: "Default"}
-                    for i in range(pa.get_device_count()):
-                        info = pa.get_device_info_by_index(i)
-                        if info.get("maxInputChannels", 0) > 0:
-                            devs[i] = f"{i}: {info['name']}"
-                    pa.terminate()
-                    st.session_state.device_options_cache = devs
-                except Exception:
-                    st.session_state.device_options_cache = {None: "Default"}
-
-            opts = st.session_state.device_options_cache
-            dev_keys = list(opts.keys())
-            cur_idx  = dev_keys.index(st.session_state.cfg_device_index) if st.session_state.cfg_device_index in dev_keys else 0
-            chosen   = st.selectbox(
-                "อุปกรณ์ไมโครโฟน",
-                options=dev_keys,
-                index=cur_idx,
-                format_func=lambda x: opts[x],
-                key="_device_select",
-            )
-            st.session_state.cfg_device_index = chosen
-        else:
-            st.warning("ไม่พบ PyAudio — ติดตั้ง: `pip install pyaudio`")
 
 
 # ── RIGHT: System Diagnostics ──
@@ -140,11 +76,8 @@ with t4R:
             
         st.markdown(f"""
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--grey-200);">
-          <span style="font-weight:500;">ระบบบันทึกเสียง (PyAudio)</span>
-          {{
-            '<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>พร้อมใช้งาน</span>' if has_audio
-            else '<span class="status-pill pill-err"><span class="status-dot dot-red"></span>ไม่พบ PyAudio</span>'
-          }}
+          <span style="font-weight:500;">ระบบอัดเสียง (Native)</span>
+          {'<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>พร้อมใช้งาน</span>'}
         </div>
         """, unsafe_allow_html=True)
         
@@ -164,7 +97,7 @@ with t4R:
         api_ok, api_msg = check_credentials()
         st.markdown(f"""
         <div style="display:flex; justify-content:space-between; padding:10px 0;">
-          <span style="font-weight:500;">Azure OpenAI API</span>
+          <span style="font-weight:500;">Gemini API</span>
           {
             '<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>ตั้งค่าแล้ว</span>' if api_ok
             else '<span class="status-pill pill-warn"><span class="status-dot dot-amber"></span>ยังไม่ได้ตั้งค่า</span>'
@@ -173,7 +106,7 @@ with t4R:
         """, unsafe_allow_html=True)
         
         if not api_ok and api_msg:
-            st.caption(f"ℹ️ {api_msg}")
+            st.info(api_msg, icon=":material/info:")
 
         st.markdown("<br>", unsafe_allow_html=True)
         
