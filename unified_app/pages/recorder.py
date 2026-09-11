@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 
 from unified_app.modules.stt_typhoon import transcribe_audio_bytes
 from unified_app.modules.emr_gemini import extract_emr, EMR_FIELDS
+from unified_app.modules.state_manager import get_state, set_state
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONTENT
@@ -54,50 +55,68 @@ with t1L:
           <span class="section-title">อัดเสียงสนทนา</span>
         </div>""", unsafe_allow_html=True)
 
-        audio_key = f"native_audio_recorder_{st.session_state.get('audio_key_counter', 0)}"
-        audio_value = st.audio_input("กดปุ่มไมโครโฟนด้านล่างเพื่อเริ่มและหยุดอัดเสียง", key=audio_key)
-        
-        if audio_value:
-            audio_bytes = audio_value.getvalue()
-            # To avoid re-transcribing the same audio on every re-render, we check if it's new
-            # We can hash the audio bytes to check if it's a new recording
-            audio_hash = hashlib.md5(audio_bytes).hexdigest()
+        @st.fragment(run_every="1s")
+        def render_recorder():
+            current_state = get_state()
             
-            if st.session_state.get("last_audio_hash") != audio_hash:
-                st.session_state.last_audio_hash = audio_hash
+            if current_state == "WAITING":
+                st.info("รอคนไข้กดยืนยันข้อตกลงความเป็นส่วนตัว...")
+                st.markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
+            elif current_state == "FINISHED":
+                st.success("บันทึกและถอดเสียงเสร็จสิ้น รอสักครู่ระบบจะกลับสู่สถานะพร้อมใช้งาน")
+                st.markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
+            else:
+                # READY state
+                st.success("คนไข้ยินยอมแล้ว พร้อมบันทึกเสียง")
+                audio_key = f"native_audio_recorder_{st.session_state.get('audio_key_counter', 0)}"
+                audio_value = st.audio_input("กดปุ่มไมโครโฟนด้านล่างเพื่อเริ่มและหยุดอัดเสียง", key=audio_key)
                 
-                AUDIO_DIR = RECORD_DIR / "audio"
-                STT_DIR = RECORD_DIR / "stt"
-                AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-                STT_DIR.mkdir(parents=True, exist_ok=True)
-                
-                now = datetime.now()
-                base_name = now.strftime("%d-%m-%y_%H-%M") + "_000"
-                audio_filename = f"{base_name}.wav"
-                stt_filename = f"{base_name}_stt.txt"
-                
-                audio_path = AUDIO_DIR / audio_filename
-                stt_path = STT_DIR / stt_filename
-                
-                # Save audio
-                audio_path.write_bytes(audio_bytes)
-                st.session_state.last_saved_path = str(audio_path)
-                
-                # Transcribe
-                if st.session_state.model_loaded:
-                    with st.spinner("กำลังถอดเสียงอัตโนมัติ..."):
-                        try:
-                            txt = transcribe_audio_bytes(st.session_state.recognizer, audio_bytes)
-                            stt_path.write_text(txt, encoding="utf-8")
-                            st.toast(f"บันทึกและถอดเสียงสำเร็จ! (`{audio_filename}`)", icon=":material/check_circle:")
-                        except Exception as e:
-                            st.toast(f"เกิดข้อผิดพลาดในการถอดเสียง: {e}", icon=":material/error:")
-                else:
-                    st.toast(f"บันทึกไฟล์ `{audio_filename}` แล้ว (ไม่สามารถถอดเสียงได้)", icon=":material/warning:")
+                if audio_value:
+                    audio_bytes = audio_value.getvalue()
+                    # To avoid re-transcribing the same audio on every re-render, we check if it's new
+                    # We can hash the audio bytes to check if it's a new recording
+                    audio_hash = hashlib.md5(audio_bytes).hexdigest()
                     
-                # Auto reset the audio recorder so it's ready for the next patient
-                st.session_state.audio_key_counter = st.session_state.get('audio_key_counter', 0) + 1
-                st.rerun()
+                    if st.session_state.get("last_audio_hash") != audio_hash:
+                        st.session_state.last_audio_hash = audio_hash
+                        
+                        AUDIO_DIR = RECORD_DIR / "audio"
+                        STT_DIR = RECORD_DIR / "stt"
+                        AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+                        STT_DIR.mkdir(parents=True, exist_ok=True)
+                        
+                        now = datetime.now()
+                        base_name = now.strftime("%d-%m-%y_%H-%M") + "_000"
+                        audio_filename = f"{base_name}.wav"
+                        stt_filename = f"{base_name}_stt.txt"
+                        
+                        audio_path = AUDIO_DIR / audio_filename
+                        stt_path = STT_DIR / stt_filename
+                        
+                        # Save audio
+                        audio_path.write_bytes(audio_bytes)
+                        st.session_state.last_saved_path = str(audio_path)
+                        
+                        # Transcribe
+                        if st.session_state.model_loaded:
+                            with st.spinner("กำลังถอดเสียงอัตโนมัติ..."):
+                                try:
+                                    txt = transcribe_audio_bytes(st.session_state.recognizer, audio_bytes)
+                                    stt_path.write_text(txt, encoding="utf-8")
+                                    st.toast(f"บันทึกและถอดเสียงสำเร็จ! (`{audio_filename}`)", icon=":material/check_circle:")
+                                except Exception as e:
+                                    st.toast(f"เกิดข้อผิดพลาดในการถอดเสียง: {e}", icon=":material/error:")
+                        else:
+                            st.toast(f"บันทึกไฟล์ `{audio_filename}` แล้ว (ไม่สามารถถอดเสียงได้)", icon=":material/warning:")
+                            
+                        # Tell the JS app that we finished
+                        set_state("FINISHED")
+                            
+                        # Auto reset the audio recorder so it's ready for the next patient
+                        st.session_state.audio_key_counter = st.session_state.get('audio_key_counter', 0) + 1
+                        st.rerun()
+
+        render_recorder()
 
 # ── RIGHT: Saved Recordings ────────────────────────────────
 with t1R:
