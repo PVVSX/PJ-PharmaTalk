@@ -1,7 +1,11 @@
-# API keys — ใช้ environment variable แทน
+# API keys & Credentials — ใช้ environment variable แทน
 .gemini_api_key
 .dashscope_api_key
+serviceAccountKey.json
 
+# API Local Data
+core_api/pharmatalk_api.db
+core_api/temp_audio/
 # Python
 __pycache__/
 *.py[cod]

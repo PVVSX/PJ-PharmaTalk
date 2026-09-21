@@ -12,7 +12,7 @@ def read_env_file() -> dict:
         api_key = KEY_FILE.read_text(encoding="utf-8").strip()
     return {
         "GEMINI_API_KEY": api_key,
-        "GEMINI_MODEL_NAME": "gemini-2.5-pro"
+        "GEMINI_MODEL_NAME": "gemini-1.5-flash"
     }
 
 def write_env_file(data: dict) -> None:
