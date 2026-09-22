@@ -21,6 +21,11 @@ from unified_app.modules.stt_typhoon import transcribe_audio_bytes
 from unified_app.modules.emr_gemini import extract_emr, EMR_FIELDS
 from unified_app.modules.state_manager import get_state, set_state
 
+try:
+  from core_api.firebase_config import upload_file_to_storage
+except Exception:
+  upload_file_to_storage = None
+
 st_autorefresh(interval=2000, key="recorder_state_refresh")
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -207,6 +212,22 @@ with t1R:
                     </div>
                     ''', unsafe_allow_html=True)
                     st.audio(str(wf_path))
+                    if st.button(
+                      "อัปโหลดขึ้น Cloud",
+                      icon=":material/cloud_upload:",
+                      key=f"upload_{rec_id}",
+                      use_container_width=True,
+                    ):
+                      if upload_file_to_storage is None:
+                        st.error("ยังไม่ได้ติดตั้งหรือเชื่อมต่อ Firebase Storage")
+                      else:
+                        with st.spinner("กำลังอัปโหลดไฟล์ขึ้น Cloud..."):
+                          try:
+                            destination = f"recordings/{wf_path.name}"
+                            upload_file_to_storage(str(wf_path), destination)
+                            st.success("อัปโหลดขึ้น Cloud สำเร็จ")
+                          except Exception as exc:
+                            st.error(str(exc))
                     if st.button("ลบไฟล์", icon=":material/delete:", key=f"del_{rec_id}", use_container_width=True):
                         wf_path.unlink(missing_ok=True)
                         if stt_file.exists():
