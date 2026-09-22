@@ -17,7 +17,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
 
 from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes, ASR_AVAILABLE
-from unified_app.modules.emr_gemini import extract_emr
+from unified_app.modules.emr_groq import extract_emr
 
 from database import SessionLocal, TaskTracker, engine
 from firebase_config import get_firestore_client
