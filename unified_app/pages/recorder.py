@@ -21,6 +21,7 @@ from unified_app.modules.stt_typhoon import transcribe_audio_bytes
 from unified_app.modules.emr_gemini import extract_emr, EMR_FIELDS
 from unified_app.modules.state_manager import get_state, set_state
 from unified_app.modules.task_api import get_core_health, get_task, queue_audio
+from unified_app.components.auto_recorder import auto_recorder
 
 try:
   from core_api.firebase_config import upload_file_to_storage
@@ -75,6 +76,8 @@ with t1L:
 
         def render_recorder():
             current_state = get_state()
+            if current_state != "READY":
+                st.session_state.recorder_consent_confirmed = False
 
             task_id = st.session_state.get("audio_task_id")
             if task_id:
@@ -111,23 +114,10 @@ with t1L:
                   <span class="material-symbols-rounded">privacy_tip</span>
                   <div>
                     <strong>รอการยืนยันความยินยอม</strong>
-                    <div>กรุณาให้คนไข้ยืนยันก่อนเริ่มบันทึกเสียง</div>
+                    <div>กรุณาให้คนไข้กดยืนยันในหน้า Consent ก่อน ระบบจึงจะเริ่มนับถอยหลังการอัดเสียงอัตโนมัติ</div>
                   </div>
                 </div>
                 ''', unsafe_allow_html=True)
-                consent_confirmed = st.checkbox(
-                    "ผู้ป่วยยืนยันความยินยอมในการบันทึกเสียงแล้ว",
-                    key="consent_confirmed",
-                )
-                if st.button(
-                    "เริ่มบันทึกเสียง",
-                    icon=":material/mic:",
-                    type="primary",
-                    use_container_width=True,
-                    disabled=not consent_confirmed,
-                ):
-                    set_state("READY")
-                    st.rerun()
                 return
 
             if current_state == "FINISHED":
@@ -144,6 +134,22 @@ with t1L:
                 return
 
             st.markdown('''
+            <div class="record-callout warning">
+              <span class="material-symbols-rounded">verified_user</span>
+              <div>
+                <strong>ยืนยันความยินยอมก่อนเริ่มอัดเสียง</strong>
+                <div>กรุณาตรวจสอบว่าคนไข้ได้อ่านและกดยินยอมในหน้า Consent แล้ว ก่อนเปิดใช้งานไมโครโฟน</div>
+              </div>
+            </div>
+            ''', unsafe_allow_html=True)
+            recorder_consent_confirmed = st.checkbox(
+                "ยืนยันว่าคนไข้ได้ให้ความยินยอมในการบันทึกเสียงแล้ว",
+                key="recorder_consent_confirmed",
+            )
+            if not recorder_consent_confirmed:
+                return
+
+            st.markdown('''
             <div class="workflow-guide">
               <div class="workflow-step"><span class="material-symbols-rounded">check_circle</span><div><strong>ขั้นที่ 1</strong><small>ยืนยันความยินยอม</small></div></div>
               <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 2</strong><small>กดอัดเสียงและรอระบบถอดเสียง</small></div></div>
@@ -156,15 +162,18 @@ with t1L:
               <span class="material-symbols-rounded">mic_external_on</span>
               <div>
                 <strong>พร้อมบันทึกเสียง</strong>
-                <div>กดปุ่มไมโครโฟนด้านล่างเพื่อเริ่มและหยุดอัดเสียง</div>
+                <div>กดเริ่มอัดได้ทันที หากไม่มีการกดภายใน 30 วินาที ระบบจะเริ่มอัดให้อัตโนมัติ</div>
               </div>
             </div>
             ''', unsafe_allow_html=True)
             audio_key = f"native_audio_recorder_{st.session_state.get('audio_key_counter', 0)}"
-            audio_value = st.audio_input("อัดเสียงสนทนา", key=audio_key)
+            audio_value = auto_recorder(
+                cooldown_seconds=30,
+                key=audio_key,
+            )
 
             if audio_value:
-                audio_bytes = audio_value.getvalue()
+                audio_bytes = audio_value.get("audio_bytes", b"")
                 audio_hash = hashlib.md5(audio_bytes).hexdigest()
 
                 if st.session_state.get("last_audio_hash") != audio_hash:

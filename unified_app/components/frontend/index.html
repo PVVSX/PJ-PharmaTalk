@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { font-family: sans-serif; color: #1b262c; }
+    body { margin: 0; }
+    .recorder { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    button { border: 0; border-radius: 8px; padding: 10px 16px; color: #fff; background: #0f4c75; cursor: pointer; font-size: 14px; }
+    button.stop { background: #b42318; }
+    button:disabled { background: #94a3b8; cursor: default; }
+    .status { font-size: 14px; color: #475569; }
+    .status.recording { color: #b42318; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="recorder">
+    <button id="toggle" type="button">เริ่มอัดเสียง</button>
+    <span id="status" class="status">ระบบจะเริ่มอัดอัตโนมัติใน 30 วินาที</span>
+  </div>
+  <script>
+    const toggle = document.getElementById("toggle");
+    const status = document.getElementById("status");
+    let cooldownTimer = null;
+    let countdownTimer = null;
+    let stream = null;
+    let audioContext = null;
+    let processor = null;
+    let input = null;
+    let samples = [];
+    let sampleRate = 44100;
+    let startedAt = 0;
+    let isRecording = false;
+    let automaticStart = false;
+    let initialized = false;
+
+    function sendMessage(type, data = {}) {
+      window.parent.postMessage({ isStreamlitMessage: true, type, ...data }, "*");
+    }
+
+    function setHeight() {
+      sendMessage("streamlit:setFrameHeight", { height: document.body.scrollHeight });
+    }
+
+    function setStatus(message, recording = false) {
+      status.textContent = message;
+      status.classList.toggle("recording", recording);
+      setHeight();
+    }
+
+    function encodeWav(chunks, rate) {
+      const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
+      const buffer = new ArrayBuffer(44 + length * 2);
+      const view = new DataView(buffer);
+      const writeText = (offset, text) => [...text].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+      let offset = 44;
+      writeText(0, "RIFF");
+      view.setUint32(4, 36 + length * 2, true);
+      writeText(8, "WAVE");
+      writeText(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, rate, true);
+      view.setUint32(28, rate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeText(36, "data");
+      view.setUint32(40, length * 2, true);
+      chunks.forEach((chunk) => chunk.forEach((sample) => {
+        const clamped = Math.max(-1, Math.min(1, sample));
+        view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
+        offset += 2;
+      }));
+      return new Uint8Array(buffer);
+    }
+
+    function toBase64(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let index = 0; index < bytes.length; index += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+      }
+      return btoa(binary);
+    }
+
+    async function startRecording(isAutomatic) {
+      if (isRecording) return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        sampleRate = audioContext.sampleRate;
+        input = audioContext.createMediaStreamSource(stream);
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        processor.onaudioprocess = (event) => {
+          if (isRecording) samples.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+        };
+        input.connect(processor);
+        processor.connect(audioContext.destination);
+        samples = [];
+        startedAt = Date.now();
+        automaticStart = isAutomatic;
+        isRecording = true;
+        toggle.textContent = "หยุดอัดเสียง";
+        toggle.classList.add("stop");
+        setStatus(isAutomatic ? "กำลังอัดเสียงอัตโนมัติ" : "กำลังอัดเสียง", true);
+      } catch (error) {
+        setStatus("เปิดไมโครโฟนไม่ได้ กรุณาอนุญาตการใช้งานแล้วกดเริ่มอัดอีกครั้ง");
+      }
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+      if (processor) processor.disconnect();
+      if (input) input.disconnect();
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      if (audioContext) audioContext.close();
+      const wav = encodeWav(samples, sampleRate);
+      sendMessage("streamlit:setComponentValue", { value: {
+        audio_base64: toBase64(wav),
+        duration_seconds: Math.round((Date.now() - startedAt) / 1000),
+        automatic: automaticStart,
+      }});
+      toggle.textContent = "เริ่มอัดเสียง";
+      toggle.classList.remove("stop");
+      setStatus("บันทึกเสียงแล้ว กำลังส่งไปประมวลผล");
+    }
+
+    function scheduleAutomaticStart(seconds) {
+      let remaining = seconds;
+      setStatus(`ระบบจะเริ่มอัดอัตโนมัติใน ${remaining} วินาที`);
+      countdownTimer = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(countdownTimer);
+          return;
+        }
+        setStatus(`ระบบจะเริ่มอัดอัตโนมัติใน ${remaining} วินาที`);
+      }, 1000);
+      cooldownTimer = setTimeout(() => startRecording(true), seconds * 1000);
+    }
+
+    toggle.addEventListener("click", () => {
+      if (isRecording) stopRecording();
+      else {
+        clearTimeout(cooldownTimer);
+        clearInterval(countdownTimer);
+        startRecording(false);
+      }
+    });
+
+    window.addEventListener("message", (event) => {
+      if (!event.data || event.data.type !== "streamlit:render" || initialized) return;
+      initialized = true;
+      const seconds = Number(event.data.args.cooldown_seconds || 30);
+      scheduleAutomaticStart(seconds);
+      setHeight();
+    });
+    sendMessage("streamlit:componentReady", { apiVersion: 1 });
+    setTimeout(setHeight, 0);
+  </script>
+</body>
+</html>
