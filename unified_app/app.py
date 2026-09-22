@@ -18,6 +18,8 @@ import streamlit as st
 # ── Path setup ──────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent          # …/Pharmatalk_project
 UNIFIED = Path(__file__).resolve().parent              # …/unified_app
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 RECORD_DIR = ROOT / "record"
 
 try:
@@ -63,7 +65,7 @@ def _init_state() -> None:
         "cfg_device_index":    None,
         "device_options_cache": None,
         # STT
-        "recognizer":          TyphoonASRRecognizer() if ASR_AVAILABLE else None,
+        "recognizer":          None,
         "model_loaded":        False,
         "model_error":         "",
         "stt_result":          "",
@@ -78,19 +80,28 @@ def _init_state() -> None:
 
 _init_state()
 
+
+@st.cache_resource(show_spinner=False)
+def _load_shared_recognizer() -> tuple[object | None, bool, str]:
+    if not ASR_AVAILABLE:
+        return None, False, "ไม่พบแพ็กเกจ ASR"
+    recognizer = TyphoonASRRecognizer()
+    try:
+        return recognizer, bool(recognizer.load_model()), ""
+    except Exception as exc:
+        return recognizer, False, str(exc)
+
+
+if st.session_state.recognizer is None:
+    recognizer, model_loaded, model_error = _load_shared_recognizer()
+    st.session_state.recognizer = recognizer
+    st.session_state.model_loaded = model_loaded
+    st.session_state.model_error = model_error
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  ENV FILE HELPERS  (used by Settings page)
 # ══════════════════════════════════════════════════════════════════════════════
 from unified_app.modules.config import read_env_file, write_env_file
-
-
-# Try loading ASR model once
-if not st.session_state.model_loaded and st.session_state.recognizer:
-    try:
-        if st.session_state.recognizer.load_model():
-            st.session_state.model_loaded = True
-    except Exception as e:
-        st.session_state.model_error = str(e)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -148,13 +159,9 @@ with st.sidebar:
     # 3. Status indicator
     if model_ok and api_ok:
         status_html = '<span class="sidebar-status status-ok"><span class="sidebar-status-dot dot-green"></span>ระบบพร้อมใช้งาน</span>'
-    elif api_ok:
-        status_html = '<span class="sidebar-status status-warn"><span class="sidebar-status-dot dot-amber"></span>ASR ยังไม่พร้อม</span>'
-    elif model_ok:
-        status_html = '<span class="sidebar-status status-warn"><span class="sidebar-status-dot dot-amber"></span>API ยังไม่ตั้งค่า</span>'
+        st.markdown(status_html, unsafe_allow_html=True)
     else:
-        status_html = '<span class="sidebar-status status-info"><span class="sidebar-status-dot dot-blue"></span>กรุณาตั้งค่าระบบ</span>'
-    st.markdown(status_html, unsafe_allow_html=True)
+        pass
 
 # ── Sidebar footer metrics ──
 with st.sidebar:

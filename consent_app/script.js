@@ -10,6 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalIcon = document.querySelector('.modal-icon-success');
     const modalTitle = document.querySelector('.modal-content h2');
     const modalDesc = document.querySelector('.modal-content p');
+    const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:8502`;
+    const consentVersion = '1.0';
+
+    function getConsentId() {
+        let consentId = sessionStorage.getItem('pharmatalk_consent_id');
+        if (!consentId) {
+            consentId = crypto.randomUUID();
+            sessionStorage.setItem('pharmatalk_consent_id', consentId);
+        }
+        return consentId;
+    }
 
     let pollInterval = null;
 
@@ -23,15 +34,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Helper: update backend state
-    async function updateBackendState(status) {
+    async function updateBackendState(status, consent = null) {
         try {
-            await fetch('/api/state', {
+            const payload = { status };
+            if (consent) {
+                payload.consent = consent;
+            }
+            const response = await fetch(`${apiBaseUrl}/api/state`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: status })
+                body: JSON.stringify(payload)
             });
+            if (!response.ok) {
+                throw new Error(`API returned ${response.status}`);
+            }
+            return true;
         } catch (err) {
             console.error("Error updating backend state", err);
+            return false;
         }
     }
 
@@ -47,7 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Polling function to check for 'FINISHED'
     async function pollState() {
         try {
-            const res = await fetch('/api/state');
+            const res = await fetch(`${apiBaseUrl}/api/state`);
+            if (!res.ok) {
+                throw new Error(`API returned ${res.status}`);
+            }
             const data = await res.json();
             
             if (data.status === 'FINISHED') {
@@ -93,8 +116,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         modal.classList.add('active');
 
-        // Tell backend we are READY
-        await updateBackendState("READY");
+        // Record consent and notify the recorder in one request.
+        const consentSaved = await updateBackendState("READY", {
+            consent_id: getConsentId(),
+            consent_version: consentVersion,
+            consented_at: new Date().toISOString()
+        });
+        if (!consentSaved) {
+            modalTitle.innerText = "ไม่สามารถบันทึกการยินยอมได้";
+            modalDesc.innerText = "กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง";
+            btnCloseModal.style.display = 'block';
+            return;
+        }
 
         // Start polling for FINISHED state
         pollInterval = setInterval(pollState, 1000);

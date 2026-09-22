@@ -21,7 +21,7 @@ from unified_app.modules.emr_gemini import EMR_FIELDS, check_credentials, extrac
 def _do_emr_extraction(text: str) -> None:
     api_ok, _ = check_credentials()
     if not api_ok:
-        st.session_state.emr_error = "กรุณาตั้งค่า Azure OpenAI ในหน้า 'ตั้งค่า' ก่อนใช้งาน"
+        st.session_state.emr_error = "กรุณาตั้งค่า Gemini API ในหน้า 'ตั้งค่า' ก่อนใช้งาน"
         return
     st.session_state.emr_error = ""
     try:
@@ -54,12 +54,14 @@ st.markdown("""
 
 # ── API Status Banner ──
 api_ok, _ = check_credentials()
-col_stat1, col_stat2 = st.columns(2)
-with col_stat1:
+status_col1, status_col2 = st.columns([2, 1])
+with status_col1:
     if not api_ok:
-        st.markdown('<span class="status-pill pill-warn"><span class="status-dot dot-amber"></span>Azure OpenAI ยังไม่ได้ตั้งค่า (ไม่สามารถวิเคราะห์ได้)</span>', unsafe_allow_html=True)
+        st.markdown('<div class="record-status-banner warn"><span class="material-symbols-rounded">warning</span><span>Gemini API ยังไม่ได้ตั้งค่า</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>Azure OpenAI พร้อมใช้งาน</span>', unsafe_allow_html=True)
+        st.markdown('<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span><span>Gemini API พร้อมใช้งาน</span></div>', unsafe_allow_html=True)
+with status_col2:
+    st.markdown(f'<div class="record-mini-stat"><span class="label">สถานะ</span><strong>{"พร้อม" if api_ok else "รอตั้งค่า"}</strong></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 t3L, t3R = st.columns([1, 1], gap="large")
@@ -86,6 +88,39 @@ with t3L:
             if file_path.exists():
                 st.session_state.emr_conv_input = file_path.read_text(encoding="utf-8")
         
+        sample_prompts = {
+            "ตัวอย่าง 1: คนไข้รายใหม่": "คนไข้รายนี้แพ้ยาพาราเซตามอลและยาลดไข้ชนิด NSAIDs มีประวัติโรคความดันโลหิตสูงและเบาหวาน เคยได้รับยา amlodipine 5 มก. วันละ 1 เม็ด และ metformin 500 มก. วันละ 2 เม็ด หลังจากรับประทานยาแล้วมีอาการเวียนหัวและผื่นแดงที่ผิวหนัง ผู้ป่วยบอกว่ามีอาการไอเรื้อรัง 2 สัปดาห์ และแพทย์แนะนำให้ใช้ยา salbutamol 2 puff เมื่อมีอาการหอบ",
+            "ตัวอย่าง 2: การปรับยา": "ผู้ป่วยมียา celecoxib 200 มก. หลังอาหาร วันละ 1 เม็ด และ aspirin 81 มก. วันละ 1 เม็ด มีประวัติแพ้ penicillin อาการคันและผื่นแดง ควรหลีกเลี่ยงยา NSAIDs เพราะมีประวัติปวดศีรษะและความดันโลหิตสูง แพทย์แนะนำให้ทานยา atorvastatin 20 มก. ก่อนนอน"
+        }
+
+        st.markdown('''
+        <div class="workflow-guide">
+          <div class="workflow-step"><span class="material-symbols-rounded">upload_file</span><div><strong>ขั้นที่ 1</strong><small>เลือกหรือคัดลอกข้อความ</small></div></div>
+          <div class="workflow-step"><span class="material-symbols-rounded">bolt</span><div><strong>ขั้นที่ 2</strong><small>กดวิเคราะห์ EMR</small></div></div>
+          <div class="workflow-step"><span class="material-symbols-rounded">task_alt</span><div><strong>ขั้นที่ 3</strong><small>ตรวจสอบฟอร์มผลลัพธ์</small></div></div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        st.markdown('''
+        <div class="record-callout info">
+          <span class="material-symbols-rounded">auto_awesome</span>
+          <div>
+            <strong>เริ่มต้นได้เร็ว</strong>
+            <div>เลือกตัวอย่างข้อความด้านล่างหรือวางบทสนทนาจากประวัติที่มีอยู่</div>
+          </div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        prompt_col1, prompt_col2 = st.columns(2)
+        with prompt_col1:
+            if st.button("ตัวอย่างข้อความ 1", use_container_width=True):
+                st.session_state.emr_conv_input = sample_prompts["ตัวอย่าง 1: คนไข้รายใหม่"]
+                st.rerun()
+        with prompt_col2:
+            if st.button("ตัวอย่างข้อความ 2", use_container_width=True):
+                st.session_state.emr_conv_input = sample_prompts["ตัวอย่าง 2: การปรับยา"]
+                st.rerun()
+
         st.text_area(
             "ข้อความบทสนทนา (แก้ไขได้ก่อนวิเคราะห์)",
             value=st.session_state.emr_conv_input,
@@ -127,24 +162,30 @@ with t3R:
 
         emr_data = st.session_state.emr_result or {}
 
-        # Display fields dynamically based on EMR_FIELDS
-        for field in EMR_FIELDS:
-            label = field
-            val = emr_data.get(field, "-")
-            if isinstance(val, list):
-                val = "\n".join(f"- {x}" for x in val)
-            elif isinstance(val, dict):
-                val = json.dumps(val, ensure_ascii=False, indent=2)
-            else:
-                val = str(val)
-            
-            # Using custom HTML for form field layout
-            st.markdown(f"""
-            <div style="margin-bottom: 12px;">
-              <div style="font-size: 0.85rem; font-weight: 600; color: var(--grey-600); margin-bottom: 4px;">{label}</div>
-              <div style="background: var(--grey-50); border: 1px solid var(--grey-200); border-radius: 6px; padding: 10px; font-size: 0.95rem; color: var(--grey-800); min-height: 42px; white-space: pre-wrap;">{val if val != "-" else "<span style='color:var(--grey-400);font-style:italic;'>ไม่มีข้อมูล</span>"}</div>
+        if not emr_data:
+            st.markdown('''
+            <div class="record-empty-state" style="min-height: 220px; margin-bottom: 14px;">
+              <span class="material-symbols-rounded">assignment</span>
+              <div>ยังไม่มีผลวิเคราะห์ EMR</div>
             </div>
-            """, unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
+        else:
+            for field in EMR_FIELDS:
+                label = field
+                val = emr_data.get(field, "-")
+                if isinstance(val, list):
+                    val = "\n".join(f"- {x}" for x in val)
+                elif isinstance(val, dict):
+                    val = json.dumps(val, ensure_ascii=False, indent=2)
+                else:
+                    val = str(val)
+
+                st.markdown(f"""
+                <div class="emr-field">
+                  <div class="emr-field-label">{label}</div>
+                  <div class="emr-field-value">{val if val != "-" else "<span style='color:var(--grey-400);font-style:italic;'>ไม่มีข้อมูล</span>"}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
         st.markdown("<hr style='margin: 1.5rem 0;'>", unsafe_allow_html=True)
         col_json, col_save = st.columns(2)

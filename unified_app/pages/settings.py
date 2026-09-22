@@ -51,9 +51,13 @@ with t4L:
           <span class="section-sub">สำหรับวิเคราะห์ EMR</span>
         </div>""", unsafe_allow_html=True)
         
-        st.info("API Key ของ Gemini ถูกตั้งค่าไว้ในระบบเรียบร้อยแล้ว", icon=":material/info:")
+        env_cfg = read_env_file()
+        if env_cfg.get("GEMINI_API_KEY"):
+            st.success("Gemini API พร้อมใช้งานแล้ว", icon=":material/check_circle:")
+        else:
+            st.warning("ยังไม่ได้ตั้งค่า Gemini API Key กรุณาตั้งค่าให้เรียบร้อยก่อนใช้งานฟังก์ชันสกัด EMR", icon=":material/info:")
 
-
+        st.caption("หมายเหตุ: API Key ถูกอ่านจาก environment/config ของระบบ ไม่ควรเก็บไว้ในโค้ดหรือไฟล์โปรเจกต์")
 
 
 # ── RIGHT: System Diagnostics ──
