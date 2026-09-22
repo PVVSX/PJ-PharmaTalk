@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 from unified_app.modules.stt_typhoon import transcribe_audio_bytes
 from unified_app.modules.emr_gemini import extract_emr, EMR_FIELDS
 from unified_app.modules.state_manager import get_state, set_state
+from unified_app.modules.task_api import get_core_health, get_task, queue_audio
 
 try:
   from core_api.firebase_config import upload_file_to_storage
@@ -43,11 +44,16 @@ st.markdown("""
 
 # ── Status Banner ──
 status_col1, status_col2, status_col3 = st.columns([2, 1, 1], gap="small")
+try:
+  core_health = get_core_health()
+  core_asr_ready = bool(core_health.get("asr_loaded"))
+except Exception:
+  core_asr_ready = False
 with status_col1:
-    if st.session_state.model_loaded:
+  if core_asr_ready:
         st.markdown('<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span><span>โมเดล ASR พร้อมใช้งาน</span></div>', unsafe_allow_html=True)
 with status_col2:
-    if st.session_state.model_loaded:
+  if core_asr_ready:
         st.markdown('<div class="record-mini-stat"><span class="label">สถานะ</span><strong>พร้อมใช้งาน</strong></div>', unsafe_allow_html=True)
 with status_col3:
     audio_total = len(sorted((RECORD_DIR / "audio").glob("*.wav"), key=lambda p: p.stat().st_mtime, reverse=True)) if (RECORD_DIR / "audio").exists() else 0
@@ -69,6 +75,35 @@ with t1L:
 
         def render_recorder():
             current_state = get_state()
+
+            task_id = st.session_state.get("audio_task_id")
+            if task_id:
+                try:
+                    task = get_task(task_id)
+                    task_status = task.get("status", "UNKNOWN")
+                    if task_status not in ("COMPLETED", "ERROR"):
+                        st.info(f"กำลังประมวลผลเสียง: {task_status}")
+                        return
+                    if task_status == "ERROR":
+                        st.error(f"ประมวลผลเสียงไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}")
+                        st.session_state.audio_task_id = None
+                        return
+
+                    stt_text = task.get("stt_text") or ""
+                    if st.session_state.get("audio_task_completed") != task_id:
+                        saved_path = Path(st.session_state.last_saved_path)
+                        stt_path = saved_path.with_name(saved_path.stem + "_stt.txt")
+                        stt_path.write_text(stt_text, encoding="utf-8")
+                        st.session_state.emr_conv_input = stt_text
+                        st.session_state.audio_task_completed = task_id
+                        st.session_state.last_audio_task_id = task_id
+                        st.session_state.audio_task_id = None
+                        set_state("FINISHED")
+                        st.success("ถอดเสียงเสร็จแล้ว สามารถไปที่หน้า EMR เพื่อวิเคราะห์ต่อได้")
+                        return
+                except Exception as exc:
+                    st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
+                    return
 
             if current_state == "WAITING":
                 st.markdown('''
@@ -151,18 +186,13 @@ with t1L:
                     audio_path.write_bytes(audio_bytes)
                     st.session_state.last_saved_path = str(audio_path)
 
-                    if st.session_state.model_loaded:
-                        with st.spinner("กำลังถอดเสียงอัตโนมัติ..."):
-                            try:
-                                txt = transcribe_audio_bytes(st.session_state.recognizer, audio_bytes)
-                                stt_path.write_text(txt, encoding="utf-8")
-                                st.success(f"บันทึกและถอดเสียงสำเร็จ! ({audio_filename})")
-                            except Exception as e:
-                                st.warning(f"เกิดข้อผิดพลาดในการถอดเสียง: {e}")
-                    else:
-                        st.warning(f"บันทึกไฟล์ {audio_filename} แล้ว (ไม่สามารถถอดเสียงได้)")
-
-                    set_state("FINISHED")
+                    try:
+                      st.session_state.audio_task_id = queue_audio(audio_bytes, audio_filename)
+                      st.session_state.last_audio_task_id = st.session_state.audio_task_id
+                      st.info("บันทึกไฟล์ในเครื่องแล้ว และส่งงานไปประมวลผลเบื้องหลัง")
+                    except Exception as exc:
+                      st.error(f"ส่งงานไป Core API ไม่สำเร็จ: {exc}")
+                      st.warning(f"ไฟล์ถูกเก็บไว้ในเครื่องแล้ว: {audio_filename}")
                     st.session_state.audio_key_counter = st.session_state.get('audio_key_counter', 0) + 1
                     st.rerun()
 

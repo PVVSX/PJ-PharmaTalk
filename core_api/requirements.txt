@@ -3,4 +3,4 @@ uvicorn
 sqlalchemy
 python-multipart
 firebase-admin
-groq
+google-generativeai

@@ -6,6 +6,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
+import uvicorn
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
 
 from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes, ASR_AVAILABLE
-from unified_app.modules.emr_groq import extract_emr
+from unified_app.modules.emr_gemini import extract_emr
 
 from database import SessionLocal, TaskTracker, engine
 from firebase_config import get_firestore_client
@@ -31,6 +32,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "asr_available": ASR_AVAILABLE,
+        "asr_loaded": bool(getattr(asr_recognizer, "is_loaded", False)),
+    }
+
+
+@app.get("/")
+async def root():
+    return {
+        "service": "PharmaTalk Core API",
+        "status": "ok",
+        "docs": "/docs",
+        "health": "/health",
+    }
 
 AUDIO_DIR = os.path.join(os.path.dirname(__file__), "temp_audio")
 os.makedirs(AUDIO_DIR, exist_ok=True)
@@ -166,3 +186,7 @@ async def get_task_status(task_id: str, db: Session = Depends(get_db)):
         "emr_json": task.emr_json,
         "error_message": task.error_message
     }
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PHARMATALK_CORE_API_PORT", "8080")))

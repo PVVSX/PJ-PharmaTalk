@@ -8,11 +8,30 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from unified_app.modules.emr_gemini import EMR_FIELDS, check_credentials, extract_emr
+from unified_app.modules.task_api import get_task
+
+
+task_id = st.session_state.get("last_audio_task_id")
+if task_id and not st.session_state.get("emr_result"):
+    st_autorefresh(interval=2000, key="emr_task_refresh")
+    try:
+        task = get_task(task_id)
+        task_status = task.get("status", "UNKNOWN")
+        if task_status not in ("COMPLETED", "ERROR"):
+            st.info(f"งานจากหน้าอัดเสียงกำลังประมวลผล: {task_status}")
+        elif task_status == "ERROR":
+            st.error(f"งานประมวลผลไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}")
+        elif task.get("emr_json"):
+            st.session_state.emr_result = json.loads(task["emr_json"])
+            st.success("ได้รับผลวิเคราะห์ EMR จาก Core API แล้ว")
+    except Exception as exc:
+        st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════

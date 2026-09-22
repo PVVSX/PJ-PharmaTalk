@@ -30,8 +30,7 @@ except ImportError:
 
 
 
-from unified_app.modules.stt_typhoon import ASR_AVAILABLE, TyphoonASRRecognizer, transcribe_audio_bytes
-from unified_app.modules.emr_gemini   import EMR_FIELDS, check_credentials, extract_emr
+from unified_app.modules.emr_gemini import check_credentials
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONFIG
@@ -73,30 +72,15 @@ def _init_state() -> None:
         "emr_conv_input":      "",
         "emr_result":          None,
         "emr_error":           "",
+        "audio_task_id":       None,
+        "last_audio_task_id":  None,
+        "audio_task_completed": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 _init_state()
-
-
-@st.cache_resource(show_spinner=False)
-def _load_shared_recognizer() -> tuple[object | None, bool, str]:
-    if not ASR_AVAILABLE:
-        return None, False, "ไม่พบแพ็กเกจ ASR"
-    recognizer = TyphoonASRRecognizer()
-    try:
-        return recognizer, bool(recognizer.load_model()), ""
-    except Exception as exc:
-        return recognizer, False, str(exc)
-
-
-if st.session_state.recognizer is None:
-    recognizer, model_loaded, model_error = _load_shared_recognizer()
-    st.session_state.recognizer = recognizer
-    st.session_state.model_loaded = model_loaded
-    st.session_state.model_error = model_error
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  ENV FILE HELPERS  (used by Settings page)
