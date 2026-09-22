@@ -155,7 +155,7 @@ def extract_emr(conversation: str) -> dict[str, str]:
         except ImportError:
             pass
 
-    model_name = "llama-3.1-70b-versatile" # 70b is very smart and supports JSON mode
+    model_name = "openai/gpt-oss-120b" # Using available model on Groq
 
     if not api_key:
         raise RuntimeError("ไม่พบ Groq API Key (ตั้งค่า GROQ_API_KEY หรือ .groq_api_key)")
