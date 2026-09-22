@@ -23,7 +23,7 @@ except ImportError:
 from unified_app.modules.config import read_env_file, write_env_file
 
 from unified_app.modules.stt_typhoon import ASR_AVAILABLE
-from unified_app.modules.emr_gemini import check_credentials
+from unified_app.modules.emr_groq import check_credentials
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONTENT
@@ -47,15 +47,15 @@ with t4L:
         <div class="card-accent-bar accent-amber"></div>
         <div class="section-header">
            <div class="sh-icon sh-grey"><span class="material-symbols-rounded">key</span></div>
-          <span class="section-title">ตั้งค่า Gemini API</span>
+          <span class="section-title">ตั้งค่า Groq API</span>
           <span class="section-sub">สำหรับวิเคราะห์ EMR</span>
         </div>""", unsafe_allow_html=True)
         
         env_cfg = read_env_file()
-        if env_cfg.get("GEMINI_API_KEY"):
-            st.success("Gemini API พร้อมใช้งานแล้ว", icon=":material/check_circle:")
+        if env_cfg.get("GROQ_API_KEY"):
+            st.success("Groq API พร้อมใช้งานแล้ว", icon=":material/check_circle:")
         else:
-            st.warning("ยังไม่ได้ตั้งค่า Gemini API Key กรุณาตั้งค่าให้เรียบร้อยก่อนใช้งานฟังก์ชันสกัด EMR", icon=":material/info:")
+            st.warning("ยังไม่ได้ตั้งค่า Groq API Key กรุณาตั้งค่าให้เรียบร้อยก่อนใช้งานฟังก์ชันสกัด EMR", icon=":material/info:")
 
         st.caption("หมายเหตุ: API Key ถูกอ่านจาก environment/config ของระบบ ไม่ควรเก็บไว้ในโค้ดหรือไฟล์โปรเจกต์")
 
@@ -101,7 +101,7 @@ with t4R:
         api_ok, api_msg = check_credentials()
         st.markdown(f"""
         <div style="display:flex; justify-content:space-between; padding:10px 0;">
-          <span style="font-weight:500;">Gemini API</span>
+          <span style="font-weight:500;">Groq API</span>
           {
             '<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>ตั้งค่าแล้ว</span>' if api_ok
             else '<span class="status-pill pill-warn"><span class="status-dot dot-amber"></span>ยังไม่ได้ตั้งค่า</span>'

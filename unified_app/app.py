@@ -30,7 +30,7 @@ except ImportError:
 
 
 
-from unified_app.modules.emr_gemini import check_credentials
+from unified_app.modules.emr_groq import check_credentials
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONFIG
@@ -72,6 +72,7 @@ def _init_state() -> None:
         "emr_conv_input":      "",
         "emr_result":          None,
         "emr_error":           "",
+        "emr_history":         [],
         "audio_task_id":       None,
         "last_audio_task_id":  None,
         "audio_task_completed": None,

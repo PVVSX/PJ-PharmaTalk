@@ -13,7 +13,7 @@ from streamlit_autorefresh import st_autorefresh
 ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from unified_app.modules.emr_gemini import EMR_FIELDS, check_credentials, extract_emr
+from unified_app.modules.emr_groq import EMR_FIELDS, check_credentials, extract_emr
 from unified_app.modules.task_api import get_task
 
 
@@ -40,7 +40,7 @@ if task_id and not st.session_state.get("emr_result"):
 def _do_emr_extraction(text: str) -> None:
     api_ok, _ = check_credentials()
     if not api_ok:
-        st.session_state.emr_error = "กรุณาตั้งค่า Gemini API ในหน้า 'ตั้งค่า' ก่อนใช้งาน"
+        st.session_state.emr_error = "กรุณาตั้งค่า Groq API ในหน้า 'ตั้งค่า' ก่อนใช้งาน"
         return
     st.session_state.emr_error = ""
     try:
@@ -76,9 +76,9 @@ api_ok, _ = check_credentials()
 status_col1, status_col2 = st.columns([2, 1])
 with status_col1:
     if not api_ok:
-        st.markdown('<div class="record-status-banner warn"><span class="material-symbols-rounded">warning</span><span>Gemini API ยังไม่ได้ตั้งค่า</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="record-status-banner warn"><span class="material-symbols-rounded">warning</span><span>Groq API ยังไม่ได้ตั้งค่า</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span><span>Gemini API พร้อมใช้งาน</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span><span>Groq API พร้อมใช้งาน</span></div>', unsafe_allow_html=True)
 with status_col2:
     st.markdown(f'<div class="record-mini-stat"><span class="label">สถานะ</span><strong>{"พร้อม" if api_ok else "รอตั้งค่า"}</strong></div>', unsafe_allow_html=True)
 

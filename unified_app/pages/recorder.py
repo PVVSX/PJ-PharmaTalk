@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from unified_app.modules.stt_typhoon import transcribe_audio_bytes
-from unified_app.modules.emr_gemini import extract_emr, EMR_FIELDS
+from unified_app.modules.emr_groq import extract_emr, EMR_FIELDS
 from unified_app.modules.state_manager import get_state, set_state
 from unified_app.modules.task_api import get_core_health, get_task, queue_audio
 from unified_app.components.auto_recorder import auto_recorder
@@ -89,13 +89,20 @@ with t1L:
                         return
                     if task_status == "ERROR":
                         st.error(f"ประมวลผลเสียงไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}")
+                        stt_text = task.get("stt_text")
+                        if stt_text:
+                            saved_path = Path(st.session_state.last_saved_path)
+                            stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
+                            stt_path.write_text(stt_text, encoding="utf-8")
+                            st.session_state.emr_conv_input = stt_text
+                            st.warning("ระบบสามารถถอดเสียงได้สำเร็จ แต่มีข้อผิดพลาดบางอย่างในขั้นตอนถัดไป คุณสามารถตรวจสอบข้อความได้")
                         st.session_state.audio_task_id = None
                         return
 
                     stt_text = task.get("stt_text") or ""
                     if st.session_state.get("audio_task_completed") != task_id:
                         saved_path = Path(st.session_state.last_saved_path)
-                        stt_path = saved_path.with_name(saved_path.stem + "_stt.txt")
+                        stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
                         stt_path.write_text(stt_text, encoding="utf-8")
                         st.session_state.emr_conv_input = stt_text
                         st.session_state.audio_task_completed = task_id
@@ -126,10 +133,13 @@ with t1L:
                   <span class="material-symbols-rounded">check_circle</span>
                   <div>
                     <strong>บันทึกและถอดเสียงเสร็จสิ้น</strong>
-                    <div>ระบบจะกลับสู่สถานะพร้อมใช้งานอัตโนมัติ</div>
+                    <div>สามารถวิเคราะห์ EMR หรือเริ่มบันทึกรายใหม่ได้เลย</div>
                   </div>
                 </div>
                 ''', unsafe_allow_html=True)
+                if st.button("บันทึกผู้ป่วยรายใหม่", icon=":material/refresh:", type="primary", use_container_width=True):
+                    set_state("WAITING")
+                    st.rerun()
                 st.markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
                 return
 

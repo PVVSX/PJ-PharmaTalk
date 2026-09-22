@@ -14,6 +14,20 @@ EMR_FIELDS = [
     "คำแนะนำจากเภสัช",
 ]
 
+def check_credentials() -> tuple[bool, str]:
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        try:
+            from unified_app.modules.config import ROOT
+            key_file = ROOT / ".groq_api_key"
+            if key_file.exists():
+                api_key = key_file.read_text(encoding="utf-8").strip()
+        except ImportError:
+            pass
+    if api_key:
+        return True, "Groq API Key is configured."
+    return False, "Groq API Key is missing."
+
 _RETRY_COUNT = 3
 _RETRY_BASE_SEC = 2.0
 
