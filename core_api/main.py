@@ -19,9 +19,18 @@ sys.path.append(str(ROOT_DIR))
 
 from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes, ASR_AVAILABLE
 from unified_app.modules.emr_groq import extract_emr
+from unified_app.modules.stt_groq import transcribe_audio_groq
+from unified_app.modules.stt_deepgram import transcribe_audio_deepgram
+
+# TOGGLE FOR STT MODEL
+# Set USE_DEEPGRAM_STT = True to use Diarization (Speaker separation)
+USE_DEEPGRAM_STT = False
+USE_GROQ_STT = False
+
+
 
 from database import SessionLocal, TaskTracker, engine
-from firebase_config import get_firestore_client
+from firebase_config import get_firestore_client, upload_file_to_storage
 
 app = FastAPI(title="PharmaTalk Fault-Tolerant API")
 
@@ -87,15 +96,38 @@ async def process_audio_task(task_id: str, audio_path: str):
         task.status = "STT_PROCESSING"
         db.commit()
         
-        # Call actual Typhoon ASR using run_in_threadpool because it's a synchronous blocking call
+        # Call STT based on configuration
         with open(audio_path, "rb") as f:
             audio_bytes = f.read()
             
-        stt_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
+        if USE_DEEPGRAM_STT:
+            stt_result = await run_in_threadpool(transcribe_audio_deepgram, audio_bytes)
+        elif USE_GROQ_STT:
+            stt_result = await run_in_threadpool(transcribe_audio_groq, audio_bytes, "audio.wav")
+        else:
+            stt_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
         
         task.stt_text = stt_result
         task.status = "STT_DONE"
         db.commit()
+        
+        # Save to Firestore EARLY so it shows up in History page immediately
+        firestore_db = get_firestore_client()
+        if firestore_db:
+            try:
+                doc_ref = firestore_db.collection("patients_emr").document(task_id)
+                doc_ref.set({
+                    "task_id": task_id,
+                    "stt_text": task.stt_text,
+                    "emr_data": {},
+                    "audio_filename": os.path.basename(audio_path),
+                    "created_at": firestore.SERVER_TIMESTAMP,
+                    "status": "EMR_PROCESSING"
+                })
+                print(f"Task {task_id} saved to Firestore (STT only) successfully.")
+            except Exception as fs_error:
+                print(f"Warning: Failed to save STT to Firestore: {fs_error}")
+
     except Exception as e:
         task.status = "ERROR"
         task.error_message = f"STT Failed: {str(e)}"
@@ -117,20 +149,27 @@ async def process_audio_task(task_id: str, audio_path: str):
             task.status = "COMPLETED"
             db.commit()
             
-            # Save to Firestore
+            # Update to Firestore
             firestore_db = get_firestore_client()
             if firestore_db:
                 try:
                     doc_ref = firestore_db.collection("patients_emr").document(task_id)
-                    doc_ref.set({
-                        "task_id": task_id,
-                        "stt_text": task.stt_text,
+                    doc_ref.update({
                         "emr_data": emr_dict,
-                        "created_at": firestore.SERVER_TIMESTAMP
+                        "status": "COMPLETED"
                     })
-                    print(f"Task {task_id} saved to Firestore successfully.")
+                    print(f"Task {task_id} EMR updated to Firestore successfully.")
+                    
+                    # 🚀 AUTOMATICALLY UPLOAD AUDIO TO CLOUD STORAGE
+                    try:
+                        destination = f"recordings/{os.path.basename(audio_path)}"
+                        upload_file_to_storage(audio_path, destination)
+                        print(f"Audio {audio_path} automatically uploaded to Cloud Storage as {destination}")
+                    except Exception as upload_err:
+                        print(f"Warning: Failed to automatically upload audio to Cloud Storage: {upload_err}")
+                        
                 except Exception as fs_error:
-                    print(f"Warning: Failed to save to Firestore: {fs_error}")
+                    print(f"Warning: Failed to update EMR to Firestore: {fs_error}")
             
             break # Success!
         except Exception as e:
@@ -145,6 +184,18 @@ async def process_audio_task(task_id: str, audio_path: str):
                 task.status = "ERROR"
                 task.error_message = f"EMR API Failed after retries: {str(e)}"
                 db.commit()
+                
+                # Update status in Firestore
+                firestore_db = get_firestore_client()
+                if firestore_db:
+                    try:
+                        doc_ref = firestore_db.collection("patients_emr").document(task_id)
+                        doc_ref.update({
+                            "status": "EMR_ERROR",
+                            "error_message": task.error_message
+                        })
+                    except Exception as fs_error:
+                        pass
 
     db.close()
 

@@ -51,8 +51,8 @@ with t4L:
           <span class="section-sub">สำหรับวิเคราะห์ EMR</span>
         </div>""", unsafe_allow_html=True)
         
-        env_cfg = read_env_file()
-        if env_cfg.get("GROQ_API_KEY"):
+        api_ok, _ = check_credentials()
+        if api_ok:
             st.success("Groq API พร้อมใช้งานแล้ว", icon=":material/check_circle:")
         else:
             st.warning("ยังไม่ได้ตั้งค่า Groq API Key กรุณาตั้งค่าให้เรียบร้อยก่อนใช้งานฟังก์ชันสกัด EMR", icon=":material/info:")
@@ -85,14 +85,22 @@ with t4R:
         </div>
         """, unsafe_allow_html=True)
         
-        # Check ASR
-        model_ok = st.session_state.model_loaded
+        # Check ASR (from Core API)
+        from unified_app.modules.task_api import get_core_health
+        try:
+            core_health = get_core_health()
+            model_ok = bool(core_health.get("asr_loaded"))
+            asr_avail = bool(core_health.get("asr_available"))
+        except Exception:
+            model_ok = False
+            asr_avail = False
+            
         st.markdown(f"""
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--grey-200);">
           <span style="font-weight:500;">โมเดลถอดเสียง (Typhoon ASR)</span>
           {
-            '<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>โหลดสำเร็จ</span>' if model_ok
-            else ('<span class="status-pill pill-warn"><span class="status-dot dot-amber"></span>กำลังโหลด / ไม่พร้อม</span>' if ASR_AVAILABLE else '<span class="status-pill pill-err"><span class="status-dot dot-red"></span>ไม่พบ NeMo</span>')
+            '<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>พร้อมใช้งาน (Core API)</span>' if model_ok
+            else ('<span class="status-pill pill-warn"><span class="status-dot dot-amber"></span>กำลังโหลด / ไม่พร้อม</span>' if asr_avail else '<span class="status-pill pill-err"><span class="status-dot dot-red"></span>ไม่สามารถเชื่อมต่อ API ได้</span>')
           }
         </div>
         """, unsafe_allow_html=True)
@@ -115,10 +123,4 @@ with t4R:
         st.markdown("<br>", unsafe_allow_html=True)
         
         if st.button("ตรวจสอบระบบใหม่ (Refresh)", icon=":material/refresh:", use_container_width=True):
-            if st.session_state.recognizer and not st.session_state.model_loaded:
-                try:
-                    if st.session_state.recognizer.load_model():
-                        st.session_state.model_loaded = True
-                except Exception as e:
-                    st.session_state.model_error = str(e)
             st.rerun()

@@ -109,7 +109,7 @@ with t1L:
                         st.session_state.last_audio_task_id = task_id
                         st.session_state.audio_task_id = None
                         set_state("FINISHED")
-                        st.success("ถอดเสียงเสร็จแล้ว สามารถไปที่หน้า EMR เพื่อวิเคราะห์ต่อได้")
+                        st.success("🎉 ประมวลผลเวชระเบียนและแบ็คอัปเสร็จสมบูรณ์ สามารถดูสรุปได้ที่หน้า 'วิเคราะห์เวชระเบียน'")
                         return
                 except Exception as exc:
                     st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
@@ -125,6 +125,21 @@ with t1L:
                   </div>
                 </div>
                 ''', unsafe_allow_html=True)
+                
+                # Manual Override
+                consent_confirmed = st.checkbox(
+                    "ผู้ป่วยยืนยันความยินยอมในการบันทึกเสียงแล้ว (ข้ามหน้า Consent)",
+                    key="consent_confirmed",
+                )
+                if st.button(
+                    "เริ่มบันทึกเสียง (Manual Override)",
+                    icon=":material/mic:",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=not consent_confirmed,
+                ):
+                    set_state("READY")
+                    st.rerun()
                 return
 
             if current_state == "FINISHED":
@@ -132,8 +147,8 @@ with t1L:
                 <div class="record-callout success">
                   <span class="material-symbols-rounded">check_circle</span>
                   <div>
-                    <strong>บันทึกและถอดเสียงเสร็จสิ้น</strong>
-                    <div>สามารถวิเคราะห์ EMR หรือเริ่มบันทึกรายใหม่ได้เลย</div>
+                    <strong>ประมวลผลเสร็จสมบูรณ์</strong>
+                    <div>ระบบดึงข้อมูลลง EMR และแบ็คอัปขึ้น Cloud เรียบร้อยแล้ว ไปที่หน้าเวชระเบียนได้เลย</div>
                   </div>
                 </div>
                 ''', unsafe_allow_html=True)
@@ -163,7 +178,7 @@ with t1L:
             <div class="workflow-guide">
               <div class="workflow-step"><span class="material-symbols-rounded">check_circle</span><div><strong>ขั้นที่ 1</strong><small>ยืนยันความยินยอม</small></div></div>
               <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 2</strong><small>กดอัดเสียงและรอระบบถอดเสียง</small></div></div>
-              <div class="workflow-step"><span class="material-symbols-rounded">arrow_forward</span><div><strong>ขั้นที่ 3</strong><small>ไปที่หน้า EMR เพื่อวิเคราะห์</small></div></div>
+              <div class="workflow-step"><span class="material-symbols-rounded">arrow_forward</span><div><strong>ขั้นที่ 3</strong><small>ไปที่หน้าเวชระเบียนเพื่อดูสรุปผล</small></div></div>
             </div>
             ''', unsafe_allow_html=True)
 
@@ -261,22 +276,11 @@ with t1R:
                     </div>
                     ''', unsafe_allow_html=True)
                     st.audio(str(wf_path))
-                    if st.button(
-                      "อัปโหลดขึ้น Cloud",
-                      icon=":material/cloud_upload:",
-                      key=f"upload_{rec_id}",
-                      use_container_width=True,
-                    ):
-                      if upload_file_to_storage is None:
-                        st.error("ยังไม่ได้ติดตั้งหรือเชื่อมต่อ Firebase Storage")
-                      else:
-                        with st.spinner("กำลังอัปโหลดไฟล์ขึ้น Cloud..."):
-                          try:
-                            destination = f"recordings/{wf_path.name}"
-                            upload_file_to_storage(str(wf_path), destination)
-                            st.success("อัปโหลดขึ้น Cloud สำเร็จ")
-                          except Exception as exc:
-                            st.error(str(exc))
+                    st.markdown('''
+                    <div style="text-align: center; margin-bottom: 8px; color: #10b981; font-size: 0.9rem;">
+                      <span class="material-symbols-rounded" style="font-size: 1.1rem; vertical-align: middle;">cloud_done</span> แบ็คอัปขึ้น Cloud แล้ว
+                    </div>
+                    ''', unsafe_allow_html=True)
                     if st.button("ลบไฟล์", icon=":material/delete:", key=f"del_{rec_id}", use_container_width=True):
                         wf_path.unlink(missing_ok=True)
                         if stt_file.exists():
