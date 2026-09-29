@@ -100,12 +100,17 @@ async def process_audio_task(task_id: str, audio_path: str):
         with open(audio_path, "rb") as f:
             audio_bytes = f.read()
             
-        if USE_DEEPGRAM_STT:
-            stt_result = await run_in_threadpool(transcribe_audio_deepgram, audio_bytes)
-        elif USE_GROQ_STT:
-            stt_result = await run_in_threadpool(transcribe_audio_groq, audio_bytes, "audio.wav")
-        else:
-            stt_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
+        # Hybrid Fusion: Run both Typhoon (local) and Deepgram (cloud) concurrently
+        task_typhoon = run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
+        task_deepgram = run_in_threadpool(transcribe_audio_deepgram, audio_bytes)
+        
+        results = await asyncio.gather(task_typhoon, task_deepgram, return_exceptions=True)
+        
+        typhoon_result = results[0] if not isinstance(results[0], Exception) else f"Typhoon Failed: {results[0]}"
+        deepgram_result = results[1] if not isinstance(results[1], Exception) else f"Deepgram Failed: {results[1]}"
+        
+        # Combine them for the LLM
+        stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย (Typhoon) ---\n{typhoon_result}\n\n--- ส่วนที่ 2: โครงสร้างคนพูด (Deepgram) ---\n{deepgram_result}"
         
         task.stt_text = stt_result
         task.status = "STT_DONE"

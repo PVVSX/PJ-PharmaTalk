@@ -95,11 +95,24 @@ else:
                     
             if has_stt:
                 stt_display_text = stt_text
-                # Beautiful Markdown instead of disabled text area
-                with st.expander("ข้อความถอดเสียงต้นฉบับ", expanded=False):
+                with st.expander("ข้อความถอดเสียงดิบ (ไม่ได้แยกผู้พูด)", expanded=False):
                     st.markdown(f"<div style='background-color: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; color: #1E293B; font-size: 0.95rem; line-height: 1.6;'>{stt_display_text}</div>", unsafe_allow_html=True)
 
             if has_emr:
+                dialogue = emr_data.get("บทสนทนาที่จัดเรียงแล้ว")
+                if dialogue and dialogue != "-":
+                    st.markdown("##### บทสนทนา (AI จัดเรียงใหม่)")
+                    formatted_html = "<div style='background-color: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; color: #1E293B; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px;'>"
+                    for line in dialogue.split('\n'):
+                        line = line.strip()
+                        if not line: continue
+                        if "เภสัชกร:" in line or "ผู้ป่วย:" in line or "คนไข้:" in line:
+                            formatted_html += f"<div style='margin-bottom: 4px;'><strong>{line}</strong></div>"
+                        else:
+                            formatted_html += f"<div style='margin-bottom: 4px; padding-left: 15px;'>{line}</div>"
+                    formatted_html += "</div>"
+                    st.markdown(formatted_html, unsafe_allow_html=True)
+
                 with st.expander("📋 ผลวิเคราะห์เวชระเบียน (EMR)", expanded=True):
                     # BEAUTIFUL EMR RENDERING instead of raw JSON
                     if isinstance(emr_data, dict):
