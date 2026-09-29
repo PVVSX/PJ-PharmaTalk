@@ -12,8 +12,22 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <main class="consent-page">
+        <section class="motion-section" aria-label="PharmaTalk: 6 ขั้นตอนการดูแลข้อมูล">
+            <iframe
+                class="motion-frame"
+                src="motion-graphic.html"
+                title="โมชั่นกราฟิกอธิบาย 6 ขั้นตอนการบันทึกและใช้ข้อมูล"
+                loading="eager"
+            ></iframe>
+        </section>
 
-    <div class="consent-container">
+        <a class="motion-continue" href="#consent-form">
+            <span class="material-symbols-rounded" aria-hidden="true">arrow_downward</span>
+            ไปยังแบบฟอร์มยินยอม
+        </a>
+
+        <div class="consent-container" id="consent-form">
         <!-- Header -->
         <header class="consent-header">
             <div class="logo"><span class="material-symbols-rounded" style="vertical-align: text-bottom;">local_hospital</span> PharmaTalk</div>
@@ -81,7 +95,8 @@
                 </button>
             </div>
         </footer>
-    </div>
+        </div>
+    </main>
 
     <!-- Thank you Pop-up Modal -->
     <div id="thank-you-modal" class="modal-overlay">

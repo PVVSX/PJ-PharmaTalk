@@ -12,6 +12,81 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalDesc = document.querySelector('.modal-content p');
     const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:8502`;
     const consentVersion = '1.0';
+    const motionFrame = document.querySelector('.motion-frame');
+    const motionContinue = document.querySelector('.motion-continue');
+    const consentForm = document.getElementById('consent-form');
+    let userNavigatedPage = window.location.hash === '#consent-form';
+    let autoScrollTriggered = false;
+    let autoScrollFallbackTimer = null;
+
+    function scrollToConsentForm() {
+        if (userNavigatedPage || autoScrollTriggered || window.location.hash === '#consent-form') {
+            return;
+        }
+
+        autoScrollTriggered = true;
+        motionContinue.classList.add('is-ready');
+
+        const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+        const target = consentForm || motionContinue;
+        const scrollContainer = document.querySelector('.document-content');
+
+        if (scrollContainer && target) {
+            const targetPosition = target.offsetTop - 18;
+            scrollContainer.scrollTo({
+                top: targetPosition,
+                behavior
+            });
+        } else if (target) {
+            target.scrollIntoView({ behavior, block: 'start' });
+        }
+
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', '#consent-form');
+        } else {
+            window.location.hash = '#consent-form';
+        }
+    }
+
+    window.addEventListener('hashchange', () => {
+        if (window.location.hash) {
+            userNavigatedPage = true;
+        }
+    });
+    window.addEventListener('wheel', () => {
+        userNavigatedPage = true;
+    }, { once: true, passive: true });
+    window.addEventListener('touchstart', () => {
+        userNavigatedPage = true;
+    }, { once: true, passive: true });
+    window.addEventListener('keydown', (event) => {
+        if (['ArrowDown', 'PageDown', 'End', ' '].includes(event.key)) {
+            userNavigatedPage = true;
+        }
+    });
+
+    autoScrollFallbackTimer = window.setTimeout(() => {
+        if (!userNavigatedPage) {
+            scrollToConsentForm();
+        }
+    }, 14500);
+
+    window.addEventListener('message', (event) => {
+        if (event.data?.type !== 'pharmatalk-motion-complete') {
+            return;
+        }
+
+        if (motionFrame && event.source !== motionFrame.contentWindow && event.source !== null) {
+            return;
+        }
+
+        if (!userNavigatedPage) {
+            if (autoScrollFallbackTimer) {
+                window.clearTimeout(autoScrollFallbackTimer);
+            }
+            scrollToConsentForm();
+        }
+    });
 
     function getConsentId() {
         let consentId = sessionStorage.getItem('pharmatalk_consent_id');
