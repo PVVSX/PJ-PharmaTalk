@@ -3,6 +3,7 @@
 .dashscope_api_key
 .groq_api_key
 .deepgram_api_key
+MODELS_AND_APIS.md
 serviceAccountKey.json
 
 # API Local Data
