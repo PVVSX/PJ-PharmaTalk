@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-PharmaTalk — Unified App v3.0  (Multi-page Sidebar Navigation)
+PharmaTalk — Pharmacist Portal
 Pages:
   Page 1 : อัดเสียง        (Audio Recorder)
-  Page 2 : ถอดเสียง       (Speech-to-Text — Typhoon ASR)
-  Page 3 : วิเคราะห์ EMR  (Azure OpenAI extraction)
-  Page 4 : ตั้งค่า         (Settings)
+  Page 2 : ประวัติข้อมูล     (History)
 """
 from __future__ import annotations
 
@@ -16,19 +14,11 @@ from pathlib import Path
 import streamlit as st
 
 # ── Path setup ──────────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent.parent          # …/Pharmatalk_project
-UNIFIED = Path(__file__).resolve().parent              # …/unified_app
+ROOT = Path(__file__).resolve().parent          # …/Pharmatalk_project
+UNIFIED = ROOT / "unified_app"              # …/unified_app
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 RECORD_DIR = ROOT / "record"
-
-try:
-    import pyaudio
-    PYAUDIO_AVAILABLE = True
-except ImportError:
-    PYAUDIO_AVAILABLE = False
-
-
 
 from unified_app.modules.emr_groq import check_credentials
 
@@ -84,12 +74,6 @@ def _init_state() -> None:
 _init_state()
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  ENV FILE HELPERS  (used by Settings page)
-# ══════════════════════════════════════════════════════════════════════════════
-from unified_app.modules.config import read_env_file, write_env_file
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 #  SIDEBAR BRANDING + NAVIGATION
 # ══════════════════════════════════════════════════════════════════════════════
 api_ok, _ = check_credentials()
@@ -99,15 +83,9 @@ wav_count = len(list((RECORD_DIR / "audio").glob("*.wav"))) if (RECORD_DIR / "au
 # ── Pages (Hidden Native Nav) ──
 pages = {
     "เมนูหลัก": [
-        st.Page("pages/recorder.py",  title="อัดเสียง",      icon=":material/mic:"),
-        st.Page("pages/history.py",   title="ประวัติข้อมูล", icon=":material/history:"),
-    ],
-    "วิเคราะห์": [
-        st.Page("pages/emr.py",       title="วิเคราะห์ EMR", icon=":material/medical_services:"),
-    ],
-    "ระบบ": [
-        st.Page("pages/settings.py",  title="ตั้งค่า",        icon=":material/settings:"),
-    ],
+        st.Page(str(UNIFIED / "pages/recorder.py"),  title="อัดเสียง",      icon=":material/mic:"),
+        st.Page(str(UNIFIED / "pages/history.py"),   title="ประวัติข้อมูล", icon=":material/history:"),
+    ]
 }
 
 pg = st.navigation(pages, position="hidden")
@@ -130,14 +108,8 @@ with st.sidebar:
 
     # 2. Custom Navigation
     st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 12px 0 12px 16px;'>เมนูหลัก</div>", unsafe_allow_html=True)
-    st.page_link("pages/recorder.py", label="อัดเสียง", icon=":material/mic:")
-    st.page_link("pages/history.py", label="ประวัติข้อมูล", icon=":material/history:")
-    
-    st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 24px 0 12px 16px;'>วิเคราะห์</div>", unsafe_allow_html=True)
-    st.page_link("pages/emr.py", label="วิเคราะห์ EMR", icon=":material/medical_services:")
-    
-    st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 24px 0 12px 16px;'>ระบบ</div>", unsafe_allow_html=True)
-    st.page_link("pages/settings.py", label="ตั้งค่า", icon=":material/settings:")
+    st.page_link(str(UNIFIED / "pages/recorder.py"), label="อัดเสียง", icon=":material/mic:")
+    st.page_link(str(UNIFIED / "pages/history.py"), label="ประวัติข้อมูล", icon=":material/history:")
     
     st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
@@ -166,3 +138,4 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 pg.run()
+

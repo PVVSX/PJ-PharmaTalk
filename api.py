@@ -99,4 +99,4 @@ if __name__ == "__main__":
     # Ensure state is reset when API starts
     init_database()
     set_state_internal("WAITING")
-    uvicorn.run(app, host="0.0.0.0", port=8502)
+    uvicorn.run(app, host="0.0.0.0", port=8500)

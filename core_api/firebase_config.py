@@ -13,7 +13,7 @@ def init_firebase():
             try:
                 cred = credentials.Certificate(cred_path)
                 options = {}
-                bucket_name = os.environ.get("FIREBASE_STORAGE_BUCKET", "").strip()
+                bucket_name = os.environ.get("FIREBASE_STORAGE_BUCKET", "pharmatalkproject.appspot.com").strip()
                 if bucket_name:
                     options["storageBucket"] = bucket_name
                 firebase_admin.initialize_app(cred, options or None)

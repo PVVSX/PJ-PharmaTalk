@@ -44,6 +44,13 @@ html, body {
   font-family: 'Kanit', sans-serif;
 }
 
+/* Force Streamlit header bar to match light theme */
+[data-testid="stHeader"],
+header[data-testid="stHeader"] {
+  background: linear-gradient(180deg, #f4f8fc, rgba(244, 248, 252, 0.95)) !important;
+  color: var(--text-main) !important;
+}
+
 h1, h2, h3, h4, h5, h6, .markdown-text-container {
   font-family: 'Kanit', sans-serif !important;
   color: var(--text-main);
@@ -462,6 +469,7 @@ span.material-symbols-rounded {
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   box-shadow: var(--shadow-card);
   margin-bottom: 10px;
+  color: var(--grey-800) !important;
 }
 .record-callout .material-symbols-rounded {
   font-size: 1.5rem;
@@ -620,6 +628,42 @@ button[kind="secondary"]:hover {
 div[data-testid="stExpander"] {
   border-radius: 12px !important;
   border: 1px solid var(--grey-200) !important;
+  background-color: var(--bg-card) !important;
+}
+
+/* Force expander header to light */
+div[data-testid="stExpander"] summary,
+div[data-testid="stExpander"] [data-testid="stExpanderToggleIcon"],
+div[data-testid="stExpander"] summary span,
+div[data-testid="stExpander"] summary p {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+}
+
+/* Force expander content area to light */
+div[data-testid="stExpander"] > div[role="group"],
+div[data-testid="stExpander"] > div {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+}
+
+/* Force text areas and disabled inputs to be readable */
+textarea, textarea:disabled {
+  background-color: var(--grey-50) !important;
+  color: var(--text-main) !important;
+  border-color: var(--grey-200) !important;
+}
+
+/* Force all info/warning/success/error boxes to have dark text */
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] span,
+.stAlert p, .stAlert span {
+  color: var(--grey-800) !important;
+}
+
+/* Force caption text to be visible */
+[data-testid="stCaptionContainer"] p {
+  color: var(--grey-500) !important;
 }
 
 /* Custom Scrollbar */
@@ -668,5 +712,14 @@ ul[role="listbox"] li {
 /* Ensure Markdown Text is dark */
 .stMarkdown p, .stMarkdown li, .stMarkdown span {
   color: var(--grey-800);
+}
+
+/* Fix Checkbox and Radio Labels (in case of Dark Mode) */
+[data-testid="stCheckbox"] label span,
+[data-testid="stRadio"] label span,
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span {
+  color: var(--grey-800) !important;
+  font-weight: 500;
 }
 
