@@ -1,7 +1,0 @@
-# แอป Streamlit + Azure OpenAI + PDF (ติดตั้งเร็ว)
-streamlit
-openai
-reportlab
-huggingface_hub>=0.26
-numpy
-scipy

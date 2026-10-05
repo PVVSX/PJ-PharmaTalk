@@ -1,0 +1,138 @@
+{
+  "recording_2025-10-09_13-47-26.wav": {
+    "original_raw": "ก็เป็น อ่ารับอะไรดีฮะ ตอนนี้ผมไม่สบายมีน้ํามูกครับ เป็นมากี่วันแล้ว เป็นมาสภาพแล้วครับ อ่ามีใช้ยาอะไรมาก่อนหน้านี้ไหม ไม่ได้ใช้ครับ ไม่ได้ใช้เนอะ อากา...",
+    "corrected_raw": "ก็เป็น อ่ารับอะไรดีฮะ ตอนนี้ผมไม่สบายมีน้ํามูกครับ เป็นมากี่วันแล้ว เป็นมาสภาพแล้วครับ อ่ามีใช้ยาอะไรมาก่อนหน้านี้ไหม ไม่ได้ใช้ครับ ไม่ได้ใช้เนอะ อากา...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": [
+      {
+        "tier": "1-safe",
+        "original": "Setifisine",
+        "corrected": "Cetirizine",
+        "count": 1,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      }
+    ]
+  },
+  "recording_2025-10-09_13-46-07.wav": {
+    "original_raw": "อ่ามียาพาราไหมครับมีครับเอาเป็นยี่ห้อไหนไหมมียี่ห้อไหนมั่งอ่ะคือเนี่ยมันต้องย้ายไปทางนี้ถ้าเป็นพาราอยู่ฝั่งนู้นเอาเค้กง่ายก่อนไหมเอาเคสเลยดีวะที่มันพอ...",
+    "corrected_raw": "อ่ามียาพาราไหมครับมีครับเอาเป็นยี่ห้อไหนไหมมียี่ห้อไหนมั่งอ่ะคือเนี่ยมันต้องย้ายไปทางนี้ถ้าเป็นพาราอยู่ฝั่งนู้นเอาเค้กง่ายก่อนไหมเอาเคสเลยดีวะที่มันพอ...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": []
+  },
+  "recording_2025-10-15_10-51-23.wav": {
+    "original_raw": "เป็นปื้นปืนเนอะเคยเป็นก่อนแข็งเดี๋ยวมีมีลูกให้ดูไหมเขาไม่ได้ถ่ายรูปมาค่ะอืมเขาฝากซื้อเนอะใช่ค่ะก็ใช้ยาตามอาการไปก่อนที่สี่แล้วจะไม่ง่วงแล้วก็จะเป็นไฮด...",
+    "corrected_raw": "เป็นปื้นปืนเนอะเคยเป็นก่อนแข็งเดี๋ยวมีมีลูกให้ดูไหมเขาไม่ได้ถ่ายรูปมาค่ะอืมเขาฝากซื้อเนอะใช่ค่ะก็ใช้ยาตามอาการไปก่อนที่สี่แล้วจะไม่ง่วงแล้วก็จะเป็นHyd...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": [
+      {
+        "tier": "1-safe",
+        "original": "ไฮด็อกซิก",
+        "corrected": "Hydroxyzine",
+        "count": 1,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      },
+      {
+        "tier": "1-safe",
+        "original": "มิติกรรม",
+        "corrected": "มิลลิกรัม",
+        "count": 1,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      }
+    ]
+  },
+  "recording_2025-10-13_16-03-42.wav": {
+    "original_raw": "บริเวณตาไม่ได้มีตุ่มขึ้นมาไม่มีค่ะ แต่เจ็บเจ็บเนาะ เดี๋ยวอันนี้คือกระซึไปลองล้างดูด้วยใช่ไหม ขั้นเคืองไหม เขาก็ไม่คันค่ะ แต่คือเจ็บตาเลย ใช้ยาไม่มีนะ ...",
+    "corrected_raw": "บริเวณตาไม่ได้มีตุ่มขึ้นมาไม่มีค่ะ แต่เจ็บเจ็บเนาะ เดี๋ยวอันนี้คือกระซึไปลองล้างดูด้วยใช่ไหม ขั้นเคืองไหม เขาก็ไม่คันค่ะ แต่คือเจ็บตาเลย ใช้ยาไม่มีนะ ...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": []
+  },
+  "recording_2025-10-15_10-20-06.wav": {
+    "original_raw": "น้องเต้นมากี่วันแล้ววันนี้วันที่สองมีใช้ยาอะไรมาก่อนหน้านี้ไหมไม่เลยครับเจ็บคออย่างเดียวไข้ไม่มีไปไปตาดน้ําค้างมาแล้วก็ขาเอามาแค่เจ็บคอแต่ไม่มีอาการอย...",
+    "corrected_raw": "น้องเต้นมากี่วันแล้ววันนี้วันที่สองมีใช้ยาอะไรมาก่อนหน้านี้ไหมไม่เลยครับเจ็บคออย่างเดียวไข้ไม่มีไปไปตาดน้ําค้างมาแล้วก็ขาเอามาแค่เจ็บคอแต่ไม่มีอาการอย...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": []
+  },
+  "recording_2025-10-10_10-24-18.wav": {
+    "original_raw": "ฉีดวัคซีนอนามัยก็เลยใช้เอาซื้อยาแก้ปวดติดไปก่อนน้องประมาณเท่าไหร่ครับอ๋อห้าโลครับอยากให้เป็นแบบดอกไฟนะโลประมาณสองจุดห้าสี่สิบห้าแล้วเดี๋ยวถ้าคนอื่นเผื...",
+    "corrected_raw": "ฉีดวัคซีนอนามัยก็เลยใช้เอาซื้อยาแก้ปวดติดไปก่อนน้องประมาณเท่าไหร่ครับอ๋อห้าโลครับอยากให้เป็นแบบดอกไฟนะโลประมาณสองจุดห้าสี่สิบห้าแล้วเดี๋ยวถ้าคนอื่นเผื...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": []
+  },
+  "recording_2025-10-14_09-53-14.wav": {
+    "original_raw": "ไม่ค่อยอยากอาหารเป็นมากี่วันนะเป็นมะละวันเคยเคยมาซื้อเขาดีเป็นคู่ไหมครับเป็นเม็ดขาวกับเม็ดแดงไหมจําไม่ได้นะมันเบื่อมันไม่ตอนก่อนนอนนะยาจะง่วงนิดนึงครั...",
+    "corrected_raw": "ไม่ค่อยอยากอาหารเป็นมากี่วันนะเป็นมะละวันเคยเคยมาซื้อเขาดีเป็นคู่ไหมครับเป็นเม็ดขาวกับเม็ดแดงไหมจําไม่ได้นะมันเบื่อมันไม่ตอนก่อนนอนนะยาจะง่วงนิดนึงครั...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": [
+      {
+        "tier": "1-safe",
+        "original": "ไซโปเคเตอร์",
+        "corrected": "Cyproheptadine",
+        "count": 1,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      }
+    ]
+  },
+  "recording_2025-10-10_14-27-17.wav": {
+    "original_raw": "แต่ว่ามันก็หมายแล้วค่ะแต่ว่าเนี่ยวันเนี้ยตื่นเช้ามามันเจ็บเนี่ยค่ะเท่าฝั่งเป็นแค่วันนี้เพิ่งเป็นเลยเนอะเพิ่งเป็นตอนตื่นนอนต่อหมายถึงว่ากระดูกซี่โครงหั...",
+    "corrected_raw": "แต่ว่ามันก็หมายแล้วค่ะแต่ว่าเนี่ยวันเนี้ยตื่นเช้ามามันเจ็บเนี่ยค่ะเท่าฝั่งเป็นแค่วันนี้เพิ่งเป็นเลยเนอะเพิ่งเป็นตอนตื่นนอนต่อหมายถึงว่ากระดูกซี่โครงหั...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": [
+      {
+        "tier": "2-regex",
+        "original": "(?<!มิลลิ)(หนึ่ง|สอง|สาม|ครึ่ง)เมตร",
+        "corrected": "\\1เม็ด",
+        "count": 1,
+        "description": "เมตร -> เม็ด (จำนวนยา)"
+      }
+    ]
+  },
+  "recording_2025-10-10_10-05-37.wav": {
+    "original_raw": "เป็นยาแก้ปวดฝันแพ้ยาไม่มีนะไม่มีครับเป็นมากี่วันแล้วเพิ่งเป็นได้เมื่อคืนมีใช้อะไรมาก่อนหน้านี้ไหมก็ยาพาราใช้ภาระดีขึ้นไหมก็ดีขึ้นนิดหน่อยตามอาการนะ แต...",
+    "corrected_raw": "เป็นยาแก้ปวดฝันแพ้ยาไม่มีนะไม่มีครับเป็นมากี่วันแล้วเพิ่งเป็นได้เมื่อคืนมีใช้อะไรมาก่อนหน้านี้ไหมก็ยาพาราใช้ภาระดีขึ้นไหมก็ดีขึ้นนิดหน่อยตามอาการนะ แต...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": [
+      {
+        "tier": "1-safe",
+        "original": "เมโทนี่นาโซ",
+        "corrected": "Metronidazole",
+        "count": 1,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      },
+      {
+        "tier": "1-safe",
+        "original": "ค่าเชื้อ",
+        "corrected": "ฆ่าเชื้อ",
+        "count": 3,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      }
+    ]
+  },
+  "recording_2025-10-15_16-01-23.wav": {
+    "original_raw": "อาการเป็นยังไงนะปัสเขาว่าขัดประมาณสามวันแล้วใช่ไหมครับยังไม่ได้กินยาอะไรมาก่อนหน้านี้นะแพ้ยาไม่มีเลยครับปวดหลังมีไข้ไหมแล้วอะไรเพิ่มไหมครับมีปวดหลังมี...",
+    "corrected_raw": "อาการเป็นยังไงนะปัสเขาว่าขัดประมาณสามวันแล้วใช่ไหมครับยังไม่ได้กินยาอะไรมาก่อนหน้านี้นะแพ้ยาไม่มีเลยครับปวดหลังมีไข้ไหมแล้วอะไรเพิ่มไหมครับมีปวดหลังมี...",
+    "formatted": "(Error: Error code: 404 - {'error': {'message': 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}})",
+    "changes": [
+      {
+        "tier": "1-safe",
+        "original": "ค่าเชื้อ",
+        "corrected": "ฆ่าเชื้อ",
+        "count": 1,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      },
+      {
+        "tier": "1-safe",
+        "original": "มิติกรรม",
+        "corrected": "มิลลิกรัม",
+        "count": 1,
+        "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด"
+      },
+      {
+        "tier": "2-regex",
+        "original": "(?<!มิลลิ)(หนึ่ง|สอง|สาม|ครึ่ง)เมตร",
+        "corrected": "\\1เม็ด",
+        "count": 1,
+        "description": "เมตร -> เม็ด (จำนวนยา)"
+      }
+    ]
+  }
+}

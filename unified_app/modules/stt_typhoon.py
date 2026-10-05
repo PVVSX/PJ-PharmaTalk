@@ -48,7 +48,16 @@ def transcribe_audio_bytes(recognizer: TyphoonASRRecognizer, audio_bytes: bytes)
             tmp_path = tmp.name
 
         result = recognizer.transcribe_audio(tmp_path)
-        return result if isinstance(result, str) else str(result)
+        text = result if isinstance(result, str) else str(result)
+
+        # ── Post-process: แก้ชื่อยาและคำทางการแพทย์ที่ถอดเสียงผิด ──
+        try:
+            from unified_app.modules.pharmacy_dict import correct_transcript
+            text, _changes = correct_transcript(text)
+        except Exception:
+            pass  # Fail silently -- dictionary is optional
+
+        return text
     except Exception as exc:
         return f"(ถอดเสียงล้มเหลว: {exc})"
     finally:

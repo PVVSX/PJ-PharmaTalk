@@ -51,7 +51,16 @@ def transcribe_audio_groq(audio_path_or_bytes, filename="audio.wav") -> str:
                 response_format="json",
                 language="th"
             )
-            return _format_transcript_with_llm(transcription.text)
+            raw_text = transcription.text
+
+            # ── Post-process: แก้ชื่อยาและคำทางการแพทย์ที่ถอดเสียงผิด ──
+            try:
+                from unified_app.modules.pharmacy_dict import correct_transcript
+                raw_text, _ = correct_transcript(raw_text)
+            except Exception:
+                pass
+
+            return _format_transcript_with_llm(raw_text)
 
             
     elif isinstance(audio_path_or_bytes, bytes):
@@ -62,6 +71,15 @@ def transcribe_audio_groq(audio_path_or_bytes, filename="audio.wav") -> str:
             response_format="json",
             language="th"
         )
-        return _format_transcript_with_llm(transcription.text)
+        raw_text = transcription.text
+
+        # ── Post-process: แก้ชื่อยาและคำทางการแพทย์ที่ถอดเสียงผิด ──
+        try:
+            from unified_app.modules.pharmacy_dict import correct_transcript
+            raw_text, _ = correct_transcript(raw_text)
+        except Exception:
+            pass
+
+        return _format_transcript_with_llm(raw_text)
 
     return ""

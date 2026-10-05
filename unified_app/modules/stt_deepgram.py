@@ -96,6 +96,13 @@ def transcribe_audio_deepgram(audio_path_or_bytes) -> str:
     if current_sentence:
         formatted_transcript += f"[Speaker {current_speaker}]: {''.join(current_sentence)}\n"
         
+    # ── Post-process: แก้ชื่อยาและคำทางการแพทย์ที่ถอดเสียงผิด ──
+    try:
+        from unified_app.modules.pharmacy_dict import correct_transcript
+        formatted_transcript, _ = correct_transcript(formatted_transcript)
+    except Exception:
+        pass
+
     # Send to LLM for instant formatting before returning
     if formatted_transcript.strip():
         final_transcript = _format_transcript_with_llm(formatted_transcript)
