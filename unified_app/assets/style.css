@@ -115,6 +115,7 @@ span.material-symbols-rounded {
 [data-testid="stSidebarNavItems"] li a:hover {
   background: rgba(255,255,255,0.08) !important;
   border-color: rgba(255,255,255,0.12) !important;
+  transform: translateX(6px);
 }
 
 /* Selected nav item */
@@ -466,10 +467,16 @@ span.material-symbols-rounded {
   padding: 14px 16px;
   border-radius: 14px;
   border: 1px solid var(--grey-200);
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(248,250,252,0.8));
+  backdrop-filter: blur(12px);
   box-shadow: var(--shadow-card);
   margin-bottom: 10px;
   color: var(--grey-800) !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.record-callout:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
 }
 .record-callout .material-symbols-rounded {
   font-size: 1.5rem;
@@ -596,12 +603,16 @@ button[kind="primary"] {
   border-radius: 12px !important;
   font-weight: 600 !important;
   border: none !important;
-  transition: all 0.2s ease !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-shadow: 0 6px 12px rgba(15, 76, 117, 0.2);
 }
 button[kind="primary"]:hover {
-  filter: brightness(1.04) !important;
-  box-shadow: 0 8px 16px rgba(15, 76, 117, 0.25);
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 12px 20px rgba(15, 76, 117, 0.3) !important;
+  filter: brightness(1.08) !important;
+}
+button[kind="primary"]:active {
+  transform: translateY(1px) scale(0.98) !important;
 }
 
 button[kind="secondary"] {
@@ -723,3 +734,72 @@ ul[role="listbox"] li {
   font-weight: 500;
 }
 
+/* =========================================================================
+   Animations and Gimmicks
+   ========================================================================= */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Apply animation to cards, callouts, and main containers */
+[data-testid="stVerticalBlockBorderWrapper"],
+.record-callout,
+.history-stat-card,
+.emr-field,
+.waveform-wrap {
+  animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0; /* Starts hidden before animation kicks in */
+}
+
+/* Staggering animation delay so elements pop up in sequence */
+[data-testid="stVerticalBlockBorderWrapper"]:nth-child(1) { animation-delay: 0.05s; }
+[data-testid="stVerticalBlockBorderWrapper"]:nth-child(2) { animation-delay: 0.1s; }
+[data-testid="stVerticalBlockBorderWrapper"]:nth-child(3) { animation-delay: 0.15s; }
+
+.record-callout {
+  animation-delay: 0.05s;
+}
+
+/* Pulse Glow Animation for Icons */
+@keyframes pulseGlow {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(59, 130, 246, 0)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(59, 130, 246, 0)); }
+}
+
+@keyframes pulseWarn {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)); }
+}
+
+@keyframes pulseSuccess {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(16, 185, 129, 0)); }
+}
+
+.record-callout.info .material-symbols-rounded {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+.record-callout.warning .material-symbols-rounded {
+  animation: pulseWarn 2s infinite ease-in-out;
+}
+.record-callout.success .material-symbols-rounded {
+  animation: pulseSuccess 2s infinite ease-in-out;
+}
+
+/* Spinning/Pulsing state for loading spinners */
+.stSpinner > div > div {
+  border-color: var(--primary) !important;
+  border-bottom-color: transparent !important;
+  animation-duration: 0.8s !important;
+}

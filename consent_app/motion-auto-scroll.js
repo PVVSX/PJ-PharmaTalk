@@ -1,7 +1,7 @@
 (() => {
-    const firstStepDelay = 2200;
-    const stepInterval = 4200;
-    const completionDelay = 3200;
+    const firstStepDelay = 1000;
+    const stepInterval = 1500;
+    const completionDelay = 2000;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function startAutoScroll() {
@@ -27,42 +27,6 @@
             if (summary) {
                 summary.scrollIntoView({ behavior, block: 'center' });
             }
-
-            window.setTimeout(() => {
-                try {
-                    const parentWindow = window.parent;
-                    const parentDocument = parentWindow.document;
-                    const consentForm = parentDocument.getElementById('consent-form');
-                    const motionContinue = parentDocument.querySelector('.motion-continue');
-                    const scrollContainer = parentDocument.querySelector('.document-content');
-
-                    if (consentForm) {
-                        if (motionContinue) {
-                            motionContinue.classList.add('is-ready');
-                        }
-
-                        if (scrollContainer) {
-                            scrollContainer.scrollTo({
-                                top: consentForm.offsetTop - 18,
-                                behavior
-                            });
-                        } else {
-                            consentForm.scrollIntoView({ behavior, block: 'start' });
-                        }
-
-                        if (parentWindow.location.hash !== '#consent-form') {
-                            parentWindow.location.hash = '#consent-form';
-                        }
-                    }
-                } catch (error) {
-                    console.warn('Auto-scroll fallback to parent failed:', error);
-                }
-
-                window.parent.postMessage(
-                    { type: 'pharmatalk-motion-complete' },
-                    '*'
-                );
-            }, completionDelay);
         }
 
         window.setTimeout(revealNext, firstStepDelay);

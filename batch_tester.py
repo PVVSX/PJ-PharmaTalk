@@ -32,15 +32,43 @@ def process_audio_files():
     print(f"Found {len(all_wavs)} WAV files. Starting STT Batch Processing...")
     results = {}
     
+    # Initialize Typhoon
+    from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes
+    from unified_app.modules.stt_groq import transcribe_audio_groq
+    
+    print("Loading Typhoon ASR Model...")
+    recognizer = TyphoonASRRecognizer()
+    recognizer.load_model()
+    
     # Process files (Start with smaller files first for quicker feedback)
     all_wavs.sort(key=lambda p: p.stat().st_size)
     
     for i, wav_path in enumerate(all_wavs):
         size_mb = wav_path.stat().st_size / 1024 / 1024
         print(f"[{i+1}/{len(all_wavs)}] STT on {wav_path.name} ({size_mb:.1f} MB)...", flush=True)
+        
+        with open(wav_path, "rb") as f:
+            audio_bytes = f.read()
+            
         try:
-            transcript = transcribe_audio_deepgram(str(wav_path))
-            results[wav_path.name] = {"status": "success", "size_mb": size_mb, "transcript": transcript}
+            # Test Groq
+            start_g = time.time()
+            groq_text = transcribe_audio_groq(audio_bytes)
+            time_g = time.time() - start_g
+            
+            # Test Typhoon
+            start_t = time.time()
+            typhoon_text = transcribe_audio_bytes(recognizer, audio_bytes)
+            time_t = time.time() - start_t
+            
+            results[wav_path.name] = {
+                "status": "success",
+                "size_mb": size_mb,
+                "groq_transcript": groq_text,
+                "groq_time_sec": time_g,
+                "typhoon_transcript": typhoon_text,
+                "typhoon_time_sec": time_t
+            }
         except Exception as e:
             results[wav_path.name] = {"status": "error", "size_mb": size_mb, "error": str(e)}
         

@@ -23,6 +23,7 @@
     const status = document.getElementById("status");
     let cooldownTimer = null;
     let countdownTimer = null;
+    let apiUrl = "http://localhost:8500/api/state";
     let stream = null;
     let audioContext = null;
     let processor = null;
@@ -101,6 +102,15 @@
         startedAt = Date.now();
         automaticStart = isAutomatic;
         isRecording = true;
+        
+        if (apiUrl) {
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'RECORDING' })
+          }).catch(e => console.error(e));
+        }
+        
         toggle.textContent = "หยุดอัดเสียง";
         toggle.classList.add("stop");
         setStatus(isAutomatic ? "กำลังอัดเสียงอัตโนมัติ" : "กำลังอัดเสียง", true);
@@ -153,8 +163,14 @@
     window.addEventListener("message", (event) => {
       if (!event.data || event.data.type !== "streamlit:render" || initialized) return;
       initialized = true;
-      const seconds = Number(event.data.args.cooldown_seconds || 30);
-      scheduleAutomaticStart(seconds);
+      const seconds = Number(event.data.args.cooldown_seconds || 0);
+      if (event.data.args.api_url) apiUrl = event.data.args.api_url;
+      
+      if (seconds > 0) {
+        scheduleAutomaticStart(seconds);
+      } else {
+        setStatus("พร้อมบันทึกเสียง กดปุ่มเพื่อเริ่มอัด");
+      }
       setHeight();
     });
     sendMessage("streamlit:componentReady", { apiVersion: 1 });

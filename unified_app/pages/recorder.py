@@ -75,9 +75,32 @@ with t1L:
         </div>""", unsafe_allow_html=True)
 
         def render_recorder():
-            current_state = get_state()
-            if current_state != "READY":
-                st.session_state.recorder_consent_confirmed = False
+            is_backoffice = st.session_state.get("is_backoffice", False)
+            
+            if is_backoffice:
+                # Back-office uses isolated local session state so it won't conflict with pharmacist app
+                if "bo_state" not in st.session_state:
+                    st.session_state.bo_state = "READY"
+                current_state = st.session_state.bo_state
+                
+                def active_set_state(s):
+                    st.session_state.bo_state = s
+            else:
+                # Pharmacist app uses shared state from consent app
+                current_state = get_state()
+                active_set_state = set_state
+                
+                if current_state == "WAITING":
+                    st.markdown('''
+                    <div class="record-callout warning">
+                      <span class="material-symbols-rounded">privacy_tip</span>
+                      <div>
+                        <strong>รอการยืนยันความยินยอม</strong>
+                        <div>กรุณาให้คนไข้กดยืนยันในหน้า Consent (หน้าจอด้านนอก) ก่อน ระบบจึงจะเปิดให้บันทึกเสียง</div>
+                      </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                    return
 
             task_id = st.session_state.get("audio_task_id")
             if task_id:
@@ -108,39 +131,13 @@ with t1L:
                         st.session_state.audio_task_completed = task_id
                         st.session_state.last_audio_task_id = task_id
                         st.session_state.audio_task_id = None
-                        set_state("FINISHED")
+                        active_set_state("FINISHED")
                         st.success("🎉 ประมวลผลเวชระเบียนและแบ็คอัปเสร็จสมบูรณ์ สามารถดูสรุปได้ที่หน้า 'วิเคราะห์เวชระเบียน'")
                         return
                 except Exception as exc:
                     st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
                     return
 
-            if current_state == "WAITING":
-                st.markdown('''
-                <div class="record-callout warning">
-                  <span class="material-symbols-rounded">privacy_tip</span>
-                  <div>
-                    <strong>รอการยืนยันความยินยอม</strong>
-                    <div>กรุณาให้คนไข้กดยืนยันในหน้า Consent ก่อน ระบบจึงจะเริ่มนับถอยหลังการอัดเสียงอัตโนมัติ</div>
-                  </div>
-                </div>
-                ''', unsafe_allow_html=True)
-                
-                # Manual Override
-                consent_confirmed = st.checkbox(
-                    "ผู้ป่วยยืนยันความยินยอมในการบันทึกเสียงแล้ว (ข้ามหน้า Consent)",
-                    key="consent_confirmed",
-                )
-                if st.button(
-                    "เริ่มบันทึกเสียง (Manual Override)",
-                    icon=":material/mic:",
-                    type="primary",
-                    use_container_width=True,
-                    disabled=not consent_confirmed,
-                ):
-                    set_state("READY")
-                    st.rerun()
-                return
 
             if current_state == "FINISHED":
                 st.markdown('''
@@ -153,32 +150,15 @@ with t1L:
                 </div>
                 ''', unsafe_allow_html=True)
                 if st.button("บันทึกผู้ป่วยรายใหม่", icon=":material/refresh:", type="primary", use_container_width=True):
-                    set_state("WAITING")
+                    active_set_state("READY" if is_backoffice else "WAITING")
                     st.rerun()
                 st.markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
                 return
 
             st.markdown('''
-            <div class="record-callout warning">
-              <span class="material-symbols-rounded">verified_user</span>
-              <div>
-                <strong>ยืนยันความยินยอมก่อนเริ่มอัดเสียง</strong>
-                <div>กรุณาตรวจสอบว่าคนไข้ได้อ่านและกดยินยอมในหน้า Consent แล้ว ก่อนเปิดใช้งานไมโครโฟน</div>
-              </div>
-            </div>
-            ''', unsafe_allow_html=True)
-            recorder_consent_confirmed = st.checkbox(
-                "ยืนยันว่าคนไข้ได้ให้ความยินยอมในการบันทึกเสียงแล้ว",
-                key="recorder_consent_confirmed",
-            )
-            if not recorder_consent_confirmed:
-                return
-
-            st.markdown('''
             <div class="workflow-guide">
-              <div class="workflow-step"><span class="material-symbols-rounded">check_circle</span><div><strong>ขั้นที่ 1</strong><small>ยืนยันความยินยอม</small></div></div>
-              <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 2</strong><small>กดอัดเสียงและรอระบบถอดเสียง</small></div></div>
-              <div class="workflow-step"><span class="material-symbols-rounded">arrow_forward</span><div><strong>ขั้นที่ 3</strong><small>ไปที่หน้าเวชระเบียนเพื่อดูสรุปผล</small></div></div>
+              <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 1</strong><small>กดอัดเสียงและรอระบบถอดเสียง</small></div></div>
+              <div class="workflow-step"><span class="material-symbols-rounded">arrow_forward</span><div><strong>ขั้นที่ 2</strong><small>ไปที่หน้าเวชระเบียนเพื่อดูสรุปผล</small></div></div>
             </div>
             ''', unsafe_allow_html=True)
 
@@ -187,13 +167,13 @@ with t1L:
               <span class="material-symbols-rounded">mic_external_on</span>
               <div>
                 <strong>พร้อมบันทึกเสียง</strong>
-                <div>กดเริ่มอัดได้ทันที หากไม่มีการกดภายใน 30 วินาที ระบบจะเริ่มอัดให้อัตโนมัติ</div>
+                <div>กรุณากดปุ่ม <b>เริ่มอัดเสียง</b> ภายใน 30 วินาที หากเกินเวลาต้องให้คนไข้กดยืนยันใหม่</div>
               </div>
             </div>
             ''', unsafe_allow_html=True)
             audio_key = f"native_audio_recorder_{st.session_state.get('audio_key_counter', 0)}"
             audio_value = auto_recorder(
-                cooldown_seconds=30,
+                cooldown_seconds=0,
                 key=audio_key,
             )
 

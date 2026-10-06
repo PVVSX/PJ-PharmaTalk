@@ -35,3 +35,8 @@ result_record/model_speech_to_text/*.nemo
 # OS
 .DS_Store
 Thumbs.db
+
+# Large files added recently
+models/
+*.wav
+*.zip

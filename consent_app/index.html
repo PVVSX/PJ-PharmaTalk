@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>แบบแสดงความยินยอม - PharmaTalk</title>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -12,72 +11,54 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main class="consent-page">
-        <section class="motion-section" aria-label="PharmaTalk: 6 ขั้นตอนการดูแลข้อมูล">
-            <iframe
-                class="motion-frame"
-                src="motion-graphic.html"
-                title="โมชั่นกราฟิกอธิบาย 6 ขั้นตอนการบันทึกและใช้ข้อมูล"
-                loading="eager"
-            ></iframe>
-        </section>
-
-        <a class="motion-continue" href="#consent-form">
-            <span class="material-symbols-rounded" aria-hidden="true">arrow_downward</span>
-            ไปยังแบบฟอร์มยินยอม
-        </a>
-
-        <div class="consent-container" id="consent-form">
-        <!-- Header -->
-        <header class="consent-header">
-            <div class="logo"><span class="material-symbols-rounded" style="vertical-align: text-bottom;">local_hospital</span> PharmaTalk</div>
-            <h1>แบบแสดงความยินยอมในการเก็บรวบรวมและใช้ข้อมูล</h1>
-            <p class="subtitle">(Patient Consent Form)</p>
-        </header>
-
-        <!-- Scrollable Document Content -->
-        <div class="document-content">
-            <p class="doc-intro">
-                เอกสารฉบับนี้จัดทำขึ้นเพื่อชี้แจงรายละเอียดและขอความยินยอมจากท่านในการเก็บรวบรวมข้อมูลและใช้ข้อมูล ซึ่งดำเนินงานโดยคณะนักศึกษาระดับอุดมศึกษา <strong>มหาวิทยาลัยกรุงเทพ คณะวิศวกรรมศาสตร์ สาขาวิศวกรรมปัญญาประดิษฐ์และวิทยาการข้อมูล</strong> เพื่อประโยชน์ในการศึกษา ค้นคว้า และพัฒนาเทคโนโลยีสารสนเทศเพื่อสนับสนุนการบริการทางเภสัชกรรม
-            </p>
-            <p class="doc-intro">
-                ก่อนที่ท่านจะตัดสินใจยินยอมเอกสารฉบับนี้ คณะผู้วิจัยขอชี้แจงรายละเอียดสำคัญเพื่อให้ท่านพิจารณาดังนี้:
-            </p>
-
-            <div class="doc-section">
-                <h3>๑. ข้อมูลและการดำเนินการวิจัย</h3>
-                <p>หากท่านยินยอมเอกสารฉบับนี้ ระบบจะดำเนินการบันทึกและจัดเก็บข้อมูลที่เกี่ยวข้องกับการรับบริการของท่าน ได้แก่</p>
-                <ul>
-                    <li><strong>ข้อมูลเสียงบทสนทนา:</strong> ระหว่างท่านและเภสัชกร (เพื่อใช้ในการพัฒนาระบบประมวลผลเสียงเป็นข้อความ)</li>
-                    <li><strong>ข้อมูลสุขภาพเบื้องต้น:</strong> ประวัติการแพ้ยา โรคประจำตัว และประวัติการได้รับยา</li>
-                    <li><strong>บันทึกทางการแพทย์:</strong> ข้อมูลอาการเจ็บป่วยเบื้องต้น และคำแนะนำในการใช้ยา</li>
-                </ul>
-            </div>
-
-            <div class="doc-section">
-                <h3>๒. การรักษาความลับและการคุ้มครองข้อมูลส่วนบุคคล</h3>
-                <p>
-                    ข้อมูลทั้งหมดที่ได้รับจากการดำเนินโครงการวิจัยนี้ จะได้รับการปกป้องและรักษาความลับอย่างเคร่งครัดตาม<strong>พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล (PDPA)</strong>
-                </p>
-            </div>
-
-            <div class="doc-section">
-                <h3>๓. สิทธิและความสมัครใจของผู้ยินยอม</h3>
-                <p>
-                    การยินยอมเอกสารฉบับนี้เป็นไปโดยความสมัครใจของท่านอย่างแท้จริง ท่านมีสิทธิในการปฏิเสธการยินยอม โดย<strong>การปฏิเสธดังกล่าว จะไม่มีผลกระทบใดๆ ต่อมาตรฐานการให้บริการ</strong> การดูแลรักษา หรือสิทธิในการรับยาที่ท่านพึงได้รับตามปกติแต่อย่างใด
-                </p>
-            </div>
-            
-            <!-- Spacer to ensure scroll doesn't cut off text -->
-            <div style="height: 20px;"></div>
+    <div class="interactive-container">
+        
+        <!-- Step 0: Landing -->
+        <div class="step-card active" id="step-0">
+            <div class="logo"><span class="material-symbols-rounded">local_hospital</span> PharmaTalk</div>
+            <h1>แบบแสดงความยินยอม<br>การเก็บข้อมูลคนไข้</h1>
+            <p class="subtitle">เพื่อความโปร่งใสและสิทธิประโยชน์ของท่าน</p>
+            <button id="btn-start" class="btn-primary">เริ่มทำความเข้าใจข้อตกลง</button>
         </div>
 
-        <!-- Fixed Footer with Checkbox and Button -->
-        <footer class="consent-footer">
+        <!-- Step 1: Motion Graphic (Optional/Interactive) -->
+        <div class="step-card" id="step-1">
+            <div id="motion-container" style="width: 100%; flex: 1; display: flex; flex-direction: column;">
+                <!-- Iframe will be injected here dynamically -->
+            </div>
+            <button class="btn-secondary btn-next" style="margin-top:2rem;">อ่านรายละเอียดข้อตกลง <span class="material-symbols-rounded">arrow_forward</span></button>
+        </div>
+
+        <!-- Step 2: Info 1 -->
+        <div class="step-card" id="step-2">
+            <div class="icon-circle"><span class="material-symbols-rounded">dataset</span></div>
+            <h2>๑. ข้อมูลที่จัดเก็บ</h2>
+            <p>ระบบจะบันทึกเสียงสนทนา ข้อมูลสุขภาพเบื้องต้น และประวัติการรับยาของท่าน เพื่อนำไปพัฒนาระบบ AI สนับสนุนเภสัชกร</p>
+        </div>
+
+        <!-- Step 3: Info 2 -->
+        <div class="step-card" id="step-3">
+            <div class="icon-circle"><span class="material-symbols-rounded">security</span></div>
+            <h2>๒. การรักษาความลับ (PDPA)</h2>
+            <p>ข้อมูลของท่านจะถูก <strong>Anonymization (ลบตัวตน)</strong> ไม่สามารถระบุได้ว่าเป็นใคร และไม่มีการนำไปใช้ในเชิงพาณิชย์เด็ดขาด</p>
+        </div>
+
+        <!-- Step 4: Info 3 -->
+        <div class="step-card" id="step-4">
+            <div class="icon-circle"><span class="material-symbols-rounded">volunteer_activism</span></div>
+            <h2>๓. สิทธิและความสมัครใจ</h2>
+            <p>การยินยอมเป็นไปโดยสมัครใจ หากท่านปฏิเสธ <strong>จะไม่มีผลกระทบใดๆ</strong> ต่อมาตรฐานการรักษาที่ท่านพึงได้รับ</p>
+        </div>
+
+        <!-- Step 5: Final Consent -->
+        <div class="step-card" id="step-5">
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E293B;">ยืนยันความยินยอม</h2>
+            <p style="color: #64748B; margin-bottom: 1.5rem;">กรุณายืนยันว่าท่านได้อ่านและเข้าใจข้อความทั้งหมดแล้ว</p>
+            
             <div class="highlight-box" style="margin-top: 0; margin-bottom: 1.25rem;">
                 <div class="highlight-icon"><span class="material-symbols-rounded" style="font-size: inherit;">lock</span></div>
                 <div class="highlight-text">
-                    <strong>สำคัญ:</strong> ทางคณะผู้วิจัยจะทำการ <span class="text-accent">"ลบข้อมูลที่ระบุตัวบุคคลออก เพื่อไม่ให้สามารถระบุได้ว่าเป็นใคร (Anonymization)"</span> ข้อมูลที่จัดเก็บจะถูกนำไปใช้เพื่อการวิเคราะห์และพัฒนาโครงงานเท่านั้น จะไม่มีการนำไปใช้ในเชิงพาณิชย์ หรือเปิดเผยในรูปแบบที่ระบุตัวตนได้เด็ดขาด
+                    <strong>สำคัญ:</strong> ทางคณะผู้วิจัยจะทำการ <span style="color: #0F766E; font-weight: 500;">"ลบข้อมูลที่ระบุตัวบุคคลออก เพื่อไม่ให้สามารถระบุได้ว่าเป็นใคร (Anonymization)"</span> ข้อมูลที่จัดเก็บจะถูกนำไปใช้เพื่อการวิเคราะห์และพัฒนาโครงงานเท่านั้น จะไม่มีการนำไปใช้ในเชิงพาณิชย์ หรือเปิดเผยในรูปแบบที่ระบุตัวตนได้เด็ดขาด
                 </div>
             </div>
 
@@ -85,30 +66,28 @@
                 <label class="custom-checkbox">
                     <input type="checkbox" id="consent-checkbox">
                     <span class="checkmark"></span>
-                    <span class="checkbox-text">ข้าพเจ้าได้อ่านและเข้าใจข้อความข้างต้นอย่างละเอียดแล้ว จึงแสดงความยินยอมให้เก็บรวบรวมข้อมูล</span>
+                    <span class="checkbox-text" style="font-size: 1rem;">ข้าพเจ้าได้อ่านและเข้าใจข้อความข้างต้นอย่างละเอียดแล้ว จึงแสดงความยินยอมให้เก็บรวบรวมข้อมูล</span>
                 </label>
             </div>
-
-            <div class="action-container">
-                <button id="btn-consent" class="btn-primary" disabled>
-                    ยินยอมให้เก็บรวบรวมข้อมูล
-                </button>
-            </div>
-        </footer>
+            
+            <button id="btn-consent" class="btn-primary" style="width: 100%; border-radius: 8px;" disabled>ยินยอมให้เก็บรวบรวมข้อมูล</button>
         </div>
-    </main>
 
-    <!-- Thank you Pop-up Modal -->
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-bar-container hidden" id="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <!-- Thank you Modal -->
     <div id="thank-you-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-icon-success">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <span class="material-symbols-rounded" style="font-size: 32px; color: white;">check</span>
             </div>
             <h2>ขอบคุณที่ให้ความยินยอม</h2>
-            <p>ข้อมูลของท่านจะเป็นประโยชน์อย่างยิ่งในการพัฒนาระบบบริการทางเภสัชกรรม</p>
-            <button id="btn-close-modal" class="btn-secondary">ตกลง</button>
+            <p>ระบบกำลังพาคุณเข้าสู่ระบบบันทึกเสียง...</p>
         </div>
     </div>
 

@@ -1,92 +1,90 @@
-// script.js for PharmaTalk Consent Form
-
 document.addEventListener('DOMContentLoaded', () => {
+    const steps = document.querySelectorAll('.step-card');
+    const btnStart = document.getElementById('btn-start');
+    const btnNext = document.querySelector('.btn-next');
     const checkbox = document.getElementById('consent-checkbox');
     const btnConsent = document.getElementById('btn-consent');
+    const progressBarContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
     const modal = document.getElementById('thank-you-modal');
-    const btnCloseModal = document.getElementById('btn-close-modal');
-    
-    // Select modal content elements to update dynamically
-    const modalIcon = document.querySelector('.modal-icon-success');
-    const modalTitle = document.querySelector('.modal-content h2');
-    const modalDesc = document.querySelector('.modal-content p');
     const apiBaseUrl = `${window.location.protocol}//${window.location.host}`;
-    const consentVersion = '1.0';
-    const motionFrame = document.querySelector('.motion-frame');
-    const motionContinue = document.querySelector('.motion-continue');
-    const consentForm = document.getElementById('consent-form');
-    let userNavigatedPage = window.location.hash === '#consent-form';
-    let autoScrollTriggered = false;
-    let autoScrollFallbackTimer = null;
 
-    function scrollToConsentForm() {
-        if (userNavigatedPage || autoScrollTriggered || window.location.hash === '#consent-form') {
-            return;
-        }
+    let currentStep = 0;
+    let consentTimeout = null;
 
-        autoScrollTriggered = true;
-        motionContinue.classList.add('is-ready');
+    // Time (ms) to show each text card automatically
+    const AUTO_PLAY_DELAY = 1500; 
 
-        const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
-        const target = consentForm || motionContinue;
-        const scrollContainer = document.querySelector('.document-content');
-
-        if (scrollContainer && target) {
-            const targetPosition = target.offsetTop - 18;
-            scrollContainer.scrollTo({
-                top: targetPosition,
-                behavior
-            });
-        } else if (target) {
-            target.scrollIntoView({ behavior, block: 'start' });
-        }
-
-        if (window.history && window.history.replaceState) {
-            window.history.replaceState(null, '', '#consent-form');
-        } else {
-            window.location.hash = '#consent-form';
+    function updateProgress() {
+        // Steps 2,3,4,5 are the actual content steps (total 4)
+        if(currentStep >= 2) {
+            progressBarContainer.classList.remove('hidden');
+            const progress = ((currentStep - 1) / (steps.length - 2)) * 100;
+            progressBar.style.width = `${progress}%`;
         }
     }
 
-    window.addEventListener('hashchange', () => {
-        if (window.location.hash) {
-            userNavigatedPage = true;
-        }
-    });
-    window.addEventListener('wheel', () => {
-        userNavigatedPage = true;
-    }, { once: true, passive: true });
-    window.addEventListener('touchstart', () => {
-        userNavigatedPage = true;
-    }, { once: true, passive: true });
-    window.addEventListener('keydown', (event) => {
-        if (['ArrowDown', 'PageDown', 'End', ' '].includes(event.key)) {
-            userNavigatedPage = true;
-        }
-    });
+    function goToNextStep() {
+        if (currentStep >= steps.length - 1) return;
 
-    autoScrollFallbackTimer = window.setTimeout(() => {
-        if (!userNavigatedPage) {
-            scrollToConsentForm();
-        }
-    }, 14500);
+        const currentCard = steps[currentStep];
+        const nextCard = steps[currentStep + 1];
 
-    window.addEventListener('message', (event) => {
-        if (event.data?.type !== 'pharmatalk-motion-complete') {
-            return;
-        }
+        // Animate out
+        currentCard.classList.remove('active');
+        currentCard.classList.add('exit');
 
-        if (motionFrame && event.source !== motionFrame.contentWindow && event.source !== null) {
-            return;
-        }
-
-        if (!userNavigatedPage) {
-            if (autoScrollFallbackTimer) {
-                window.clearTimeout(autoScrollFallbackTimer);
+        // Animate in next card
+        currentStep++;
+        nextCard.classList.remove('exit');
+        nextCard.classList.add('active');
+        
+        // If the next card is the motion graphic, inject the iframe NOW so it starts fresh
+        if (nextCard.id === 'step-1') {
+            const container = document.getElementById('motion-container');
+            if (container && !container.innerHTML.includes('iframe')) {
+                container.innerHTML = '<iframe class="motion-frame" src="motion-graphic.html" title="โมชั่นกราฟิก"></iframe>';
             }
-            scrollToConsentForm();
         }
+
+        updateProgress();
+
+        // If it's an info card (steps 2,3,4), auto-play to the next one
+        if (currentStep >= 2 && currentStep < steps.length - 1) {
+            setTimeout(goToNextStep, AUTO_PLAY_DELAY);
+        }
+    }
+
+    btnStart.addEventListener('click', goToNextStep);
+    
+    // User clicks next on the motion graphic manually (or we could auto-skip)
+    if(btnNext) {
+        btnNext.addEventListener('click', goToNextStep);
+    }
+
+    // Toggle button state based on checkbox
+    checkbox.addEventListener('change', (e) => {
+        btnConsent.disabled = !e.target.checked;
     });
+
+    // Helper: update backend state
+    async function updateBackendState(status, consent = null) {
+        try {
+            const payload = { status };
+            if (consent) {
+                payload.consent = consent;
+            }
+            await fetch(`${apiBaseUrl}/api/state`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            return true;
+        } catch (err) {
+            console.error("Error updating backend state", err);
+            return false;
+        }
+    }
 
     function getConsentId() {
         let consentId = sessionStorage.getItem('pharmatalk_consent_id');
@@ -97,121 +95,46 @@ document.addEventListener('DOMContentLoaded', () => {
         return consentId;
     }
 
-    let pollInterval = null;
-
-    // Toggle button state based on checkbox
-    checkbox.addEventListener('change', (e) => {
-        if (e.target.checked) {
-            btnConsent.disabled = false;
-        } else {
-            btnConsent.disabled = true;
-        }
-    });
-
-    // Helper: update backend state
-    async function updateBackendState(status, consent = null) {
-        try {
-            const payload = { status };
-            if (consent) {
-                payload.consent = consent;
-            }
-            const response = await fetch(`${apiBaseUrl}/api/state`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) {
-                throw new Error(`API returned ${response.status}`);
-            }
-            return true;
-        } catch (err) {
-            console.error("Error updating backend state", err);
-            return false;
-        }
-    }
-
-    // Helper: reset UI to initial state
-    function resetUI() {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            checkbox.checked = false;
-            btnConsent.disabled = true;
-        }, 300);
-    }
-
-    // Polling function to check for 'FINISHED'
-    async function pollState() {
-        try {
-            const res = await fetch(`${apiBaseUrl}/api/state`);
-            if (!res.ok) {
-                throw new Error(`API returned ${res.status}`);
-            }
-            const data = await res.json();
-            
-            if (data.status === 'FINISHED') {
-                clearInterval(pollInterval);
-                
-                // Update modal to finish state
-                modalIcon.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                `;
-                modalTitle.innerText = "ระบบบันทึกเสียงเสร็จสิ้น";
-                modalTitle.style.color = '#047857'; // Green
-                modalDesc.innerText = "รอสักครู่ ระบบกำลังกลับสู่หน้าหลัก...";
-                btnCloseModal.style.display = 'none';
-
-                // Automatically reset after 3 seconds
-                setTimeout(() => {
-                    updateBackendState("WAITING");
-                    resetUI();
-                }, 3000);
-            }
-        } catch (err) {
-            console.error("Polling error", err);
-        }
-    }
-
-    // Show modal when consent button is clicked
+    // Submit Consent
     btnConsent.addEventListener('click', async () => {
-        // Change UI to Ready state
-        modalIcon.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        `;
-        
-        modalTitle.innerText = "ขอบคุณที่ให้ความยินยอม";
-        modalTitle.style.color = '#047857';
-        modalDesc.innerHTML = "กำลังรอเภสัชกรเริ่มการบันทึกเสียง...<br><strong>สามารถสนทนากับเภสัชกรได้ตามปกติ</strong>";
-        
-        // Hide close button during this phase
-        btnCloseModal.style.display = 'none';
-
         modal.classList.add('active');
-
-        // Record consent and notify the recorder in one request.
-        const consentSaved = await updateBackendState("READY", {
+        
+        await updateBackendState("READY", {
             consent_id: getConsentId(),
-            consent_version: consentVersion,
+            consent_version: '2.0',
             consented_at: new Date().toISOString()
         });
-        if (!consentSaved) {
-            modalTitle.innerText = "ไม่สามารถบันทึกการยินยอมได้";
-            modalDesc.innerText = "กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง";
-            btnCloseModal.style.display = 'block';
-            return;
-        }
 
-        // Start polling for FINISHED state
-        pollInterval = setInterval(pollState, 1000);
-    });
+        // Set 30-second timeout to cancel consent if recording doesn't start
+        consentTimeout = setTimeout(() => {
+            updateBackendState("WAITING");
+            window.location.reload();
+        }, 30000);
 
-    // Close modal when 'ตกลง' is clicked (if it's ever shown manually)
-    btnCloseModal.addEventListener('click', () => {
-        clearInterval(pollInterval);
-        updateBackendState("WAITING");
-        resetUI();
+        // Polling loop to wait for RECORDING or FINISHED
+        const pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`${apiBaseUrl}/api/state`);
+                const data = await res.json();
+                
+                if (data.status === 'RECORDING') {
+                    // Recording started, clear the timeout
+                    if (consentTimeout) {
+                        clearTimeout(consentTimeout);
+                        consentTimeout = null;
+                    }
+                } else if (data.status === 'FINISHED') {
+                    if (consentTimeout) {
+                        clearTimeout(consentTimeout);
+                        consentTimeout = null;
+                    }
+                    clearInterval(pollInterval);
+                    // Reset to home page, but DO NOT change backend state (pharmacist must manually start new patient)
+                    setTimeout(() => {
+                        window.location.reload(); 
+                    }, 3000);
+                }
+            } catch (err) {}
+        }, 1000);
     });
 });

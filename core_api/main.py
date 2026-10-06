@@ -96,21 +96,31 @@ async def process_audio_task(task_id: str, audio_path: str):
         task.status = "STT_PROCESSING"
         db.commit()
         
-        # Call STT based on configuration
+        # Call STT based strictly on configuration
         with open(audio_path, "rb") as f:
             audio_bytes = f.read()
             
-        # Hybrid Fusion: Run both Typhoon (local) and Deepgram (cloud) concurrently
-        task_typhoon = run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
-        task_deepgram = run_in_threadpool(transcribe_audio_deepgram, audio_bytes)
+        tasks = []
+        if USE_GROQ_STT:
+            tasks.append(run_in_threadpool(transcribe_audio_groq, audio_bytes))
+        else:
+            # Strictly use Typhoon; throw error if not available
+            if not getattr(asr_recognizer, "is_loaded", False) and not ASR_AVAILABLE:
+                raise RuntimeError("Typhoon ASR is configured but the module/model is not available.")
+            tasks.append(run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes))
+            
+        if USE_DEEPGRAM_STT:
+            tasks.append(run_in_threadpool(transcribe_audio_deepgram, audio_bytes))
+            
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        results = await asyncio.gather(task_typhoon, task_deepgram, return_exceptions=True)
+        main_result = results[0] if not isinstance(results[0], Exception) else f"Main STT Failed: {results[0]}"
         
-        typhoon_result = results[0] if not isinstance(results[0], Exception) else f"Typhoon Failed: {results[0]}"
-        deepgram_result = results[1] if not isinstance(results[1], Exception) else f"Deepgram Failed: {results[1]}"
-        
-        # Combine them for the LLM
-        stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย (Typhoon) ---\n{typhoon_result}\n\n--- ส่วนที่ 2: โครงสร้างคนพูด (Deepgram) ---\n{deepgram_result}"
+        if USE_DEEPGRAM_STT:
+            deepgram_result = results[1] if not isinstance(results[1], Exception) else f"Deepgram Failed: {results[1]}"
+            stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}\n\n--- ส่วนที่ 2: โครงสร้างคนพูด (Deepgram) ---\n{deepgram_result}"
+        else:
+            stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}"
         
         task.stt_text = stt_result
         task.status = "STT_DONE"

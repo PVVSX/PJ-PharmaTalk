@@ -14,9 +14,9 @@ _COMPONENT = components.declare_component(
 )
 
 
-def auto_recorder(*, cooldown_seconds: int = 30, key: str | None = None) -> dict[str, Any] | None:
+def auto_recorder(*, cooldown_seconds: int = 0, key: str | None = None, api_url: str = "http://localhost:8500/api/state") -> dict[str, Any] | None:
     """Return a WAV payload when the browser recorder is stopped."""
-    value = _COMPONENT(cooldown_seconds=cooldown_seconds, default=None, key=key)
+    value = _COMPONENT(cooldown_seconds=cooldown_seconds, api_url=api_url, default=None, key=key)
     if not isinstance(value, dict) or not value.get("audio_base64"):
         return None
 

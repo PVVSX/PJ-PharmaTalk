@@ -54,30 +54,45 @@ def get_state_internal():
 
 def set_state_internal(status: str, consent: Optional[dict] = None):
     RECORD_DIR.mkdir(parents=True, exist_ok=True)
+    
+    existing = {}
+    if STATE_FILE.exists():
+        try:
+            existing = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        except:
+            pass
+            
+    current_consent = consent if consent else existing.get("consent")
+    
     data = {
         "status": status,
-        "timestamp": time.time()
+        "timestamp": time.time(),
+        "consent": current_consent
     }
     STATE_FILE.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    if status == "READY" and consent and consent.get("consent_id"):
-        consent_record = {
-            "consent_id": str(consent["consent_id"]),
-            "consent_version": str(consent.get("consent_version", "1.0")),
-            "consented_at": str(consent.get("consented_at") or datetime.now(timezone.utc).isoformat()),
-            "recorded_at": datetime.now(timezone.utc).isoformat(),
-        }
+    if current_consent and current_consent.get("consent_id"):
         init_database()
         with sqlite3.connect(DATABASE_FILE) as connection:
-            connection.execute("""
-                INSERT OR IGNORE INTO consent_records
-                (consent_id, consent_version, consented_at, recorded_at)
-                VALUES (?, ?, ?, ?)
-            """, (
-                consent_record["consent_id"],
-                consent_record["consent_version"],
-                consent_record["consented_at"],
-                consent_record["recorded_at"],
-            ))
+            if status == "READY":
+                connection.execute("""
+                    INSERT OR IGNORE INTO consent_records
+                    (consent_id, consent_version, consented_at, recorded_at)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    str(current_consent["consent_id"]),
+                    str(current_consent.get("consent_version", "1.0")),
+                    str(current_consent.get("consented_at") or datetime.now(timezone.utc).isoformat()),
+                    ""
+                ))
+            elif status == "FINISHED":
+                connection.execute("""
+                    UPDATE consent_records 
+                    SET recorded_at = ? 
+                    WHERE consent_id = ?
+                """, (
+                    datetime.now(timezone.utc).isoformat(),
+                    str(current_consent["consent_id"])
+                ))
             connection.commit()
     return data
 
@@ -87,7 +102,7 @@ def get_state():
 
 @app.post("/api/state")
 def set_state(req: StateModel):
-    if req.status not in ["WAITING", "READY", "FINISHED"]:
+    if req.status not in ["WAITING", "READY", "RECORDING", "FINISHED"]:
         raise HTTPException(status_code=400, detail="Invalid status")
     return set_state_internal(req.status, req.consent)
 
