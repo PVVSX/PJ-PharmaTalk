@@ -47,6 +47,7 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
 .mic-pulse{animation:pulseSoft 1.8s ease-out infinite}
 .ding{position:absolute;inset:0;border-radius:999px;border:2px solid currentColor;animation:dingRing .92s ease-out forwards}
 .progress-auto{position:relative;overflow:hidden;background:linear-gradient(90deg,rgba(0,0,0,0.08),rgba(255,255,255,0.9),rgba(0,0,0,0.08));background-size:200% 100%;animation:progressShine 1.6s linear infinite}
+.bottom-hint{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-spacing:0}
 </style>
 </head>
 <body class="bg-[#F7FAFF] text-[#1E3146] w-screen h-[100dvh] overflow-hidden relative selection:bg-[#8BC6FF]/30">
@@ -76,8 +77,7 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
     <div id="sceneTitleMini" class="hidden md:flex px-3 py-1 rounded-full bg-[#223349] text-white text-[11px] font-bold max-w-[220px] truncate">ขออนุญาตก่อน</div>
   </div>
   <div class="pointer-events-auto flex items-center gap-2">
-    <button id="soundToggle" class="w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-[#E6EEF7] shadow-sm flex items-center justify-center text-[16px] hover:scale-105 transition" aria-label="เปิดหรือปิดเสียง"><span class="material-symbols-rounded">volume_off</span></button>
-    <button id="skipPopupBtn" class="hidden px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-[#E6EEF7] shadow-sm text-[12px] font-semibold hover:bg-white transition">ข้ามหน้าต่าง</button>
+    <button type="button" id="skipPopupBtn" class="hidden px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-[#E6EEF7] shadow-sm text-[12px] font-semibold hover:bg-white transition">ข้ามหน้าต่าง</button>
   </div>
 </div>
 
@@ -88,7 +88,7 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
 <div id="popupOverlay" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-[#1E3146]/30">
   <div id="popupCard" class="popup-card relative w-full max-w-[440px] bg-white rounded-[28px] shadow-2xl border border-white/70 p-7 md:p-8 overflow-hidden">
     <div class="absolute -top-20 -right-20 w-[180px] h-[180px] bg-gradient-to-br from-[#E8F3FF] to-[#FFF7D6] rounded-full blur-[18px] opacity-60 pointer-events-none"></div>
-    <button id="popupCloseX" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#F2F6FB] flex items-center justify-center hover:bg-[#E6EEF7] transition" aria-label="ปิดหน้าต่าง"><span class="material-symbols-rounded text-[20px]">close</span></button>
+    <button type="button" id="popupCloseX" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#F2F6FB] flex items-center justify-center hover:bg-[#E6EEF7] transition" aria-label="ปิดหน้าต่าง"><span class="material-symbols-rounded text-[20px]">close</span></button>
     <div id="popupContent" class="relative"></div>
   </div>
 </div>
@@ -103,16 +103,16 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
   </div>
   <div class="pb-[calc(16px+env(safe-area-inset-bottom))] flex justify-center">
     <div class="pointer-events-auto bg-white/92 backdrop-blur-xl border border-[#E6EEF7] shadow-[0_18px_60px_rgba(34,51,73,0.14)] rounded-full px-3 md:px-5 py-2.5 md:py-3 flex items-center gap-2.5 md:gap-4">
-      <button id="prevBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">‹</button>
-      <button id="playPauseBtn" class="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1E3146] text-white flex items-center justify-center shadow hover:scale-105 active:scale-95 transition text-[16px]" aria-label="หยุดโมชั่น"><span class="material-symbols-rounded">pause</span></button>
-      <button id="nextBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">›</button>
+      <button type="button" id="prevBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">‹</button>
+      <button type="button" id="playPauseBtn" class="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1E3146] text-white flex items-center justify-center shadow hover:scale-105 active:scale-95 transition text-[16px]" aria-label="หยุดโมชั่น"><span class="material-symbols-rounded">pause</span></button>
+      <button type="button" id="nextBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">›</button>
       <div class="w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
       <div id="dotsNav" class="flex items-center gap-2"></div>
       <div class="w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
       <div class="flex items-center gap-2 text-[11px] font-bold text-[#7A8CA3]">
         <span id="timerText" class="tabular-nums">5.0s</span>
         <span class="w-1 h-1 rounded-full bg-[#C8D6E8]"></span>
-        <span class="hidden md:inline">Space = หยุด/เล่น • ← → เปลี่ยนฉาก</span>
+        <span class="hidden md:inline bottom-hint" aria-label="Control buttons"><span class="material-symbols-rounded text-[14px] align-middle">play_arrow</span></span>
         <span class="md:hidden">แตะซ้าย-ขวาเพื่อเปลี่ยน</span>
       </div>
     </div>
@@ -210,8 +210,8 @@ const popups=[
         <p class="mt-2 text-[13px] leading-[1.6] text-[#5A6B80]">เสียงใช้ทำบันทึกการพูดคุยกับเภสัชกร คุณปฏิเสธได้โดยไม่กระทบการรับบริการ</p>
         <div id="consentResult" class="mt-3 text-[12px] font-semibold text-[#5A6B80]" role="status" aria-live="polite"></div>
         <div class="mt-5 grid grid-cols-1 gap-2.5">
-          <button data-action="agreeConsent" class="w-full py-3.5 rounded-full bg-[#1E3146] text-white text-[15px] font-bold shadow hover:scale-[1.01] transition">ยินยอมให้บันทึกเสียง</button>
-          <button data-action="declineConsent" class="w-full py-3 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] text-[#4A5C72] text-[14px] font-semibold hover:bg-[#E6EEF7] transition">ไม่ยินยอม</button>
+          <button type="button" data-action="agreeConsent" class="w-full py-3.5 rounded-full bg-[#1E3146] text-white text-[15px] font-bold shadow hover:scale-[1.01] transition">ยินยอมให้บันทึกเสียง</button>
+          <button type="button" data-action="declineConsent" class="w-full py-3 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] text-[#4A5C72] text-[14px] font-semibold hover:bg-[#E6EEF7] transition">ไม่ยินยอม</button>
         </div>
         <p class="mt-3 text-[11px] text-[#9AA9BC]">การบันทึกจะเริ่มเมื่อคุณกดยินยอมเท่านั้น</p>
       </div>`
@@ -314,7 +314,12 @@ const popupOverlay=document.getElementById('popupOverlay');
 const popupCard=document.getElementById('popupCard');
 const popupContent=document.getElementById('popupContent');
 const skipPopupBtn=document.getElementById('skipPopupBtn');
-const soundToggle=document.getElementById('soundToggle');
+
+function forceButtonTypeBehavior(){
+  document.querySelectorAll('button').forEach((btn)=>{
+    if(!btn.hasAttribute('type')) btn.type='button';
+  });
+}
 
 function updateBackground(idx){
   const c=SCENE_BG[idx];
@@ -453,9 +458,12 @@ function showFinalPopup(){
 function renderPopup(cfg, from, to){
   const header=`<div class="flex items-center gap-3 mb-4"><div class="w-11 h-11 rounded-[14px] bg-[#F7FAFF] border border-[#E6EEF7] flex items-center justify-center text-[#223349]"><span class="material-symbols-rounded text-[24px]">${cfg.icon}</span></div><div><div class="text-[16px] font-extrabold leading-[1.2]">${cfg.title}</div><div class="text-[12px] text-[#7A8CA3] font-medium">${cfg.subtitle}</div></div></div>`;
   popupContent.innerHTML=header + cfg.render();
+  forceButtonTypeBehavior();
   // wire buttons
   popupContent.querySelectorAll('[data-action]').forEach(btn=>{
     btn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
       const act=e.currentTarget.dataset.action;
       if(act==='agreeConsent'){
         const consentButton=e.currentTarget;
@@ -481,7 +489,8 @@ function renderPopup(cfg, from, to){
             })
           });
           if(!response.ok) throw new Error(`API returned ${response.status}`);
-          popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#E8FDF0] text-[#23804A] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">check_circle</span></div><h3 class="mt-4 text-[20px] font-extrabold">บันทึกความยินยอมแล้ว</h3><p class="mt-2 text-[14px] text-[#5A6B80]">เภสัชกรสามารถเริ่มบันทึกเสียงได้</p></div>`;
+          popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#E8FDF0] text-[#23804A] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">check_circle</span></div><h3 class="mt-4 text-[20px] font-extrabold">บันทึกความยินยอมแล้ว</h3><p class="mt-2 text-[14px] text-[#5A6B80]">กำลังเปิดหน้าใหม่...</p></div>`;
+          setTimeout(()=>openNextPage('agree'), 1200);
         } catch(error) {
           console.error('Could not save recording consent',error);
           result.textContent='บันทึกไม่ได้ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง';
@@ -489,14 +498,18 @@ function renderPopup(cfg, from, to){
         }
       }
       else if(act==='declineConsent'){
-        popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#F2F6FB] text-[#5A6B80] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">mic_off</span></div><h3 class="mt-4 text-[20px] font-extrabold">จะไม่เริ่มบันทึกเสียง</h3><p class="mt-2 text-[14px] text-[#5A6B80]">คุณปฏิเสธได้ โดยไม่กระทบการรับบริการ</p><button id="returnToSteps" class="mt-5 w-full py-3 rounded-full bg-[#1E3146] text-white font-bold">กลับไปดูขั้นตอน</button></div>`;
-        document.getElementById('returnToSteps').addEventListener('click',()=>{
-          hidePopup(()=>{ pauseAuto(); showScene(5); });
-        });
+        popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#F2F6FB] text-[#5A6B80] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">mic_off</span></div><h3 class="mt-4 text-[20px] font-extrabold">จะไม่เริ่มบันทึกเสียง</h3><p class="mt-2 text-[14px] text-[#5A6B80]">กำลังเปิดหน้าใหม่...</p></div>`;
+        setTimeout(()=>openNextPage('decline'), 1200);
       }
       else if(act==='next'){ closePopupAndGo(); }
     });
   });
+}
+function openNextPage(decision='agree'){
+  const target=new URL('./index-popup-scenes.html', window.location.href);
+  target.searchParams.set('source', 'popup-scenes');
+  target.searchParams.set('decision', decision);
+  window.location.assign(target.href);
 }
 function closePopupAndGo(){
   if(upcomingScene!==null){ const destination=upcomingScene; hidePopup(()=>{ showScene(destination); }); }
@@ -558,10 +571,6 @@ document.addEventListener('keydown', (e)=>{
   if(e.code==='ArrowLeft'){ e.preventDefault(); if(isPopupOpen && upcomingScene===null) hidePopup(()=>showScene((currentScene-1+6)%6)); else if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+6)%6)); else { pauseAuto(); showScene((currentScene-1+6)%6); } }
   if(e.code==='Escape' && isPopupOpen && upcomingScene!==null){ closePopupAndGo(); }
 });
-
-// Sound toggle visual only
-let isMuted=true;
-soundToggle.addEventListener('click',()=>{ isMuted=!isMuted; soundToggle.innerHTML=`<span class="material-symbols-rounded">${isMuted?'volume_off':'volume_up'}</span>`; soundToggle.classList.toggle('bg-[#FFF7D6]',!isMuted); });
 
 // Swipe
 let touchStartX=0, touchStartY=0;
