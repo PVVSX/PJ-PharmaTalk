@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Motion 6 Steps – ฉากอัตโนมัติ + Pop-up เปลี่ยนฉาก</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
+<style>
+*{font-family:'Noto Sans Thai',sans-serif}
+.material-symbols-rounded{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
+body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
+#mouseGlow{will-change:transform; transition:opacity .35s}
+.blob{will-change:transform; filter:blur(64px); mix-blend-mode:multiply}
+
+@keyframes bounceIn{0%{transform:scale(.82) translateY(26px);opacity:0}45%{transform:scale(1.06) translateY(-6px);opacity:1}70%{transform:scale(.98) translateY(2px)}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes bounceOut{0%{transform:scale(1)}70%{transform:scale(1.06)}100%{transform:scale(.86) translateY(18px);opacity:0}}
+@keyframes fadeBlurIn{0%{opacity:0;transform:scale(.92);filter:blur(14px)}100%{opacity:1;transform:scale(1);filter:blur(0)}}
+@keyframes fadeBlurOut{0%{opacity:1;transform:scale(1);filter:blur(0)}100%{opacity:0;transform:scale(1.08);filter:blur(14px)}}
+@keyframes fall{0%{transform:translateY(-12vh) rotate(0) translateX(0)}100%{transform:translateY(112vh) rotate(720deg) translateX(80px)}}
+.falling{position:fixed;top:-24px;width:10px;height:10px;animation:fall linear forwards;z-index:120;pointer-events:none}
+@keyframes pulseSoft{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(139,198,255,.55)}50%{transform:scale(1.12);box-shadow:0 0 0 10px rgba(139,198,255,0)}}
+@keyframes waveBar{0%{height:8px}100%{height:34px}}
+.wave-bar{display:inline-block;width:5px;background:currentColor;border-radius:999px;margin:0 2.5px;animation:waveBar .72s ease-in-out infinite alternate}
+@keyframes shineSweep{0%{transform:translateX(-120%) skewX(-18deg)}100%{transform:translateX(220%) skewX(-18deg)}}
+@keyframes typeCursor{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes tagPop{0%{transform:scale(0) translateY(22px) rotate(-6deg);opacity:0}60%{transform:scale(1.18) translateY(-4px) rotate(2deg)}100%{transform:scale(1) translateY(0) rotate(0);opacity:1}}
+@keyframes dingRing{0%{transform:scale(0)}40%{transform:scale(1.5)}100%{transform:scale(2.4);opacity:0}}
+@keyframes progressShine{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes watermarkFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px 18px 108px;opacity:0;pointer-events:none;transition:opacity .68s cubic-bezier(0.2,0.8,0.2,1), transform .72s cubic-bezier(0.2,0.8,0.2,1), filter .62s ease;transform:scale(.92);filter:blur(16px)}
+.scene.active{opacity:1;pointer-events:auto;transform:scale(1);filter:blur(0);z-index:2}
+.scene.exiting{opacity:0;transform:scale(1.08);filter:blur(18px);z-index:1}
+.watermark{position:absolute;left:50%;top:50%;transform:translate(-50%,-58%);font-size:min(42vw,380px);font-weight:800;line-height:1;opacity:.06;letter-spacing:-.06em;pointer-events:none;user-select:none;animation:watermarkFloat 6s ease-in-out infinite}
+.scene-card{will-change:transform;transform-style:preserve-3d;transition:transform .38s cubic-bezier(0.2,0.8,0.2,1), box-shadow .38s ease, border-color .3s}
+.scene-card.hovering{box-shadow:0 30px 80px rgba(34,51,73,.14),0 10px 24px rgba(34,51,73,.10)!important}
+.scene-characters{max-width:460px;margin:20px auto 0;animation:fadeBlurIn .7s ease both}
+.cartoon-bubble{transform-origin:center;animation:pulseSoft 2.4s ease-in-out infinite}
+.cartoon-ring{transform-origin:center;animation:dingRing 2.2s ease-out infinite}
+.type-cursor{display:inline-block;width:2.5px;height:1.15em;background:#8BC6FF;margin-left:3px;transform:translateY(3px);animation:typeCursor .9s infinite}
+
+#popupOverlay{backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2)}
+.popup-card{animation:bounceIn .62s cubic-bezier(0.34,1.56,0.64,1) forwards}
+.popup-card.closing{animation:bounceOut .42s cubic-bezier(0.4,0,0.6,1) forwards}
+.mic-pulse{animation:pulseSoft 1.8s ease-out infinite}
+.ding{position:absolute;inset:0;border-radius:999px;border:2px solid currentColor;animation:dingRing .92s ease-out forwards}
+.progress-auto{position:relative;overflow:hidden;background:linear-gradient(90deg,rgba(0,0,0,0.08),rgba(255,255,255,0.9),rgba(0,0,0,0.08));background-size:200% 100%;animation:progressShine 1.6s linear infinite}
+</style>
+</head>
+<body class="bg-[#F7FAFF] text-[#1E3146] w-screen h-[100dvh] overflow-hidden relative selection:bg-[#8BC6FF]/30">
+
+<div id="topAutoProgress" class="fixed top-0 left-0 h-[3px] w-0 z-[99] bg-gradient-to-r from-[#8BC6FF] via-[#FFC93D] to-[#6EDB9A] transition-all duration-100 linear"></div>
+
+<div id="mouseGlow" class="fixed w-[720px] h-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none z-[4] opacity-55 mix-blend-multiply hidden md:block" style="background:radial-gradient(circle, rgba(139,198,255,0.28) 0%, rgba(255,201,61,0.20) 26%, rgba(110,219,154,0.16) 48%, transparent 70%)"></div>
+
+<!-- BG Layer that changes color per scene -->
+<div id="bgLayer" class="fixed inset-0 -z-10 transition-colors duration-[800ms] ease-out bg-[#E8F3FF]"></div>
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+  <div id="blob1" class="blob absolute w-[560px] h-[560px] -top-28 -left-28 rounded-full bg-[#E0F0FF] opacity-80 transition-colors duration-[800ms]"></div>
+  <div id="blob2" class="blob absolute w-[620px] h-[620px] top-[28%] -right-36 rounded-full bg-[#FFF4D6] opacity-70 transition-colors duration-[800ms]"></div>
+  <div id="blob3" class="blob absolute w-[520px] h-[520px] bottom-[0%] left-[18%] rounded-full bg-[#E8FDF0] opacity-80 transition-colors duration-[800ms]"></div>
+</div>
+
+<div id="floatingLayer" class="fixed inset-0 pointer-events-none z-20"></div>
+<div id="sparkleCursor" class="fixed w-8 h-8 pointer-events-none z-[80] text-[#FFC93D] opacity-0 -translate-x-1/2 -translate-y-1/2 hidden md:block"><span class="material-symbols-rounded">auto_awesome</span></div>
+
+<!-- Top bar -->
+<div class="fixed top-0 inset-x-0 z-30 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between pointer-events-none">
+  <div class="pointer-events-auto flex items-center gap-2.5">
+    <div id="sceneIndicator" class="px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur border border-[#E6EEF7] shadow-sm text-[12px] font-bold tracking-wide flex items-center gap-2">
+      <span class="w-[6px] h-[6px] rounded-full bg-[#6EDB9A] animate-pulse"></span>
+      <span id="indicatorText">ขั้นที่ 1 จาก 6</span>
+    </div>
+    <div id="sceneTitleMini" class="hidden md:flex px-3 py-1 rounded-full bg-[#223349] text-white text-[11px] font-bold max-w-[220px] truncate">ขออนุญาตก่อน</div>
+  </div>
+  <div class="pointer-events-auto flex items-center gap-2">
+    <button id="soundToggle" class="w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-[#E6EEF7] shadow-sm flex items-center justify-center text-[16px] hover:scale-105 transition" aria-label="เปิดหรือปิดเสียง"><span class="material-symbols-rounded">volume_off</span></button>
+    <button id="skipPopupBtn" class="hidden px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-[#E6EEF7] shadow-sm text-[12px] font-semibold hover:bg-white transition">ข้ามหน้าต่าง</button>
+  </div>
+</div>
+
+<!-- Scene stage -->
+<div id="sceneStage" class="relative w-screen h-[100dvh] overflow-hidden"></div>
+
+<!-- Popup Overlay -->
+<div id="popupOverlay" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-[#1E3146]/30">
+  <div id="popupCard" class="popup-card relative w-full max-w-[440px] bg-white rounded-[28px] shadow-2xl border border-white/70 p-7 md:p-8 overflow-hidden">
+    <div class="absolute -top-20 -right-20 w-[180px] h-[180px] bg-gradient-to-br from-[#E8F3FF] to-[#FFF7D6] rounded-full blur-[18px] opacity-60 pointer-events-none"></div>
+    <button id="popupCloseX" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#F2F6FB] flex items-center justify-center hover:bg-[#E6EEF7] transition" aria-label="ปิดหน้าต่าง"><span class="material-symbols-rounded text-[20px]">close</span></button>
+    <div id="popupContent" class="relative"></div>
+  </div>
+</div>
+
+<!-- Bottom controls -->
+<div class="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
+  <!-- progress line for current scene timer -->
+  <div class="mx-auto max-w-[720px] px-6 pb-2">
+    <div class="h-[4px] w-full bg-white/70 backdrop-blur rounded-full overflow-hidden border border-white/60 shadow-sm">
+      <div id="autoProgressBar" class="h-full w-0 bg-gradient-to-r from-[#8BC6FF] via-[#5AA8F5] to-[#6EDB9A] transition-all duration-100 linear"></div>
+    </div>
+  </div>
+  <div class="pb-[calc(16px+env(safe-area-inset-bottom))] flex justify-center">
+    <div class="pointer-events-auto bg-white/92 backdrop-blur-xl border border-[#E6EEF7] shadow-[0_18px_60px_rgba(34,51,73,0.14)] rounded-full px-3 md:px-5 py-2.5 md:py-3 flex items-center gap-2.5 md:gap-4">
+      <button id="prevBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">‹</button>
+      <button id="playPauseBtn" class="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1E3146] text-white flex items-center justify-center shadow hover:scale-105 active:scale-95 transition text-[16px]" aria-label="หยุดโมชั่น"><span class="material-symbols-rounded">pause</span></button>
+      <button id="nextBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">›</button>
+      <div class="w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
+      <div id="dotsNav" class="flex items-center gap-2"></div>
+      <div class="w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
+      <div class="flex items-center gap-2 text-[11px] font-bold text-[#7A8CA3]">
+        <span id="timerText" class="tabular-nums">5.0s</span>
+        <span class="w-1 h-1 rounded-full bg-[#C8D6E8]"></span>
+        <span class="hidden md:inline">Space = หยุด/เล่น • ← → เปลี่ยนฉาก</span>
+        <span class="md:hidden">แตะซ้าย-ขวาเพื่อเปลี่ยน</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Data =====
+const SCENE_BG = [
+  {bg:"#E8F3FF", blob1:"#DDEEFF", blob2:"#FFF4D6", blob3:"#E8FDF0"},
+  {bg:"#FFF7D6", blob1:"#E8F3FF", blob2:"#FFE9A8", blob3:"#FDE9BF"},
+  {bg:"#E8FDF0", blob1:"#E0F0FF", blob2:"#FFF7D6", blob3:"#C6F6D5"},
+  {bg:"#E8F3FF", blob1:"#E8F3FF", blob2:"#FFE9EC", blob3:"#DDF1FF"},
+  {bg:"#FFF4E8", blob1:"#FFF4E8", blob2:"#E8F3FF", blob3:"#FFE0B5"},
+  {bg:"#E8FDF0", blob1:"#E8FDF0", blob2:"#E8F3FF", blob3:"#D6FFEA"},
+];
+const steps=[
+  {num:"01",icon:"verified_user",dot:"#8BC6FF",title:"ขออนุญาตก่อน",short:"ขออนุญาตก่อน",desc:"คุณเลือกยินยอมหรือปฏิเสธได้",sub:"คุณเป็นคนตัดสินใจ",subColor:"bg-[#E8F3FF] text-[#4A8FD6]", ill:"consent"},
+  {num:"02",icon:"mic",dot:"#FFC93D",title:"บันทึกเสียง",short:"บันทึกเสียง",desc:"แยกเสียงคนไข้กับเภสัชกร",sub:"รู้ว่าใครกำลังพูด",subColor:"bg-[#FFF7D6] text-[#8A6A00]", ill:"mic"},
+  {num:"03",icon:"forum",dot:"#6EDB9A",title:"เล่าอาการ",short:"เล่าอาการ",desc:"คุยตามปกติ ไม่ต้องกรอก",sub:"พูดคุยสบายๆ",subColor:"bg-[#E8FDF0] text-[#3A9B63]", ill:"chat"},
+  {num:"04",icon:"description",dot:"#5AA8F5",title:"เสียงเป็นข้อความ",short:"เสียงเป็นข้อความ",desc:"ระบบช่วยจดบทสนทนา",sub:"ช่วยจด ไม่ต้องพิมพ์เอง",subColor:"bg-[#E8F3FF] text-[#4A8FD6]", ill:"transcribe"},
+  {num:"05",icon:"folder_open",dot:"#FFAD5A",title:"จัดข้อมูลสำคัญ",short:"จัดข้อมูลสำคัญ",desc:"แยกอาการ แพ้ยา โรค และยา",sub:"จัดหมวดให้อ่านง่าย",subColor:"bg-[#FFF4E8] text-[#C07A2C]", ill:"tags"},
+  {num:"06",icon:"clinical_notes",dot:"#3AAD6E",title:"เภสัชกรตรวจทาน",short:"เภสัชกรตรวจ",desc:"เภสัชกรตรวจอีกครั้งก่อนบันทึก",sub:"มีคนตรวจสอบทุกครั้ง",subColor:"bg-[#E8FDF0] text-[#2E8A57]", ill:"verify"},
+];
+
+// Popup definitions per transition
+const popups=[
+  // 1->2
+  { icon:"graphic_eq", title:"แยกเสียงผู้พูด", subtitle:"ระบุคนไข้และเภสัชกร", type:"mic",
+    render:()=>`
+      <div class="text-center">
+        <div class="mx-auto w-[84px] h-[84px] rounded-full bg-[#E8F3FF] border-2 border-[#A9D4FF] flex items-center justify-center text-[#4A8FD6] relative mic-pulse"><span class="material-symbols-rounded text-[42px]">mic</span><span class="ding text-[#8BC6FF]"></span></div>
+        <div class="mt-4 flex justify-center gap-1.5"><span class="wave-bar text-[#8BC6FF]" style="animation-delay:0s"></span><span class="wave-bar text-[#8BC6FF]" style="animation-delay:0.08s"></span><span class="wave-bar text-[#8BC6FF]" style="animation-delay:0.16s"></span><span class="wave-bar text-[#8BC6FF]" style="animation-delay:0.24s"></span><span class="wave-bar text-[#8BC6FF]" style="animation-delay:0.32s"></span></div>
+        <p class="mt-4 text-[13px] leading-[1.6] text-[#5A6B80]">ไมค์แยกเสียงคนไข้กับเภสัชกร</p>
+        <p class="mt-5 text-center text-[12px] font-semibold text-[#7A8CA3]" role="status">กำลังเปลี่ยนไปขั้นถัดไปอัตโนมัติ</p>
+      </div>`
+  },
+  // 2->3
+  { icon:"forum", title:"คุยกันตามปกติ", subtitle:"เล่าอาการได้เลย", type:"chat",
+    render:()=>`
+      <div>
+        <div class="flex items-center gap-2 mb-3"><div class="w-8 h-8 rounded-full bg-[#E8F3FF] flex items-center justify-center text-[#4A8FD6]"><span class="material-symbols-rounded">forum</span></div><p class="text-[12px] font-bold text-[#7A8CA3] tracking-wide">ตัวอย่างบทสนทนา</p><span class="ml-auto text-[10px] px-2 py-1 rounded-full bg-[#E8FDF0] text-[#2E8A57] font-bold">สด</span></div>
+        <div id="popupChatBox" class="bg-[#F7FAFF] rounded-[20px] border border-[#E6EEF7] p-3 space-y-2.5 min-h-[152px]"></div>
+        <p class="mt-4 text-center text-[12px] font-semibold text-[#7A8CA3]" role="status">กำลังเปลี่ยนไปขั้นถัดไปอัตโนมัติ</p>
+      </div>`
+  },
+  // 3->4
+  { icon:"description", title:"เสียงเป็นข้อความ", subtitle:"ระบบช่วยจดบทสนทนา", type:"transcribe",
+    render:()=>`
+      <div class="text-center">
+        <div class="flex justify-center items-end gap-1 h-[38px] text-[#8BC6FF]"><span class="wave-bar" style="animation-delay:0s"></span><span class="wave-bar" style="animation-delay:.07s"></span><span class="wave-bar" style="animation-delay:.14s"></span><span class="wave-bar" style="animation-delay:.21s"></span><span class="wave-bar" style="animation-delay:.28s"></span><span class="wave-bar" style="animation-delay:.35s"></span><span class="wave-bar" style="animation-delay:.42s"></span><span class="wave-bar" style="animation-delay:.49s"></span></div>
+        <div class="mt-4 bg-[#F7FAFF] rounded-[16px] border border-[#DDE9FF] p-4 text-left min-h-[86px]"><span id="popupTypewriter" class="text-[14px] leading-[1.65] text-[#223349]"></span><span class="type-cursor"></span></div>
+        <div class="mt-4 flex items-center justify-center gap-2 text-[12px] text-[#6A7D94]"><span class="w-2 h-2 rounded-full bg-[#6EDB9A] animate-pulse"></span> กำลังจดภาษาไทย</div>
+        <p class="mt-4 text-center text-[12px] font-semibold text-[#7A8CA3]" role="status">กำลังเปลี่ยนไปขั้นถัดไปอัตโนมัติ</p>
+      </div>`
+  },
+  // 4->5
+  { icon:"folder_open", title:"จัดข้อมูลสำคัญ", subtitle:"แยกเป็นหมวดหมู่", type:"tags",
+    render:()=>`
+      <div>
+        <div class="flex items-center justify-between mb-3"><p class="text-[13px] font-bold">พบ 4 อย่าง • กำลังจัดให้</p><div class="text-[18px] font-extrabold text-[#FFAD5A]"><span id="popupTagCount">0</span>/4</div></div>
+        <div id="popupTagsGrid" class="grid grid-cols-2 gap-2.5"></div>
+        <div class="mt-4 flex gap-2 text-[11px] text-[#7A8CA3] items-center"><span class="px-2 py-1 rounded-full bg-[#E8FDF0] text-[#2E8A57] font-bold">ติ๊ง!</span> เพิ่มทีละใบแบบมีเสียง (จำลอง)</div>
+        <p class="mt-4 text-center text-[12px] font-semibold text-[#7A8CA3]" role="status">กำลังเปลี่ยนไปขั้นถัดไปอัตโนมัติ</p>
+      </div>`
+  },
+  // 5->6
+  { icon:"clinical_notes", title:"เภสัชกรตรวจทาน", subtitle:"ตรวจความถูกต้องอีกครั้ง", type:"verify",
+    render:()=>`
+      <div class="text-center">
+        <div class="flex justify-center"><div class="relative w-[86px] h-[86px]"><div class="absolute inset-0 rounded-full bg-[#E8FDF0] border-2 border-[#A8EFC3] flex items-center justify-center text-[#23804A]"><span class="material-symbols-rounded text-[40px]">clinical_notes</span></div><div class="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-[#6EDB9A] border-2 border-white flex items-center justify-center text-[12px] text-white font-bold">✓</div></div></div>
+        <div id="popupVerifySteps" class="mt-5 space-y-2.5 text-left"></div>
+        <div class="mt-4 h-[8px] w-full bg-[#EEF4FB] rounded-full overflow-hidden"><div id="popupVerifyBar" class="h-full w-0 bg-gradient-to-r from-[#6EDB9A] to-[#8BC6FF] transition-all duration-700 ease-out"></div></div>
+        <p class="mt-4 text-center text-[12px] font-semibold text-[#7A8CA3]" role="status">กำลังเปลี่ยนไปขั้นถัดไปอัตโนมัติ</p>
+      </div>`
+  },
+  // After 6 final
+  { icon:"graphic_eq", title:"ขอความยินยอมบันทึกเสียง", subtitle:"คุณเลือกได้ว่าจะยินยอมหรือไม่", type:"final",
+    render:()=>`
+      <div class="text-center">
+        <div class="mx-auto w-[112px] h-[112px] rounded-[28px] bg-[#E8F3FF] border border-[#B7D9FF] flex items-center justify-center">
+          <svg viewBox="0 0 120 120" class="w-[100px] h-[100px]" role="img" aria-label="คนไข้กำลังคุยกับเภสัชกร">
+            <circle cx="60" cy="60" r="54" fill="#F7FAFF"/>
+            <path d="M8 110c2-22 13-34 29-34s27 12 29 34" fill="#8BC6FF"/>
+            <circle cx="37" cy="56" r="14" fill="#F1C7A5"/>
+            <path d="M23 55c0-13 7-21 15-21 11 0 16 8 15 21-4-4-9-8-12-13-4 7-10 11-18 13" fill="#37465A"/>
+            <path d="M54 110c2-22 13-34 29-34s27 12 29 34" fill="#6EDB9A"/>
+            <circle cx="83" cy="56" r="14" fill="#E9B994"/>
+            <path d="M69 54c1-13 7-21 15-21 10 0 15 8 15 20l-5-3-4-9c-6 7-13 11-21 13" fill="#42506A"/>
+            <path d="M76 73h15l-3 37h-9z" fill="#fff"/><path d="M83 74v25" stroke="#0F766E" stroke-width="2"/>
+            <path d="M52 23v5m6-11v17m6-12v8m6-14v20" fill="none" stroke="#8BC6FF" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="mt-3 text-[19px] font-extrabold leading-[1.25]">ยินยอมให้บันทึกเสียงไหม</h3>
+        <p class="mt-2 text-[13px] leading-[1.6] text-[#5A6B80]">เสียงใช้ทำบันทึกการพูดคุยกับเภสัชกร คุณปฏิเสธได้โดยไม่กระทบการรับบริการ</p>
+        <div id="consentResult" class="mt-3 text-[12px] font-semibold text-[#5A6B80]" role="status" aria-live="polite"></div>
+        <div class="mt-5 grid grid-cols-1 gap-2.5">
+          <button data-action="agreeConsent" class="w-full py-3.5 rounded-full bg-[#1E3146] text-white text-[15px] font-bold shadow hover:scale-[1.01] transition">ยินยอมให้บันทึกเสียง</button>
+          <button data-action="declineConsent" class="w-full py-3 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] text-[#4A5C72] text-[14px] font-semibold hover:bg-[#E6EEF7] transition">ไม่ยินยอม</button>
+        </div>
+        <p class="mt-3 text-[11px] text-[#9AA9BC]">การบันทึกจะเริ่มเมื่อคุณกดยินยอมเท่านั้น</p>
+      </div>`
+  },
+];
+
+// ===== Build scenes DOM =====
+const stage=document.getElementById('sceneStage');
+function illustrationHTML(ill,id){
+  if(ill==='consent') return `<div class="mt-5 bg-white rounded-[20px] border border-[#DDE9FF] p-4 flex items-center gap-3"><div class="w-14 h-14 rounded-[16px] bg-[#E8F3FF] flex items-center justify-center text-[#4A8FD6]"><span class="material-symbols-rounded text-[30px]">tablet</span></div><div class="text-left"><div class="text-[13px] font-bold">ถามก่อนเริ่มบันทึก</div><div class="text-[12px] text-[#5A6B80]">รอการตัดสินใจจากคุณ</div></div></div>`;
+  if(ill==='mic') return `<div class="mt-5 flex justify-center gap-2 text-[#8BC6FF] h-[48px] items-end">${Array(18).fill(0).map((_,k)=>`<span class="wave-bar" style="animation-delay:${k*0.07}s"></span>`).join('')}<span class="ml-3 px-2.5 py-1 rounded-full bg-[#223349] text-white text-[11px] font-bold">เภสัช • คนไข้</span></div><p class="mt-2 text-[11px] text-[#8AA0B8] text-center">แยกเสียงอัตโนมัติ</p>`;
+  if(ill==='chat') return `<div id="chat-${id}" class="mt-4 space-y-2 min-h-[112px]"></div>`;
+  if(ill==='transcribe') return `<div class="mt-4 bg-white rounded-[18px] border border-[#B7D9FF] p-4 min-h-[88px] text-[14px] leading-[1.7]"><span id="typewriter-${id}"></span><span class="type-cursor"></span></div>`;
+  if(ill==='tags') return `<div class="mt-4"><div class="flex items-center justify-between mb-3"><p class="text-[12px] font-bold">ข้อมูลสำคัญที่คัดให้</p><div class="text-[18px] font-extrabold text-[#FFAD5A]"><span id="count-${id}">0</span>/4</div></div><div class="grid grid-cols-2 gap-2.5"><div class="rounded-[14px] border border-[#A9D4FF] bg-[#F0F7FF] px-3 py-3 text-center text-[11px]"><div class="font-bold text-[#4A8FD6]">อาการ</div><div class="mt-1">ปวดหัว • ไข้</div></div><div class="rounded-[14px] border border-[#FFB8C2] bg-[#FFF2F4] px-3 py-3 text-center text-[11px]"><div class="font-bold text-[#D14A5E]">แพ้ยา</div><div class="mt-1">เพนิซิลลิน</div></div><div class="rounded-[14px] border border-[#A8EFC3] bg-[#F1FBF4] px-3 py-3 text-center text-[11px]"><div class="font-bold text-[#2E8A57]">โรคประจำตัว</div><div class="mt-1">ความดันสูง</div></div><div class="rounded-[14px] border border-[#FFE48A] bg-[#FFFEF6] px-3 py-3 text-center text-[11px]"><div class="font-bold text-[#B68A00]">ยาที่เคยกิน</div><div class="mt-1">พารา • ยาลดไข้</div></div></div></div>`;
+  if(ill==='verify') return `<div class="mt-5 flex flex-col items-center"><div class="relative w-[84px] h-[84px]"><div class="absolute inset-0 rounded-full bg-[#E8FDF0] border-2 border-[#A8EFC3] flex items-center justify-center text-[#318353]"><span class="material-symbols-rounded text-[42px]">clinical_notes</span></div></div><p class="mt-3 text-[13px] font-semibold">เภสัชกรตรวจความถูกต้อง</p><div class="mt-3 w-full h-[6px] bg-[#EEF4FB] rounded-full overflow-hidden"><div id="verifyBar-${id}" class="h-full bg-[#6EDB9A] w-0 transition-all duration-[1100ms]"></div></div></div>`;
+  return '';
+}
+function sceneCharacterIllustration(ill){
+  const props={consent:'#8BC6FF',mic:'#FFC93D',chat:'#6EDB9A',transcribe:'#5AA8F5',tags:'#FFAD5A',verify:'#3AAD6E'}[ill];
+  const objectArt={
+    consent:'<path d="M280 48l22 8v16c0 16-10 25-22 31-12-6-22-15-22-31V56z" fill="#E8FDF0" stroke="#6EDB9A" stroke-width="3"/><path d="M269 72l8 8 15-17" fill="none" stroke="#3AAD6E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
+    mic:'<rect x="271" y="51" width="18" height="35" rx="9" fill="#FFF7D6" stroke="#FFC93D" stroke-width="3"/><path d="M261 72v5a19 19 0 0038 0v-5M280 96v9m-12 0h24" fill="none" stroke="#B68A00" stroke-width="4" stroke-linecap="round"/>',
+    chat:'<path d="M250 55h60a10 10 0 0110 10v17a10 10 0 01-10 10h-25l-14 11V92h-21a10 10 0 01-10-10V65a10 10 0 0110-10" fill="#E8FDF0" stroke="#6EDB9A" stroke-width="3"/><circle cx="266" cy="74" r="3" fill="#3A9B63"/><circle cx="280" cy="74" r="3" fill="#3A9B63"/><circle cx="294" cy="74" r="3" fill="#3A9B63"/>',
+    transcribe:'<path d="M264 51h31l13 13v34h-44z" fill="#E8F3FF" stroke="#5AA8F5" stroke-width="3" stroke-linejoin="round"/><path d="M295 51v14h13m-35 9h25m-25 9h25m-25 9h17" stroke="#4A8FD6" stroke-width="3" stroke-linecap="round"/>',
+    tags:'<rect x="255" y="56" width="50" height="33" rx="8" fill="#FFF4E8" stroke="#FFAD5A" stroke-width="3"/><rect x="264" y="67" width="50" height="33" rx="8" fill="#fff" stroke="#FFAD5A" stroke-width="3"/><path d="M275 78h27m-27 9h18" stroke="#C07A2C" stroke-width="3" stroke-linecap="round"/>',
+    verify:'<circle cx="280" cy="74" r="27" fill="#E8FDF0" stroke="#6EDB9A" stroke-width="3"/><path d="M266 74l10 10 19-21" fill="none" stroke="#3A9B63" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
+  }[ill];
+  return `<div class="scene-characters" role="img" aria-label="ภาพคนไข้และเภสัชกรกำลังทำงานร่วมกัน">
+    <svg viewBox="0 0 560 190" class="w-full h-auto" aria-hidden="true">
+      <rect x="8" y="8" width="544" height="174" rx="28" fill="#F7FAFF"/>
+      <circle cx="102" cy="82" r="27" fill="#F1C7A5"/><path d="M75 81c0-24 14-38 30-38 20 0 31 15 29 37-10-7-18-15-22-24-8 13-19 21-37 25" fill="#37465A"/>
+      <path d="M48 166c4-38 24-57 54-57s50 19 54 57" fill="#8BC6FF"/>
+      <circle cx="431" cy="82" r="27" fill="#E9B994"/><path d="M404 79c2-24 15-37 31-37 19 0 30 14 29 36l-10-5-6-14c-11 12-25 18-44 20" fill="#42506A"/>
+      <path d="M376 166c4-38 24-57 54-57s50 19 54 57" fill="#6EDB9A"/><path d="M414 113h34l-7 53h-20z" fill="#fff"/><path d="M431 115v34" stroke="#0F766E" stroke-width="4"/>
+      <rect x="180" y="118" width="200" height="34" rx="12" fill="#D9E8F5"/>
+      <circle cx="280" cy="74" r="54" fill="none" stroke="${props}" stroke-width="3" opacity=".18" class="cartoon-ring"/>
+      ${objectArt}
+    </svg>
+  </div>`;
+}
+function buildScenes(){
+  steps.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='scene';
+    el.dataset.index=i;
+    el.innerHTML=`
+      <div class="watermark select-none">${s.num}</div>
+      <div class="relative z-10 w-full max-w-[640px] mx-auto">
+        <div class="scene-card bg-white/90 backdrop-blur-xl border border-white/70 shadow-[0_24px_80px_rgba(34,51,73,0.12),0_8px_24px_rgba(34,51,73,0.08)] rounded-[32px] md:rounded-[40px] p-7 md:p-10 overflow-hidden group">
+          <div class="absolute top-0 left-0 w-[68%] h-[3px] bg-gradient-to-r from-[${s.dot}] to-transparent opacity-60"></div>
+          <div class="shine pointer-events-none absolute top-0 left-[-100%] w-[60%] h-full bg-gradient-to-r from-transparent via-white/80 to-transparent skew-x-[-20deg] opacity-0 group-hover:opacity-100 transition-all duration-700 group-hover:left-[130%]" style="background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,0.9) 50%,transparent 100%); transform:skewX(-20deg)"></div>
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-12 h-12 rounded-[16px] flex items-center justify-center text-[#223349] shadow-sm border" style="background:${SCENE_BG[i].blob2||'#fff'}; border-color:#E6EEF7"><span class="material-symbols-rounded text-[26px]">${s.icon}</span></div>
+            <div><div class="text-[11px] font-bold tracking-widest text-[#8AA0B8]">STEP ${s.num}</div><div class="inline-flex mt-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${s.subColor}">${s.sub}</div></div>
+            <div class="ml-auto w-9 h-9 rounded-full bg-[#F2F6FB] border flex items-center justify-center text-[13px] font-bold text-[#7A8CA3]">${i+1}/6</div>
+          </div>
+          <h2 id="sceneTitle-${i}" class="text-[26px] md:text-[34px] font-extrabold leading-[1.18] tracking-[-0.02em] min-h-[72px]"></h2>
+          <p id="sceneDesc-${i}" class="mt-3 text-[14px] md:text-[15px] leading-[1.65] text-[#4A5E78] opacity-0 translate-y-2"></p>
+          ${sceneCharacterIllustration(s.ill)}
+          ${illustrationHTML(s.ill,s.id)}
+        </div>
+      </div>
+    `;
+    stage.appendChild(el);
+  });
+}
+buildScenes();
+
+// dots nav
+const dotsNav=document.getElementById('dotsNav');
+steps.forEach((s,i)=>{
+  const d=document.createElement('button');
+  d.className='w-[8px] h-[8px] rounded-full transition-all duration-300 bg-[#E6EEF7]';
+  d.dataset.idx=i;
+  d.title=`ขั้นที่ ${i+1}`;
+  dotsNav.appendChild(d);
+});
+
+// state
+let currentScene=0;
+let isPlaying=true;
+let isPopupOpen=false;
+let upcomingScene=null;
+let autoTimer=null;
+let popupTimer=null;
+let progressInterval=null;
+let progressValue=0;
+const AUTO_DURATION=5000;
+
+const bgLayer=document.getElementById('bgLayer');
+const blob1=document.getElementById('blob1');
+const blob2=document.getElementById('blob2');
+const blob3=document.getElementById('blob3');
+const indicatorText=document.getElementById('indicatorText');
+const sceneTitleMini=document.getElementById('sceneTitleMini');
+const autoProgressBar=document.getElementById('autoProgressBar');
+const topAutoProgress=document.getElementById('topAutoProgress');
+const timerText=document.getElementById('timerText');
+const popupOverlay=document.getElementById('popupOverlay');
+const popupCard=document.getElementById('popupCard');
+const popupContent=document.getElementById('popupContent');
+const skipPopupBtn=document.getElementById('skipPopupBtn');
+const soundToggle=document.getElementById('soundToggle');
+
+function updateBackground(idx){
+  const c=SCENE_BG[idx];
+  bgLayer.style.background=c.bg;
+  blob1.style.background=c.blob1;
+  blob2.style.background=c.blob2;
+  blob3.style.background=c.blob3;
+}
+function updateDots(idx){
+  [...dotsNav.children].forEach((el,i)=>{
+    if(i===idx){ el.style.background=steps[i].dot; el.style.transform='scale(1.5)'; el.style.boxShadow=`0 0 0 6px ${steps[i].dot}33`; }
+    else { el.style.background='#E6EEF7'; el.style.transform='scale(1)'; el.style.boxShadow='none'; }
+  });
+}
+function typeTitleForScene(idx){
+  const el=document.getElementById(`sceneTitle-${idx}`);
+  if(!el) return;
+  const text=steps[idx].title;
+  el.innerHTML='';
+  let j=0;
+  el.textContent='';
+  function tick(){
+    if(j<=text.length){
+      el.textContent=text.slice(0,j);
+      if(j<text.length){ el.innerHTML=text.slice(0,j)+'<span class="type-cursor"></span>'; } else { el.textContent=text; }
+      j++;
+      setTimeout(tick, 32);
+    }
+  }
+  tick();
+}
+function revealDesc(idx){
+  const el=document.getElementById(`sceneDesc-${idx}`);
+  if(!el) return;
+  el.textContent=steps[idx].desc;
+  el.style.transition='opacity .6s ease .22s, transform .6s ease .22s';
+  requestAnimationFrame(()=>{ el.style.opacity='1'; el.style.transform='translateY(0)'; });
+}
+function initSceneIll(idx){
+  const id=steps[idx].id;
+  if(idx===2){ // chat
+    const box=document.getElementById(`chat-${id}`); if(!box || box.dataset.done) return; box.dataset.done='1'; box.innerHTML='';
+    const msgs=[{who:'คนไข้',text:'ปวดหัว มีไข้ 2 วัน',cls:'bg-[#E8F3FF] border-[#A9D4FF]'},{who:'เภสัชกร',text:'แพ้ยาไหมคะ?',cls:'bg-[#FFF7D6] border-[#FFE48A] self-end',align:'items-end'},{who:'คนไข้',text:'แพ้เพนิซิลลินค่ะ',cls:'bg-[#E8F3FF] border-[#A9D4FF]'}];
+    msgs.forEach((m,mi)=>{ setTimeout(()=>{ const d=document.createElement('div'); d.className=`flex flex-col ${m.align||''} transition-all duration-500`; d.innerHTML=`<div class="max-w-[86%] px-3.5 py-2.5 rounded-[16px] border text-[13px] leading-[1.55] ${m.cls}"><span class="font-bold text-[10px] block opacity-60">${m.who}:</span>${m.text}</div>`; box.appendChild(d); }, mi*560); });
+  }
+  if(idx===3){
+    const el=document.getElementById(`typewriter-${id}`); if(!el || el.dataset.done) return; el.dataset.done='1';
+    const txt='ปวดหัว 2 วัน • มีไข้ • แพ้เพนิซิลลิน • ความดันสูง'; let i=0; el.textContent=''; const iv=setInterval(()=>{ el.textContent=txt.slice(0,i++); if(i>txt.length) clearInterval(iv); },30);
+  }
+  if(idx===4){
+    const cnt=document.getElementById(`count-${id}`); if(!cnt || cnt.dataset.done) return; cnt.dataset.done='1'; let c=0; const iv=setInterval(()=>{ cnt.textContent=c; if(c>=4) clearInterval(iv); c++; },180);
+  }
+  if(idx===5){
+    setTimeout(()=>{ const b=document.getElementById(`verifyBar-${id}`); if(b) b.style.width='100%'; }, 200);
+  }
+}
+
+function showScene(idx, dir=1){
+  const scenes=[...document.querySelectorAll('.scene')];
+  scenes.forEach((sc,i)=>{
+    if(i===idx){ sc.classList.remove('exiting'); sc.classList.add('active'); }
+    else if(sc.classList.contains('active')){ sc.classList.remove('active'); sc.classList.add('exiting'); setTimeout(()=>sc.classList.remove('exiting'),720); }
+    else { sc.classList.remove('active','exiting'); }
+  });
+  currentScene=idx;
+  upcomingScene=null;
+  updateBackground(idx);
+  updateDots(idx);
+  indicatorText.textContent=`ขั้นที่ ${idx+1} จาก 6 • ${steps[idx].short}`;
+  sceneTitleMini.textContent=steps[idx].short;
+  typeTitleForScene(idx);
+  revealDesc(idx);
+  initSceneIll(idx);
+  if(isPlaying && !isPopupOpen){ scheduleNext(); }
+  if(idx===5){ /* final scene confetti occasional */ }
+}
+
+function scheduleNext(){
+  clearTimeout(autoTimer);
+  clearInterval(progressInterval);
+  progressValue=0;
+  autoProgressBar.style.width='0%';
+  topAutoProgress.style.width='0%';
+  timerText.textContent=(AUTO_DURATION/1000).toFixed(1)+'s';
+  if(!isPlaying || isPopupOpen) return;
+  const start=Date.now();
+  progressInterval=setInterval(()=>{
+    if(!isPlaying || isPopupOpen) return;
+    const elapsed=Date.now()-start;
+    progressValue=Math.min(elapsed/AUTO_DURATION*100,100);
+    autoProgressBar.style.width=progressValue+'%';
+    topAutoProgress.style.width=((currentScene*100+progressValue)/6)+'%';
+    timerText.textContent=((AUTO_DURATION-elapsed)/1000).toFixed(1)+'s';
+    if(progressValue>=100){ clearInterval(progressInterval); }
+  }, 50);
+  autoTimer=setTimeout(()=>{
+    if(currentScene<5){ showTransitionPopup(currentScene, currentScene+1); }
+    else { showFinalPopup(); }
+  }, AUTO_DURATION);
+}
+function pauseAuto(){ isPlaying=false; clearTimeout(autoTimer); clearInterval(progressInterval); document.getElementById('playPauseBtn').innerHTML='<span class="material-symbols-rounded">play_arrow</span>'; }
+function resumeAuto(){ if(isPopupOpen) return; isPlaying=true; document.getElementById('playPauseBtn').innerHTML='<span class="material-symbols-rounded">pause</span>'; scheduleNext(); }
+
+// Popup handling
+function showTransitionPopup(from,to){
+  isPopupOpen=true;
+  upcomingScene=to;
+  clearTimeout(autoTimer);
+  clearInterval(progressInterval);
+  const cfg=popups[from]; // from 0..4 corresponds to transition
+  renderPopup(cfg, from, to);
+  popupOverlay.classList.remove('hidden');
+  popupOverlay.classList.add('flex');
+  popupCard.classList.remove('closing');
+  document.getElementById('popupCloseX').classList.add('hidden');
+  skipPopupBtn.classList.add('hidden');
+  popupTimer=setTimeout(()=>{
+    if(isPopupOpen && upcomingScene===to) closePopupAndGo();
+  }, 1800);
+  setTimeout(()=> initPopupInner(cfg.type, from), 80);
+}
+function showFinalPopup(){
+  isPopupOpen=true;
+  upcomingScene=null;
+  clearTimeout(autoTimer); clearInterval(progressInterval);
+  const cfg=popups[5];
+  renderPopup(cfg, 5, 6);
+  popupOverlay.classList.remove('hidden');
+  popupOverlay.classList.add('flex');
+  popupCard.classList.remove('closing');
+  document.getElementById('popupCloseX').classList.add('hidden');
+  skipPopupBtn.classList.add('hidden');
+  setTimeout(()=> initPopupInner('final', 5), 80);
+  clearTimeout(popupTimer);
+}
+function renderPopup(cfg, from, to){
+  const header=`<div class="flex items-center gap-3 mb-4"><div class="w-11 h-11 rounded-[14px] bg-[#F7FAFF] border border-[#E6EEF7] flex items-center justify-center text-[#223349]"><span class="material-symbols-rounded text-[24px]">${cfg.icon}</span></div><div><div class="text-[16px] font-extrabold leading-[1.2]">${cfg.title}</div><div class="text-[12px] text-[#7A8CA3] font-medium">${cfg.subtitle}</div></div></div>`;
+  popupContent.innerHTML=header + cfg.render();
+  // wire buttons
+  popupContent.querySelectorAll('[data-action]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const act=e.currentTarget.dataset.action;
+      if(act==='agreeConsent'){
+        const consentButton=e.currentTarget;
+        const result=document.getElementById('consentResult');
+        consentButton.disabled=true;
+        result.textContent='กำลังบันทึกการยินยอม...';
+        try {
+          let consentId=sessionStorage.getItem('pharmatalk_consent_id');
+          if(!consentId){
+            consentId=crypto.randomUUID();
+            sessionStorage.setItem('pharmatalk_consent_id',consentId);
+          }
+          const response=await fetch('http://localhost:8502/api/state',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              status:'READY',
+              consent:{
+                consent_id:consentId,
+                consent_version:'1.0',
+                consented_at:new Date().toISOString()
+              }
+            })
+          });
+          if(!response.ok) throw new Error(`API returned ${response.status}`);
+          popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#E8FDF0] text-[#23804A] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">check_circle</span></div><h3 class="mt-4 text-[20px] font-extrabold">บันทึกความยินยอมแล้ว</h3><p class="mt-2 text-[14px] text-[#5A6B80]">เภสัชกรสามารถเริ่มบันทึกเสียงได้</p></div>`;
+        } catch(error) {
+          console.error('Could not save recording consent',error);
+          result.textContent='บันทึกไม่ได้ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง';
+          consentButton.disabled=false;
+        }
+      }
+      else if(act==='declineConsent'){
+        popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#F2F6FB] text-[#5A6B80] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">mic_off</span></div><h3 class="mt-4 text-[20px] font-extrabold">จะไม่เริ่มบันทึกเสียง</h3><p class="mt-2 text-[14px] text-[#5A6B80]">คุณปฏิเสธได้ โดยไม่กระทบการรับบริการ</p><button id="returnToSteps" class="mt-5 w-full py-3 rounded-full bg-[#1E3146] text-white font-bold">กลับไปดูขั้นตอน</button></div>`;
+        document.getElementById('returnToSteps').addEventListener('click',()=>{
+          hidePopup(()=>{ pauseAuto(); showScene(5); });
+        });
+      }
+      else if(act==='next'){ closePopupAndGo(); }
+    });
+  });
+}
+function closePopupAndGo(){
+  if(upcomingScene!==null){ const destination=upcomingScene; hidePopup(()=>{ showScene(destination); }); }
+  else { hidePopup(); }
+}
+function hidePopup(cb){
+  popupCard.classList.add('closing');
+  clearTimeout(popupTimer);
+  setTimeout(()=>{
+    popupOverlay.classList.add('hidden');
+    popupOverlay.classList.remove('flex');
+    isPopupOpen=false;
+    skipPopupBtn.classList.add('hidden');
+    popupCard.classList.remove('closing');
+    if(upcomingScene!==null){
+      const to=upcomingScene;
+      upcomingScene=null;
+      if(cb) cb(); else showScene(to);
+    } else { if(cb) cb(); else if(isPlaying){ scheduleNext(); } }
+  }, 380);
+}
+function initPopupInner(type, fromIdx){
+  if(type==='chat'){
+    const box=document.getElementById('popupChatBox'); if(!box) return;
+    box.innerHTML='';
+    const msgs=[{who:'คนไข้',text:'ปวดหัว มีไข้ 2 วัน',cls:'bg-[#E8F3FF] border-[#A9D4FF]'},{who:'เภสัช',text:'แพ้ยาไหมคะ?',cls:'bg-[#FFF7D6] border-[#FFE48A] self-end'},{who:'คนไข้',text:'แพ้เพนิซิลลินค่ะ',cls:'bg-[#E8F3FF] border-[#A9D4FF]'},{who:'เภสัช',text:'รับทราบค่ะ',cls:'bg-[#E8FDF0] border-[#A8EFC3] self-end'}];
+    msgs.forEach((m,i)=>{ setTimeout(()=>{ const d=document.createElement('div'); d.style.animation='tagPop .55s cubic-bezier(0.34,1.56,0.64,1) forwards'; d.className=`flex ${m.cls.includes('self-end')?'justify-end':''}`; d.innerHTML=`<div class="max-w-[84%] px-3 py-2 rounded-[14px] border text-[12px] leading-[1.5] ${m.cls}"><span class="font-bold text-[10px] opacity-60 block">${m.who}:</span>${m.text}</div>`; box.appendChild(d); }, i*420); });
+  }
+  if(type==='transcribe'){
+    const el=document.getElementById('popupTypewriter'); if(!el) return;
+    const txt='ปวดหัว 2 วัน • มีไข้ • แพ้เพนิซิลลิน • ความดันสูง'; let i=0; el.textContent=''; const iv=setInterval(()=>{ el.textContent=txt.slice(0,i++); if(i>txt.length) clearInterval(iv); },28);
+  }
+  if(type==='tags'){
+    const grid=document.getElementById('popupTagsGrid'); const cnt=document.getElementById('popupTagCount'); if(!grid) return; grid.innerHTML='';
+    const tags=[{label:'อาการ',val:'ปวดหัว • ไข้',color:'border-[#A9D4FF] bg-[#F0F7FF] t-[#4A8FD6]'},{label:'แพ้ยา',val:'เพนิซิลลิน',color:'border-[#FFB8C2] bg-[#FFF2F4] t-[#D14A5E]'},{label:'โรคประจำตัว',val:'ความดันสูง',color:'border-[#A8EFC3] bg-[#F1FBF4] t-[#2E8A57]'},{label:'ยาที่เคยกิน',val:'พารา • ยาลดไข้',color:'border-[#FFE48A] bg-[#FFFEF6] t-[#B68A00]'}];
+    let c=0; tags.forEach((tg,i)=>{ setTimeout(()=>{ const d=document.createElement('div'); d.style.animation='tagPop .58s cubic-bezier(0.34,1.56,0.64,1) forwards'; d.className=`rounded-[16px] border px-3 py-3 text-center relative overflow-hidden ${tg.color.split(' ').slice(0,2).join(' ')}`; d.innerHTML=`<div class="text-[10px] font-bold opacity-70">${tg.label}</div><div class="text-[12px] mt-1 font-semibold">${tg.val}</div><div class="absolute top-1 right-1 w-5 h-5 rounded-full bg-white border flex items-center justify-center text-[10px]">✓</div>`; grid.appendChild(d); c++; cnt.textContent=c; // ding visual
+      const ding=document.createElement('div'); ding.className='absolute -top-1 -right-1 w-6 h-6 text-[#FFAD5A]'; ding.innerHTML='<span class="ding" style="border-color:currentColor"></span><span class="material-symbols-rounded text-[18px]">notifications_active</span>'; d.appendChild(ding); setTimeout(()=>ding.remove(),900);
+    }, i*420); });
+  }
+  if(type==='verify'){
+    const stepsEl=document.getElementById('popupVerifySteps'); const bar=document.getElementById('popupVerifyBar'); if(!stepsEl) return;
+    const vSteps=[{t:'ตรวจสอบอาการและไข้',icon:'stethoscope'},{t:'เช็คประวัติแพ้ยา',icon:'warning'},{t:'ตรวจสอบการใช้ยา',icon:'shield'},{t:'เภสัชกรยืนยันบันทึก',icon:'clinical_notes'}];
+    stepsEl.innerHTML=''; let done=0;
+    vSteps.forEach((s,i)=>{ setTimeout(()=>{ const row=document.createElement('div'); row.className='flex items-center gap-2.5 px-3 py-2 rounded-[12px] bg-[#F7FAFF] border border-[#E6EEF7] text-[13px]'; row.style.animation='tagPop .5s cubic-bezier(0.34,1.56,0.64,1) forwards'; row.innerHTML=`<span class="w-7 h-7 rounded-full bg-white border flex items-center justify-center text-[#4A8FD6]"><span class="material-symbols-rounded text-[18px]">${s.icon}</span></span><span class="flex-1 font-medium">${s.t}</span><span class="material-symbols-rounded text-[#6EDB9A]">check_circle</span>`; stepsEl.appendChild(row); done++; bar.style.width=(done/vSteps.length*100)+'%'; if(done===vSteps.length) launchMiniConfetti(bar); }, i*520); });
+  }
+}
+
+// controls wiring
+document.getElementById('prevBtn').addEventListener('click',()=>{ pauseAuto(); if(isPopupOpen && upcomingScene===null){ hidePopup(()=>showScene((currentScene-1+6)%6)); } else { showScene((currentScene-1+6)%6); } });
+document.getElementById('nextBtn').addEventListener('click',()=>{ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); return; } pauseAuto(); if(currentScene<5){ showTransitionPopup(currentScene, currentScene+1); } else { showFinalPopup(); } });
+document.getElementById('playPauseBtn').addEventListener('click',()=>{ if(isPlaying) pauseAuto(); else resumeAuto(); });
+dotsNav.addEventListener('click', e=>{ const btn=e.target.closest('button'); if(!btn) return; const idx=parseInt(btn.dataset.idx); if(idx===currentScene) return; if(isPopupOpen) hidePopup(); pauseAuto(); if(idx>currentScene){ showTransitionPopup(currentScene, idx); /* will jump after popup */ upcomingScene=idx; } else { showScene(idx); } });
+document.getElementById('popupCloseX').addEventListener('click',()=>{ if(upcomingScene!==null) closePopupAndGo(); });
+skipPopupBtn.addEventListener('click',()=>closePopupAndGo());
+popupOverlay.addEventListener('click', (e)=>{ if(e.target===popupOverlay && upcomingScene!==null) closePopupAndGo(); });
+document.addEventListener('keydown', (e)=>{
+  if(e.code==='Space'){ e.preventDefault(); if(isPlaying) pauseAuto(); else resumeAuto(); }
+  if(e.code==='ArrowRight'){ e.preventDefault(); if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); } else { if(currentScene<5) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); } }
+  if(e.code==='ArrowLeft'){ e.preventDefault(); if(isPopupOpen && upcomingScene===null) hidePopup(()=>showScene((currentScene-1+6)%6)); else if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+6)%6)); else { pauseAuto(); showScene((currentScene-1+6)%6); } }
+  if(e.code==='Escape' && isPopupOpen && upcomingScene!==null){ closePopupAndGo(); }
+});
+
+// Sound toggle visual only
+let isMuted=true;
+soundToggle.addEventListener('click',()=>{ isMuted=!isMuted; soundToggle.innerHTML=`<span class="material-symbols-rounded">${isMuted?'volume_off':'volume_up'}</span>`; soundToggle.classList.toggle('bg-[#FFF7D6]',!isMuted); });
+
+// Swipe
+let touchStartX=0, touchStartY=0;
+stage.addEventListener('touchstart', e=>{ touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY; }, {passive:true});
+stage.addEventListener('touchend', e=>{ const dx=e.changedTouches[0].clientX-touchStartX; const dy=e.changedTouches[0].clientY-touchStartY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>48){ if(dx<0){ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); } else { if(currentScene<5) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); } } else { if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+6)%6)); else { pauseAuto(); showScene((currentScene-1+6)%6); } } } }, {passive:true});
+
+// Mouse glow & sparkle & tilt kept from gimmick
+let mouseX=innerWidth/2, mouseY=innerHeight/2, glowX=mouseX, glowY=mouseY, rafGlow=null;
+const mouseGlow=document.getElementById('mouseGlow');
+const b1=document.getElementById('blob1'), b2=document.getElementById('blob2'), b3=document.getElementById('blob3');
+const sparkleCursor=document.getElementById('sparkleCursor');
+function onMouseMove(e){ mouseX=e.clientX; mouseY=e.clientY; if(!rafGlow) rafGlow=requestAnimationFrame(updateGlow); }
+function updateGlow(){ rafGlow=null; glowX+=(mouseX-glowX)*0.085; glowY+=(mouseY-glowY)*0.085; if(mouseGlow) mouseGlow.style.transform=`translate3d(${glowX}px, ${glowY}px,0) translate(-50%,-50%)`; const cx=innerWidth/2, cy=innerHeight/2, dx=(mouseX-cx)*0.045, dy=(mouseY-cy)*0.045; if(b1) b1.style.transform=`translate3d(${dx*1.2}px, ${dy*0.8}px,0)`; if(b2) b2.style.transform=`translate3d(${-dx*0.9}px, ${-dy*0.55}px,0)`; if(b3) b3.style.transform=`translate3d(${dx*0.65}px, ${-dy*0.72}px,0)`; sparkleCursor.style.left=mouseX+'px'; sparkleCursor.style.top=mouseY+'px'; }
+addEventListener('mousemove', onMouseMove, {passive:true});
+
+// Tilt for scene cards
+function attachTilt(){
+  document.querySelectorAll('.scene-card').forEach(card=>{
+    let bounds=null;
+    card.addEventListener('mouseenter', ()=>{ bounds=card.getBoundingClientRect(); card.classList.add('hovering'); sparkleCursor.style.opacity='1'; sparkleCursor.style.transform='translate(-50%,-50%) scale(1.2)'; });
+    card.addEventListener('mousemove', e=>{ if(!bounds) return; const x=(e.clientX-bounds.left)/bounds.width-0.5; const y=(e.clientY-bounds.top)/bounds.height-0.5; card.style.transform=`perspective(900px) rotateX(${(-y*8).toFixed(2)}deg) rotateY(${(x*10).toFixed(2)}deg) scale(1.02)`; });
+    card.addEventListener('mouseleave', ()=>{ card.style.transform='perspective(900px) rotateX(0) rotateY(0) scale(1)'; card.classList.remove('hovering'); sparkleCursor.style.opacity='0'; });
+  });
+}
+attachTilt();
+
+// Confetti
+function launchConfetti(n=40){
+  for(let i=0;i<n;i++){ const c=document.createElement('div'); c.className='falling'; c.style.left=Math.random()*100+'vw'; c.style.background=['#8BC6FF','#FFC93D','#6EDB9A','#FF8AA1','#A9D4FF','#FFD4A6'][Math.floor(Math.random()*6)]; c.style.borderRadius=Math.random()>0.5?'50%':'3px'; c.style.width=(7+Math.random()*9)+'px'; c.style.height=c.style.width; c.style.animationDuration=(2.4+Math.random()*2.6)+'s'; c.style.animationDelay=(Math.random()*0.8)+'s'; document.body.appendChild(c); setTimeout(()=>c.remove(),5400); }
+}
+function launchMiniConfetti(anchor){
+  const rect=anchor.getBoundingClientRect();
+  for(let k=0;k<10;k++){ const p=document.createElement('div'); p.style.position='fixed'; p.style.left=rect.left+rect.width/2+'px'; p.style.top=rect.top+rect.height/2+'px'; p.style.width='6px'; p.style.height='6px'; p.style.borderRadius='2px'; p.style.background=['#8BC6FF','#FFC93D','#6EDB9A','#FF8AA1'][k%4]; p.style.pointerEvents='none'; p.style.zIndex='100'; const ang=Math.random()*Math.PI*2, dist=24+Math.random()*36; p.style.setProperty('--tx',Math.cos(ang)*dist+'px'); p.style.setProperty('--ty',Math.sin(ang)*dist+'px'); p.style.animation=`burst ${0.6+Math.random()*0.4}s cubic-bezier(0.2,0.8,0.2,1) forwards`; p.style.animationName='burst'; // reuse keyframe defined earlier via style tag? define inline
+      // custom burst using transform
+      document.body.appendChild(p);
+      const anim=p.animate([{transform:'translate(0,0) scale(1)', opacity:1},{transform:`translate(${Math.cos(ang)*dist}px, ${Math.sin(ang)*dist}px) scale(0) rotate(360deg)`, opacity:0}], {duration:700+Math.random()*300, easing:'cubic-bezier(0.2,0.8,0.2,1)'}); anim.onfinish=()=>p.remove();
+  }
+}
+
+// init
+showScene(0);
+resumeAuto();
+
+// expose for debug
+window._scene={showScene, pauseAuto, resumeAuto, showTransitionPopup, showFinalPopup};
+</script>
+</body>
+</html>
