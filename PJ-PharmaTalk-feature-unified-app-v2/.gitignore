@@ -1,0 +1,42 @@
+# API keys & Credentials — ใช้ environment variable แทน
+.gemini_api_key
+.dashscope_api_key
+.groq_api_key
+.deepgram_api_key
+MODELS_AND_APIS.md
+serviceAccountKey.json
+
+# API Local Data
+core_api/pharmatalk_api.db
+core_api/temp_audio/
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+venv_pyanote/
+
+# Archives (มีซอร์สโค้ดอยู่แล้ว)
+diarization/archives/
+record/record_app.zip
+record/audio/
+record/stt/
+record/emr/
+
+# Model weights (>100MB — ใช้ Hugging Face / local path แทน)
+text_classified/output_conditions/
+text_classified/output_drug_allergies/
+text_classified/output_medication_history/
+diarization/model/*.nemo
+speech_to_text/app/backend/typhoon-asr-realtime/*.nemo
+result_record/model_speech_to_text/*.nemo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large files added recently
+models/
+*.wav
+*.zip

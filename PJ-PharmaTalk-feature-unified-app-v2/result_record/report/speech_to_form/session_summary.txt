@@ -1,0 +1,42 @@
+=== session 2026-04-25T04:57:40 ===
+อินพุต: C:\Users\Captan\Desktop\project_updated\result_record\data\voice
+ไฟล์ที่ตั้งใจรันในรอบนี้: 10
+สำเร็จ (CSV + รายงาน): 0
+ข้าม/ผิดพลาด: 10
+ข้ามเดิม (มีใน CSV): 0
+เวลารวมรอบนี้ (วินาที, wall clock): 0.12
+=== session 2026-04-27T12:50:44 ===
+อินพุต (โฟลเดอร์หรือไฟล์): C:\Users\Captan\Desktop\project_updated\result_record\data\text_from_speech
+ไฟล์ที่ตั้งใจรันในรอบนี้: 11
+สำเร็จและบันทึก CSV + รายงาน: 8
+ข้ามเพราะอ่าน transcript / error อื่น: 3
+ข้ามเดิม (มีชื่อใน CSV แล้ว): 0
+เวลารวมรอบนี้ (วินาที, wall clock): 104.95
+=== session 2026-04-27T14:05:36 ===
+อินพุต (โฟลเดอร์หรือไฟล์): C:\Users\Captan\Desktop\project_updated\result_record\data\text_from_speech
+ไฟล์ที่ตั้งใจรันในรอบนี้: 3
+สำเร็จและบันทึก CSV + รายงาน: 0
+ข้ามเพราะอ่าน transcript / error อื่น: 3
+ข้ามเดิม (มีชื่อใน CSV แล้ว): 8
+เวลารวมรอบนี้ (วินาที, wall clock): 0.00
+=== session 2026-04-27T14:05:55 ===
+อินพุต (โฟลเดอร์หรือไฟล์): C:\Users\Captan\Desktop\project_updated\result_record\data\text_from_speech
+ไฟล์ที่ตั้งใจรันในรอบนี้: 3
+สำเร็จและบันทึก CSV + รายงาน: 0
+ข้ามเพราะอ่าน transcript / error อื่น: 3
+ข้ามเดิม (มีชื่อใน CSV แล้ว): 8
+เวลารวมรอบนี้ (วินาที, wall clock): 0.00
+=== session 2026-04-27T14:06:18 ===
+อินพุต (โฟลเดอร์หรือไฟล์): C:\Users\Captan\Desktop\project_updated\result_record\data\text_from_speech
+ไฟล์ที่ตั้งใจรันในรอบนี้: 3
+สำเร็จและบันทึก CSV + รายงาน: 0
+ข้ามเพราะอ่าน transcript / error อื่น: 3
+ข้ามเดิม (มีชื่อใน CSV แล้ว): 8
+เวลารวมรอบนี้ (วินาที, wall clock): 0.00
+=== session 2026-04-27T14:08:05 ===
+อินพุต (โฟลเดอร์หรือไฟล์): C:\Users\Captan\Desktop\project_updated\result_record\data\text_from_speech
+ไฟล์ที่ตั้งใจรันในรอบนี้: 11
+สำเร็จและบันทึก CSV + รายงาน: 8
+ข้ามเพราะอ่าน transcript / error อื่น: 3
+ข้ามเดิม (มีชื่อใน CSV แล้ว): 0
+เวลารวมรอบนี้ (วินาที, wall clock): 85.38

@@ -1,0 +1,7 @@
+{
+  "Conversation_1": {
+    "status": "error",
+    "input_snippet": "E x .\nเ ภ ส ัช ก ร :\nข อ ส อ บ ถ า มเ พ ิ่มเ ต ิมห น อ ยน ะ ค ะ  เ ว ียน ศ ีร ษ ะ น ี่เ ป น ม า น า น แ ค ไ ห น แ ล ว ค ะ  แ ล ว มีอ า ก า ร อ ื่",
+    "error": "เรียก Groq API ไม่สำเร็จ: Error code: 413 - {'error': {'message': 'Request too large for model `openai/gpt-oss-120b` in organization `org_01m345k8yteqrtrnsv244c93dm` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Requested 48168, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+  }
+}

@@ -1,0 +1,14 @@
+text → form (classify_gemini_extract)
+เวลาบันทึกรายงาน (local): 2026-04-27T14:08:01
+
+ไฟล์อินพุต:
+  C:\Users\Captan\Desktop\project_updated\result_record\data\text_from_speech\recording_2025-10-15_16-01-23.txt
+
+ประสิทธิภาพ / การตั้งค่า:
+  โมเดล Gemini: gemini-2.5-flash
+  เวลาที่ใช้ (วินาที) — เฉพาะขั้น Gemini + ประมวลผลรอบนี้: 5.6944
+  จำนวนท่อน transcript ที่ส่งเข้าโมเดล: 1
+
+ผลลัพธ์:
+  CSV: C:\Users\Captan\Desktop\project_updated\result_record\report\speech_to_form\gemini_extract.csv
+  ชื่อแถว (ชื่อไฟล์): recording_2025-10-15_16-01-23.txt

@@ -1,0 +1,7 @@
+=== session 2026-04-27T14:59:23 ===
+อินพุต (โฟลเดอร์หรือไฟล์): C:\Users\Captan\Desktop\project_updated\result_record\data\บท500_split
+ไฟล์ที่ตั้งใจรันในรอบนี้: 500
+สำเร็จและบันทึก CSV + รายงาน: 499
+ข้ามเพราะอ่าน transcript / error อื่น: 1
+ข้ามเดิม (มีชื่อใน CSV แล้ว): 0
+เวลารวมรอบนี้ (วินาที, wall clock): 2883.96
