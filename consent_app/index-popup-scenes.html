@@ -94,7 +94,7 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
 </div>
 
 <!-- Bottom controls -->
-<div class="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
+<div id="controllerBar" class="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
   <!-- progress line for current scene timer -->
   <div class="mx-auto max-w-[720px] px-6 pb-2">
     <div class="h-[4px] w-full bg-white/70 backdrop-blur rounded-full overflow-hidden border border-white/60 shadow-sm">
@@ -227,6 +227,10 @@ function illustrationHTML(ill,id){
     <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🏥 พัฒนาการดูแลรักษา</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">ใช้ประเมินความปลอดภัยในการใช้ยาและติดตามผลการรักษา</p></div>
     <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🚀 ต่อยอดระบบสุขภาพ</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">พัฒนาระบบผู้ช่วยเภสัชกรอัจฉริยะในอนาคต</p></div>
     <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🔒 ปลอดภัยสูงสุด</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">เก็บรักษาเป็นความลับและไม่เปิดเผยต่อบุคคลภายนอก</p></div>
+    <button type="button" onclick="nextStep()" class="mt-3 w-full flex items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] px-4 py-3 text-[15px] font-bold text-white shadow-md transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
+      <span>เริ่มต้นใช้งาน</span>
+      <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+    </button>
   </div>`;
   if(ill==='consent') return `<div class="mt-5 bg-white rounded-[20px] border border-[#DDE9FF] p-4 flex items-center gap-3"><div class="w-14 h-14 rounded-[16px] bg-[#E8F3FF] flex items-center justify-center text-[#4A8FD6]"><span class="material-symbols-rounded text-[30px]">tablet</span></div><div class="text-left"><div class="text-[13px] font-bold">ถามก่อนเริ่มบันทึก</div><div class="text-[12px] text-[#5A6B80]">รอการตัดสินใจจากคุณ</div></div></div>`;
   if(ill==='mic') return `<div class="mt-5 flex justify-center gap-2 text-[#8BC6FF] h-[48px] items-end">${Array(18).fill(0).map((_,k)=>`<span class="wave-bar" style="animation-delay:${k*0.07}s"></span>`).join('')}<span class="ml-3 px-2.5 py-1 rounded-full bg-[#223349] text-white text-[11px] font-bold">เภสัช • คนไข้</span></div><p class="mt-2 text-[11px] text-[#8AA0B8] text-center">แยกเสียงอัตโนมัติ</p>`;
@@ -300,7 +304,7 @@ steps.forEach((s,i)=>{
 
 // state
 let currentScene=0;
-let isPlaying=true;
+let isPlaying=false;
 let isPopupOpen=false;
 let upcomingScene=null;
 let autoTimer=null;
@@ -393,6 +397,7 @@ function showScene(idx, dir=1){
     else { sc.classList.remove('active','exiting'); }
   });
   currentScene=idx;
+  document.getElementById('controllerBar').classList.toggle('hidden', idx===0);
   upcomingScene=null;
   updateBackground(idx);
   updateDots(idx);
@@ -405,6 +410,12 @@ function showScene(idx, dir=1){
   if(idx===6){ /* final scene confetti occasional */ }
 }
 
+function nextStep(){
+  if(currentScene!==0) return;
+  showScene(1);
+  resumeAuto();
+}
+
 function scheduleNext(){
   clearTimeout(autoTimer);
   clearInterval(progressInterval);
@@ -412,7 +423,7 @@ function scheduleNext(){
   autoProgressBar.style.width='0%';
   topAutoProgress.style.width='0%';
   timerText.textContent=(AUTO_DURATION/1000).toFixed(1)+'s';
-  if(!isPlaying || isPopupOpen) return;
+  if(!isPlaying || isPopupOpen || currentScene===0) return;
   const start=Date.now();
   progressInterval=setInterval(()=>{
     if(!isPlaying || isPopupOpen) return;
@@ -429,7 +440,7 @@ function scheduleNext(){
   }, AUTO_DURATION);
 }
 function pauseAuto(){ isPlaying=false; clearTimeout(autoTimer); clearInterval(progressInterval); document.getElementById('playPauseBtn').innerHTML='<span class="material-symbols-rounded">play_arrow</span>'; }
-function resumeAuto(){ if(isPopupOpen) return; isPlaying=true; document.getElementById('playPauseBtn').innerHTML='<span class="material-symbols-rounded">pause</span>'; scheduleNext(); }
+function resumeAuto(){ if(isPopupOpen || currentScene===0) return; isPlaying=true; document.getElementById('playPauseBtn').innerHTML='<span class="material-symbols-rounded">pause</span>'; scheduleNext(); }
 
 // Popup handling
 function showTransitionPopup(from,to){
@@ -622,7 +633,6 @@ function launchMiniConfetti(anchor){
 
 // init
 showScene(0);
-resumeAuto();
 
 // expose for debug
 window._scene={showScene, pauseAuto, resumeAuto, showTransitionPopup, showFinalPopup};
