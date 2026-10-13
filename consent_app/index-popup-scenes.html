@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Motion 6 Steps – ฉากอัตโนมัติ + Pop-up เปลี่ยนฉาก</title>
+<title>Motion 7 Steps – ฉากอัตโนมัติ + Pop-up เปลี่ยนฉาก</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
@@ -72,7 +72,7 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
   <div class="pointer-events-auto flex items-center gap-2.5">
     <div id="sceneIndicator" class="px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur border border-[#E6EEF7] shadow-sm text-[12px] font-bold tracking-wide flex items-center gap-2">
       <span class="w-[6px] h-[6px] rounded-full bg-[#6EDB9A] animate-pulse"></span>
-      <span id="indicatorText">ขั้นที่ 1 จาก 6</span>
+      <span id="indicatorText">ขั้นที่ 1 จาก 7</span>
     </div>
     <div id="sceneTitleMini" class="hidden md:flex px-3 py-1 rounded-full bg-[#223349] text-white text-[11px] font-bold max-w-[220px] truncate">ขออนุญาตก่อน</div>
   </div>
@@ -121,6 +121,7 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
 <script>
 // ===== Data =====
 const SCENE_BG = [
+  {bg:"#F3F5FF", blob1:"#E4E9FF", blob2:"#FFF4D6", blob3:"#E8FDF0"},
   {bg:"#E8F3FF", blob1:"#DDEEFF", blob2:"#FFF4D6", blob3:"#E8FDF0"},
   {bg:"#FFF7D6", blob1:"#E8F3FF", blob2:"#FFE9A8", blob3:"#FDE9BF"},
   {bg:"#E8FDF0", blob1:"#E0F0FF", blob2:"#FFF7D6", blob3:"#C6F6D5"},
@@ -129,6 +130,7 @@ const SCENE_BG = [
   {bg:"#E8FDF0", blob1:"#E8FDF0", blob2:"#E8F3FF", blob3:"#D6FFEA"},
 ];
 const steps=[
+  {num:"00",id:"intro",icon:"record_voice_over",dot:"#8B9BFF",title:"วัตถุประสงค์การบันทึกเสียง",short:"วัตถุประสงค์การบันทึกเสียง",desc:"เพื่อรวบรวมข้อมูลประกอบการดำเนินโครงงานของนักศึกษามหาวิทยาลัยกรุงเทพ คณะวิศวกรรมศาสตร์ สาขาปัญญาประดิษฐ์และวิทยาการข้อมูล",sub:"ทำไมจึงบันทึกเสียง",subColor:"bg-[#EEF0FF] text-[#5968C9]", ill:"intro"},
   {num:"01",icon:"verified_user",dot:"#8BC6FF",title:"ขออนุญาตก่อน",short:"ขออนุญาตก่อน",desc:"คุณเลือกยินยอมหรือปฏิเสธได้",sub:"คุณเป็นคนตัดสินใจ",subColor:"bg-[#E8F3FF] text-[#4A8FD6]", ill:"consent"},
   {num:"02",icon:"mic",dot:"#FFC93D",title:"บันทึกเสียง",short:"บันทึกเสียง",desc:"แยกเสียงคนไข้กับเภสัชกร",sub:"รู้ว่าใครกำลังพูด",subColor:"bg-[#FFF7D6] text-[#8A6A00]", ill:"mic"},
   {num:"03",icon:"forum",dot:"#6EDB9A",title:"เล่าอาการ",short:"เล่าอาการ",desc:"คุยตามปกติ ไม่ต้องกรอก",sub:"พูดคุยสบายๆ",subColor:"bg-[#E8FDF0] text-[#3A9B63]", ill:"chat"},
@@ -220,6 +222,12 @@ const popups=[
 // ===== Build scenes DOM =====
 const stage=document.getElementById('sceneStage');
 function illustrationHTML(ill,id){
+  if(ill==='intro') return `<div class="mt-4 grid gap-2.5 text-left">
+    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">📝 แปลงเสียงเป็นข้อความ</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">บันทึกบทสนทนากลายเป็นเวชระเบียนอัตโนมัติเพื่อความถูกต้อง</p></div>
+    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🏥 พัฒนาการดูแลรักษา</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">ใช้ประเมินความปลอดภัยในการใช้ยาและติดตามผลการรักษา</p></div>
+    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🚀 ต่อยอดระบบสุขภาพ</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">พัฒนาระบบผู้ช่วยเภสัชกรอัจฉริยะในอนาคต</p></div>
+    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🔒 ปลอดภัยสูงสุด</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">เก็บรักษาเป็นความลับและไม่เปิดเผยต่อบุคคลภายนอก</p></div>
+  </div>`;
   if(ill==='consent') return `<div class="mt-5 bg-white rounded-[20px] border border-[#DDE9FF] p-4 flex items-center gap-3"><div class="w-14 h-14 rounded-[16px] bg-[#E8F3FF] flex items-center justify-center text-[#4A8FD6]"><span class="material-symbols-rounded text-[30px]">tablet</span></div><div class="text-left"><div class="text-[13px] font-bold">ถามก่อนเริ่มบันทึก</div><div class="text-[12px] text-[#5A6B80]">รอการตัดสินใจจากคุณ</div></div></div>`;
   if(ill==='mic') return `<div class="mt-5 flex justify-center gap-2 text-[#8BC6FF] h-[48px] items-end">${Array(18).fill(0).map((_,k)=>`<span class="wave-bar" style="animation-delay:${k*0.07}s"></span>`).join('')}<span class="ml-3 px-2.5 py-1 rounded-full bg-[#223349] text-white text-[11px] font-bold">เภสัช • คนไข้</span></div><p class="mt-2 text-[11px] text-[#8AA0B8] text-center">แยกเสียงอัตโนมัติ</p>`;
   if(ill==='chat') return `<div id="chat-${id}" class="mt-4 space-y-2 min-h-[112px]"></div>`;
@@ -229,6 +237,7 @@ function illustrationHTML(ill,id){
   return '';
 }
 function sceneCharacterIllustration(ill){
+  if(ill==='intro') return '';
   const props={consent:'#8BC6FF',mic:'#FFC93D',chat:'#6EDB9A',transcribe:'#5AA8F5',tags:'#FFAD5A',verify:'#3AAD6E'}[ill];
   const objectArt={
     consent:'<path d="M280 48l22 8v16c0 16-10 25-22 31-12-6-22-15-22-31V56z" fill="#E8FDF0" stroke="#6EDB9A" stroke-width="3"/><path d="M269 72l8 8 15-17" fill="none" stroke="#3AAD6E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -265,10 +274,10 @@ function buildScenes(){
           <div class="flex items-center gap-3 mb-5">
             <div class="w-12 h-12 rounded-[16px] flex items-center justify-center text-[#223349] shadow-sm border" style="background:${SCENE_BG[i].blob2||'#fff'}; border-color:#E6EEF7"><span class="material-symbols-rounded text-[26px]">${s.icon}</span></div>
             <div><div class="text-[11px] font-bold tracking-widest text-[#8AA0B8]">STEP ${s.num}</div><div class="inline-flex mt-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${s.subColor}">${s.sub}</div></div>
-            <div class="ml-auto w-9 h-9 rounded-full bg-[#F2F6FB] border flex items-center justify-center text-[13px] font-bold text-[#7A8CA3]">${i+1}/6</div>
+            <div class="ml-auto w-9 h-9 rounded-full bg-[#F2F6FB] border flex items-center justify-center text-[13px] font-bold text-[#7A8CA3]">${i+1}/${steps.length}</div>
           </div>
           <h2 id="sceneTitle-${i}" class="text-[26px] md:text-[34px] font-extrabold leading-[1.18] tracking-[-0.02em] min-h-[72px]"></h2>
-          <p id="sceneDesc-${i}" class="mt-3 text-[14px] md:text-[15px] leading-[1.65] text-[#4A5E78] opacity-0 translate-y-2"></p>
+          <p id="sceneDesc-${i}" class="${s.ill==='intro'?'mt-0':'mt-3'} text-[14px] md:text-[15px] leading-[1.65] text-[#4A5E78] ${s.ill==='intro'?'font-bold':''} opacity-0 translate-y-2"></p>
           ${sceneCharacterIllustration(s.ill)}
           ${illustrationHTML(s.ill,s.id)}
         </div>
@@ -359,19 +368,19 @@ function revealDesc(idx){
 }
 function initSceneIll(idx){
   const id=steps[idx].id;
-  if(idx===2){ // chat
+  if(idx===3){ // chat
     const box=document.getElementById(`chat-${id}`); if(!box || box.dataset.done) return; box.dataset.done='1'; box.innerHTML='';
     const msgs=[{who:'คนไข้',text:'ปวดหัว มีไข้ 2 วัน',cls:'bg-[#E8F3FF] border-[#A9D4FF]'},{who:'เภสัชกร',text:'แพ้ยาไหมคะ?',cls:'bg-[#FFF7D6] border-[#FFE48A] self-end',align:'items-end'},{who:'คนไข้',text:'แพ้เพนิซิลลินค่ะ',cls:'bg-[#E8F3FF] border-[#A9D4FF]'}];
     msgs.forEach((m,mi)=>{ setTimeout(()=>{ const d=document.createElement('div'); d.className=`flex flex-col ${m.align||''} transition-all duration-500`; d.innerHTML=`<div class="max-w-[86%] px-3.5 py-2.5 rounded-[16px] border text-[13px] leading-[1.55] ${m.cls}"><span class="font-bold text-[10px] block opacity-60">${m.who}:</span>${m.text}</div>`; box.appendChild(d); }, mi*560); });
   }
-  if(idx===3){
+  if(idx===4){
     const el=document.getElementById(`typewriter-${id}`); if(!el || el.dataset.done) return; el.dataset.done='1';
     const txt='ปวดหัว 2 วัน • มีไข้ • แพ้เพนิซิลลิน • ความดันสูง'; let i=0; el.textContent=''; const iv=setInterval(()=>{ el.textContent=txt.slice(0,i++); if(i>txt.length) clearInterval(iv); },30);
   }
-  if(idx===4){
+  if(idx===5){
     const cnt=document.getElementById(`count-${id}`); if(!cnt || cnt.dataset.done) return; cnt.dataset.done='1'; let c=0; const iv=setInterval(()=>{ cnt.textContent=c; if(c>=4) clearInterval(iv); c++; },180);
   }
-  if(idx===5){
+  if(idx===6){
     setTimeout(()=>{ const b=document.getElementById(`verifyBar-${id}`); if(b) b.style.width='100%'; }, 200);
   }
 }
@@ -387,13 +396,13 @@ function showScene(idx, dir=1){
   upcomingScene=null;
   updateBackground(idx);
   updateDots(idx);
-  indicatorText.textContent=`ขั้นที่ ${idx+1} จาก 6 • ${steps[idx].short}`;
+  indicatorText.textContent=`ขั้นที่ ${idx+1} จาก ${steps.length} • ${steps[idx].short}`;
   sceneTitleMini.textContent=steps[idx].short;
   typeTitleForScene(idx);
   revealDesc(idx);
   initSceneIll(idx);
   if(isPlaying && !isPopupOpen){ scheduleNext(); }
-  if(idx===5){ /* final scene confetti occasional */ }
+  if(idx===6){ /* final scene confetti occasional */ }
 }
 
 function scheduleNext(){
@@ -410,12 +419,12 @@ function scheduleNext(){
     const elapsed=Date.now()-start;
     progressValue=Math.min(elapsed/AUTO_DURATION*100,100);
     autoProgressBar.style.width=progressValue+'%';
-    topAutoProgress.style.width=((currentScene*100+progressValue)/6)+'%';
+    topAutoProgress.style.width=((currentScene*100+progressValue)/steps.length)+'%';
     timerText.textContent=((AUTO_DURATION-elapsed)/1000).toFixed(1)+'s';
     if(progressValue>=100){ clearInterval(progressInterval); }
   }, 50);
   autoTimer=setTimeout(()=>{
-    if(currentScene<5){ showTransitionPopup(currentScene, currentScene+1); }
+    if(currentScene<steps.length-1){ showTransitionPopup(currentScene, currentScene+1); }
     else { showFinalPopup(); }
   }, AUTO_DURATION);
 }
@@ -424,12 +433,14 @@ function resumeAuto(){ if(isPopupOpen) return; isPlaying=true; document.getEleme
 
 // Popup handling
 function showTransitionPopup(from,to){
+  if(from===0){ showScene(to); return; }
   isPopupOpen=true;
   upcomingScene=to;
   clearTimeout(autoTimer);
   clearInterval(progressInterval);
-  const cfg=popups[from]; // from 0..4 corresponds to transition
-  renderPopup(cfg, from, to);
+  const popupIndex=from-1;
+  const cfg=popups[popupIndex]; // original scenes 01..05 correspond to transitions
+  renderPopup(cfg, popupIndex, to);
   popupOverlay.classList.remove('hidden');
   popupOverlay.classList.add('flex');
   popupCard.classList.remove('closing');
@@ -438,7 +449,7 @@ function showTransitionPopup(from,to){
   popupTimer=setTimeout(()=>{
     if(isPopupOpen && upcomingScene===to) closePopupAndGo();
   }, 1800);
-  setTimeout(()=> initPopupInner(cfg.type, from), 80);
+  setTimeout(()=> initPopupInner(cfg.type, popupIndex), 80);
 }
 function showFinalPopup(){
   isPopupOpen=true;
@@ -557,8 +568,8 @@ function initPopupInner(type, fromIdx){
 }
 
 // controls wiring
-document.getElementById('prevBtn').addEventListener('click',()=>{ pauseAuto(); if(isPopupOpen && upcomingScene===null){ hidePopup(()=>showScene((currentScene-1+6)%6)); } else { showScene((currentScene-1+6)%6); } });
-document.getElementById('nextBtn').addEventListener('click',()=>{ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); return; } pauseAuto(); if(currentScene<5){ showTransitionPopup(currentScene, currentScene+1); } else { showFinalPopup(); } });
+document.getElementById('prevBtn').addEventListener('click',()=>{ pauseAuto(); if(isPopupOpen && upcomingScene===null){ hidePopup(()=>showScene((currentScene-1+steps.length)%steps.length)); } else { showScene((currentScene-1+steps.length)%steps.length); } });
+document.getElementById('nextBtn').addEventListener('click',()=>{ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); return; } pauseAuto(); if(currentScene<steps.length-1){ showTransitionPopup(currentScene, currentScene+1); } else { showFinalPopup(); } });
 document.getElementById('playPauseBtn').addEventListener('click',()=>{ if(isPlaying) pauseAuto(); else resumeAuto(); });
 dotsNav.addEventListener('click', e=>{ const btn=e.target.closest('button'); if(!btn) return; const idx=parseInt(btn.dataset.idx); if(idx===currentScene) return; if(isPopupOpen) hidePopup(); pauseAuto(); if(idx>currentScene){ showTransitionPopup(currentScene, idx); /* will jump after popup */ upcomingScene=idx; } else { showScene(idx); } });
 document.getElementById('popupCloseX').addEventListener('click',()=>{ if(upcomingScene!==null) closePopupAndGo(); });
@@ -566,15 +577,15 @@ skipPopupBtn.addEventListener('click',()=>closePopupAndGo());
 popupOverlay.addEventListener('click', (e)=>{ if(e.target===popupOverlay && upcomingScene!==null) closePopupAndGo(); });
 document.addEventListener('keydown', (e)=>{
   if(e.code==='Space'){ e.preventDefault(); if(isPlaying) pauseAuto(); else resumeAuto(); }
-  if(e.code==='ArrowRight'){ e.preventDefault(); if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); } else { if(currentScene<5) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); } }
-  if(e.code==='ArrowLeft'){ e.preventDefault(); if(isPopupOpen && upcomingScene===null) hidePopup(()=>showScene((currentScene-1+6)%6)); else if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+6)%6)); else { pauseAuto(); showScene((currentScene-1+6)%6); } }
+  if(e.code==='ArrowRight'){ e.preventDefault(); if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); } else { if(currentScene<steps.length-1) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); } }
+  if(e.code==='ArrowLeft'){ e.preventDefault(); if(isPopupOpen && upcomingScene===null) hidePopup(()=>showScene((currentScene-1+steps.length)%steps.length)); else if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+steps.length)%steps.length)); else { pauseAuto(); showScene((currentScene-1+steps.length)%steps.length); } }
   if(e.code==='Escape' && isPopupOpen && upcomingScene!==null){ closePopupAndGo(); }
 });
 
 // Swipe
 let touchStartX=0, touchStartY=0;
 stage.addEventListener('touchstart', e=>{ touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY; }, {passive:true});
-stage.addEventListener('touchend', e=>{ const dx=e.changedTouches[0].clientX-touchStartX; const dy=e.changedTouches[0].clientY-touchStartY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>48){ if(dx<0){ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); } else { if(currentScene<5) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); } } else { if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+6)%6)); else { pauseAuto(); showScene((currentScene-1+6)%6); } } } }, {passive:true});
+stage.addEventListener('touchend', e=>{ const dx=e.changedTouches[0].clientX-touchStartX; const dy=e.changedTouches[0].clientY-touchStartY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>48){ if(dx<0){ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); } else { if(currentScene<steps.length-1) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); } } else { if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+steps.length)%steps.length)); else { pauseAuto(); showScene((currentScene-1+steps.length)%steps.length); } } } }, {passive:true});
 
 // Mouse glow & sparkle & tilt kept from gimmick
 let mouseX=innerWidth/2, mouseY=innerHeight/2, glowX=mouseX, glowY=mouseY, rafGlow=null;
