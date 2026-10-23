@@ -9,7 +9,6 @@ init(autoreset=True)
 
 # Import all modules from the pipeline
 from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes
-from unified_app.modules.stt_deepgram import transcribe_audio_deepgram
 from unified_app.modules.emr_groq import extract_emr
 
 async def run_full_pipeline_test(wav_path: Path):
@@ -23,20 +22,18 @@ async def run_full_pipeline_test(wav_path: Path):
     recognizer = TyphoonASRRecognizer()
     recognizer.load_model()
     
-    # 2. Run STT (Typhoon + Dictionary) and Diarization (Deepgram) in PARALLEL
-    print(Fore.YELLOW + "2. Running STT (Typhoon) + Diarization (Deepgram) in parallel...")
+    # 2. Run STT (Typhoon + Dictionary)
+    print(Fore.YELLOW + "2. Running STT (Typhoon)...")
     start_stt = time.time()
     
     # Simulate asyncio wrapper for synchronous functions
     loop = asyncio.get_running_loop()
     task_typhoon = loop.run_in_executor(None, transcribe_audio_bytes, recognizer, audio_bytes)
-    task_deepgram = loop.run_in_executor(None, transcribe_audio_deepgram, audio_bytes)
     
-    results = await asyncio.gather(task_typhoon, task_deepgram, return_exceptions=True)
+    results = await asyncio.gather(task_typhoon, return_exceptions=True)
     stt_time = time.time() - start_stt
     
     typhoon_res = results[0]
-    deepgram_res = results[1]
     
     print(Fore.GREEN + f"   -> STT Phase completed in {stt_time:.2f} seconds.")
     
@@ -49,13 +46,6 @@ async def run_full_pipeline_test(wav_path: Path):
     else:
         typhoon_text = typhoon_res
         
-    if isinstance(deepgram_res, Exception):
-        print(Fore.RED + f"   [ERROR] Deepgram Diarization failed: {deepgram_res}")
-        has_error = True
-        deepgram_text = str(deepgram_res)
-    else:
-        deepgram_text = deepgram_res
-        
     print(Fore.WHITE + "--- Typhoon Result (with Dictionary) ---")
     print(f"{typhoon_text[:200]}..." if len(typhoon_text) > 200 else typhoon_text)
     
@@ -63,9 +53,9 @@ async def run_full_pipeline_test(wav_path: Path):
         print(Fore.RED + "Pipeline stopped early due to STT errors.")
         return
 
-    # 3. Combine results for LLM
-    print(Fore.YELLOW + "\n3. Combining results for Groq EMR LLM...")
-    combined_text = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{typhoon_text}\n\n--- ส่วนที่ 2: โครงสร้างคนพูด (Deepgram) ---\n{deepgram_text}"
+    # 3. Prepare input for LLM (same format as core_api/main.py)
+    print(Fore.YELLOW + "\n3. Preparing input for Groq EMR LLM...")
+    combined_text = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{typhoon_text}"
     
     # 4. Run EMR Extraction
     print(Fore.YELLOW + "4. Extracting EMR via Groq...")

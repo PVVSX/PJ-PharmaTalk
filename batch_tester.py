@@ -9,7 +9,6 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from unified_app.modules.stt_deepgram import transcribe_audio_deepgram
 from unified_app.modules.emr_groq import extract_emr
 
 try:
@@ -34,7 +33,6 @@ def process_audio_files():
     
     # Initialize Typhoon
     from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes
-    from unified_app.modules.stt_groq import transcribe_audio_groq
     
     print("Loading Typhoon ASR Model...")
     recognizer = TyphoonASRRecognizer()
@@ -51,11 +49,6 @@ def process_audio_files():
             audio_bytes = f.read()
             
         try:
-            # Test Groq
-            start_g = time.time()
-            groq_text = transcribe_audio_groq(audio_bytes)
-            time_g = time.time() - start_g
-            
             # Test Typhoon
             start_t = time.time()
             typhoon_text = transcribe_audio_bytes(recognizer, audio_bytes)
@@ -64,8 +57,6 @@ def process_audio_files():
             results[wav_path.name] = {
                 "status": "success",
                 "size_mb": size_mb,
-                "groq_transcript": groq_text,
-                "groq_time_sec": time_g,
                 "typhoon_transcript": typhoon_text,
                 "typhoon_time_sec": time_t
             }

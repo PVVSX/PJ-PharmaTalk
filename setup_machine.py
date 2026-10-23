@@ -27,24 +27,8 @@ def main():
 
     print("\n" + "-"*50 + "\n")
 
-    # 2. Deepgram API Key (ทางเลือก)
-    print("📌 2. ตั้งค่า Deepgram API Key (สำหรับโมเดลแยกเสียงผู้พูด - ถ้ามี)")
-    dg_path = ".deepgram_api_key"
-    if os.path.exists(dg_path):
-        print(f"✅ พบไฟล์ {dg_path} อยู่แล้ว")
-    else:
-        key = input("กรุณาใส่ Deepgram API Key (ถ้าไม่ใช้ให้กด Enter ผ่านได้เลย): ").strip()
-        if key:
-            with open(dg_path, "w", encoding="utf-8") as f:
-                f.write(key)
-            print("✅ บันทึก .deepgram_api_key สำเร็จ!")
-        else:
-            print("⏭️ ข้ามการตั้งค่า Deepgram")
-
-    print("\n" + "-"*50 + "\n")
-
-    # 3. Firebase Service Account
-    print("📌 3. ตรวจสอบไฟล์ฐานข้อมูล Firebase (serviceAccountKey.json)")
+    # 2. Firebase Service Account
+    print("📌 2. ตรวจสอบไฟล์ฐานข้อมูล Firebase (serviceAccountKey.json)")
     firebase_path = "serviceAccountKey.json"
     if os.path.exists(firebase_path):
         print("✅ พบไฟล์ serviceAccountKey.json แล้ว พร้อมเชื่อมต่อ Cloud!")

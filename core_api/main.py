@@ -19,13 +19,6 @@ sys.path.append(str(ROOT_DIR))
 
 from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes, ASR_AVAILABLE
 from unified_app.modules.emr_groq import extract_emr
-from unified_app.modules.stt_groq import transcribe_audio_groq
-from unified_app.modules.stt_deepgram import transcribe_audio_deepgram
-
-# TOGGLE FOR STT MODEL
-# Set USE_DEEPGRAM_STT = True to use Diarization (Speaker separation)
-USE_DEEPGRAM_STT = False
-USE_GROQ_STT = False
 
 
 
@@ -100,27 +93,15 @@ async def process_audio_task(task_id: str, audio_path: str):
         with open(audio_path, "rb") as f:
             audio_bytes = f.read()
             
-        tasks = []
-        if USE_GROQ_STT:
-            tasks.append(run_in_threadpool(transcribe_audio_groq, audio_bytes))
-        else:
-            # Strictly use Typhoon; throw error if not available
-            if not getattr(asr_recognizer, "is_loaded", False) and not ASR_AVAILABLE:
-                raise RuntimeError("Typhoon ASR is configured but the module/model is not available.")
-            tasks.append(run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes))
-            
-        if USE_DEEPGRAM_STT:
-            tasks.append(run_in_threadpool(transcribe_audio_deepgram, audio_bytes))
-            
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        main_result = results[0] if not isinstance(results[0], Exception) else f"Main STT Failed: {results[0]}"
-        
-        if USE_DEEPGRAM_STT:
-            deepgram_result = results[1] if not isinstance(results[1], Exception) else f"Deepgram Failed: {results[1]}"
-            stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}\n\n--- ส่วนที่ 2: โครงสร้างคนพูด (Deepgram) ---\n{deepgram_result}"
-        else:
-            stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}"
+        # Strictly use Typhoon; throw error if not available
+        if not getattr(asr_recognizer, "is_loaded", False) and not ASR_AVAILABLE:
+            raise RuntimeError("Typhoon ASR is configured but the module/model is not available.")
+        try:
+            main_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
+        except Exception as stt_error:
+            main_result = f"Main STT Failed: {stt_error}"
+
+        stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}"
         
         task.stt_text = stt_result
         task.status = "STT_DONE"

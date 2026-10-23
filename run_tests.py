@@ -9,7 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # Patch Groq client model temporarily for testing if it's using invalid models
-from unified_app.modules.stt_deepgram import transcribe_audio_deepgram
+from unified_app.modules.stt_typhoon import TyphoonASRRecognizer
 from unified_app.modules.emr_groq import extract_emr
 
 def test_stt():
@@ -19,7 +19,9 @@ def test_stt():
     
     print(f"Testing STT on {wav_path.name}...")
     try:
-        transcript = transcribe_audio_deepgram(str(wav_path))
+        recognizer = TyphoonASRRecognizer()
+        recognizer.load_model()
+        transcript = recognizer.transcribe_audio(str(wav_path))
         return transcript
     except Exception as e:
         return f"Error: {e}"

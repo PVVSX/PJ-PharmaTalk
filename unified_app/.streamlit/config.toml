@@ -1,7 +1,11 @@
+# Theme shared by pharmacist_app.py (8502) and unified_app/app.py (8515), which are run from this folder.
+# Matches consent_app/index-popup-scenes.html.
 [theme]
-base="light"
-primaryColor="#0F4C75"
-backgroundColor="#F8FAFC"
-secondaryBackgroundColor="#E2E8F0"
-textColor="#1B262C"
-font="sans serif"
+base = "light"
+primaryColor = "#2563EB"
+backgroundColor = "#F7FAFF"
+secondaryBackgroundColor = "#F2F6FB"
+textColor = "#1E3146"
+borderColor = "#E6EEF7"
+baseRadius = "12px"
+font = "Noto Sans Thai:https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap, sans-serif"

@@ -1,63 +1,128 @@
-# PharmaTalk: Unified App v3.0 (Architecture Guide)
+# PharmaTalk: Unified App (Architecture Guide)
 
-เอกสารนี้จัดทำขึ้นเพื่ออธิบาย **โครงสร้างสถาปัตยกรรม (Modular Architecture)** ของโปรเจกต์ PharmaTalk เพื่อให้ทีมพัฒนาสามารถแบ่งงานกันทำ (Collaboration) ได้อย่างชัดเจน ป้องกันปัญหา Code Conflict และการแก้ไขโค้ดที่กระทบกับส่วนอื่นโดยไม่ตั้งใจ
+`unified_app/` คือส่วนหน้าจอ (Streamlit) ของ PharmaTalk ใช้อัดเสียงบทสนทนาระหว่างเภสัชกรกับคนไข้ ส่งไปถอดเสียงและสรุปเป็นเวชระเบียน (EMR) แล้วแสดงผลและประวัติ เอกสารนี้อธิบายโครงสร้างโค้ดและการแบ่งความรับผิดชอบ เพื่อให้ทีมแก้โค้ดได้โดยไม่กระทบส่วนอื่น
 
-## 📁 โครงสร้างโปรเจกต์ (Directory Structure)
+ขั้นตอนการรันระบบทั้งหมดดูได้ที่ [`docs/PHARMATALK_SYSTEM_GUIDE.md`](../docs/PHARMATALK_SYSTEM_GUIDE.md)
+
+## ภาพรวมการทำงาน
+
+```text
+Consent page (api.py) ──READY──▶ Recorder (Streamlit)
+                                      │  อัปโหลดไฟล์เสียง
+                                      ▼
+                              Core API (core_api/main.py)
+                                      │  background task
+                                      ├─▶ Typhoon ASR (+ พจนานุกรมแก้ชื่อยา)
+                                      ├─▶ Groq LLM สกัด EMR 6 ช่อง
+                                      └─▶ Firestore + Firebase Storage
+```
+
+แอปนี้ไม่ได้รันโมเดลเอง งานถอดเสียงและสกัด EMR ทำใน Core API ส่วนหน้าจอแค่ส่งไฟล์และรอผลผ่าน `modules/task_api.py`
+
+## จุดเริ่มต้น (Entry points)
+
+| ไฟล์ | ใช้สำหรับ | หน้าที่มี | ต้องผ่าน Consent |
+| --- | --- | --- | --- |
+| `unified_app/app.py` | Back-office / ทดสอบ | อัดเสียง, ประวัติข้อมูล, วิเคราะห์ EMR, ตั้งค่า | ไม่ต้อง (`is_backoffice = True`) |
+| `pharmacist_app.py` (root) | หน้าจอเภสัชกรหน้าร้าน | อัดเสียง, ประวัติข้อมูล | ต้อง (อ่านสถานะจาก `record/shared_state.json`) |
+
+ทั้งสองไฟล์ใช้หน้าใน `pages/` ชุดเดียวกัน
+
+## โครงสร้างโฟลเดอร์
 
 ```text
 unified_app/
-├── app.py                  # (1) Entry Point & Router
+├── app.py                  # Entry point + sidebar navigation (back-office)
+├── .streamlit/config.toml  # ค่าตั้งต้นของ Streamlit
 ├── assets/
-│   └── style.css           # (2) Global Styles
+│   └── style.css           # สไตล์ทั้งหมดของแอป
+├── components/
+│   ├── auto_recorder.py    # Custom component อัดเสียงในเบราว์เซอร์ คืนค่า WAV
+│   └── frontend/           # HTML/JS ของ component
 ├── modules/
-│   ├── config.py           # (3) Configuration Manager
-│   ├── emr_azure.py        # (3) AI: Azure OpenAI Logic
-│   └── stt_typhoon.py      # (3) AI: Typhoon ASR Logic
+│   ├── config.py           # path กลาง (ROOT, RECORD_DIR)
+│   ├── task_api.py         # client เรียก Core API (/upload-audio, /task, /health)
+│   ├── state_manager.py    # อ่าน/เขียนสถานะ consent ใน shared_state.json
+│   ├── stt_typhoon.py      # โหลดและเรียก Typhoon ASR ผ่าน NeMo (ใช้ใน Core API)
+│   ├── pharmacy_dict.py    # พจนานุกรมแก้ชื่อยา/ศัพท์การแพทย์ที่ถอดเสียงผิด
+│   └── emr_groq.py         # prompt + เรียก Groq สกัด EMR เป็น JSON
 └── pages/
-    ├── emr.py              # (4) UI: หน้าวิเคราะห์ EMR
-    ├── history.py          # (4) UI: หน้าประวัติข้อมูล
-    ├── recorder.py         # (4) UI: หน้าอัดเสียง
-    ├── settings.py         # (4) UI: หน้าตั้งค่าระบบ
-    └── stt.py              # (4) UI: หน้าอัปโหลดไฟล์เสียงเพื่อถอดข้อความ
-
-record/                     # (5) Database (Storage)
-├── audio/                  # เก็บไฟล์เสียง (.wav)
-├── emr/                    # เก็บผลวิเคราะห์ EMR (.json)
-└── stt/                    # เก็บไฟล์ข้อความถอดเสียง (.txt)
+    ├── recorder.py         # อัดเสียง ส่งเข้า Core API และรายการไฟล์ที่บันทึก
+    ├── history.py          # ประวัติเคสจาก Firestore
+    ├── emr.py              # แสดง transcript และฟอร์ม EMR (อ่านอย่างเดียว)
+    └── settings.py         # สถานะระบบ: Core API, ASR, Groq key
 ```
 
----
+ข้อมูลที่ระบบเขียนลงเครื่อง (อยู่นอก `unified_app/`; `record/audio/`, `record/stt/` และ `core_api/temp_audio/` อยู่ใน `.gitignore` แล้ว):
 
-## 🛠️ การแบ่งความรับผิดชอบ (Separation of Concerns)
+```text
+record/
+├── audio/              # ไฟล์เสียง .wav ที่อัดจากหน้า Recorder
+├── stt/                # transcript (*_stt.txt)
+├── shared_state.json   # สถานะ consent: WAITING / READY / RECORDING / FINISHED
+└── pharmatalk.db       # บันทึก consent (SQLite)
 
-เพื่อให้การทำงานเป็นระบบ ขอให้ทีมงานยึดหลักการทำงานตามโฟลเดอร์ดังต่อไปนี้:
+core_api/
+├── api_queue.db        # คิวงานและผล EMR (SQLite)
+└── temp_audio/         # สำเนาไฟล์เสียงที่ Core API รับมา
+```
 
-### 1. ทีม Frontend / UI Developer
-**รับผิดชอบ:** `unified_app/pages/` และ `unified_app/assets/`
-- หากต้องการเพิ่มหน้าเว็บใหม่ ให้สร้างไฟล์ `.py` ในโฟลเดอร์ `pages/` และไปเพิ่มลิงก์เชื่อมโยงที่ `app.py`
-- หากต้องการปรับปรุงหน้าตาเว็บ (UI) เช่น ย้ายปุ่ม เปลี่ยนกราฟ หรือแก้ข้อความบนหน้าเว็บ ให้เข้าไปแก้ที่ไฟล์ในโฟลเดอร์ `pages/` ตามหน้าที่ต้องการ
-- หากต้องการปรับเปลี่ยนสี, ฟอนต์, หรือระยะห่าง (CSS) ให้แก้ไขที่ไฟล์ `assets/style.css` **เท่านั้น**
-- **ข้อควรระวัง:** ห้ามเขียนโค้ดที่ติดต่อกับ AI Model ตรงๆ ในโฟลเดอร์นี้ ให้เรียกใช้ผ่านฟังก์ชันที่ทีม Backend เตรียมไว้ให้ใน `modules/`
+## ช่อง EMR ที่สกัดได้
 
-### 2. ทีม Backend / AI Engineer
-**รับผิดชอบ:** `unified_app/modules/`
-- โฟลเดอร์นี้เปรียบเสมือนสมองของระบบ
-- **`stt_typhoon.py`**: ใช้สำหรับปรับแต่งความแม่นยำของโมเดลถอดเสียง (Typhoon ASR) หรือเปลี่ยนโมเดล
-- **`emr_azure.py`**: ใช้สำหรับทำ Prompt Engineering เพื่อปรับแต่งผลลัพธ์การสกัดข้อมูล EMR หรือจัดการ API Key ของ Azure OpenAI
-- **`config.py`**: จัดการการอ่าน/เขียนตัวแปรระบบ (Environment Variables)
-- การทำงานในโฟลเดอร์นี้สามารถทำได้อย่างอิสระ โดยไม่ต้องกังวลว่าจะทำให้หน้าเว็บ (UI) พัง ตราบใดที่ชื่อฟังก์ชันและผลลัพธ์ (Return) ยังเหมือนเดิม
+กำหนดไว้ใน `EMR_FIELDS` ของ `modules/emr_groq.py` ถ้าจะเพิ่มหรือเปลี่ยนช่อง ต้องแก้ทั้ง `EMR_FIELDS` และ prompt ใน `_build_prompt()`
 
-### 3. ทีม Data Management
-**รับผิดชอบ:** โฟลเดอร์ `record/` (อยู่นอก `unified_app`)
-- ข้อมูลไฟล์ดิบ (Audio, Text, JSON) จะถูกเก็บไว้ที่นี่
-- หากต้องการเปลี่ยนไปใช้ Cloud Storage (เช่น AWS S3 หรือ Firebase) ทีมพัฒนาจะต้องแก้ไขที่การบันทึกไฟล์ใน `pages/recorder.py` และ `pages/emr.py` ให้ชี้ไปที่ระบบ Cloud แทนโฟลเดอร์ `record/`
+1. บทสนทนาที่จัดเรียงแล้ว
+2. ประวัติการแพ้ยา
+3. โรคประจำตัว
+4. ประวัติการจ่ายยา
+5. บันทึกทางการแพทย์
+6. คำแนะนำจากเภสัช
 
----
+## การตั้งค่า API Key
 
-## 🚀 สรุปขั้นตอนการเพิ่มฟีเจอร์ใหม่
-1. **เพิ่มหน้าจอใหม่:** สร้างไฟล์ใน `pages/` 
-2. **สร้างระบบคิดวิเคราะห์:** เขียนฟังก์ชันใน `modules/`
-3. **ผูกหน้าจอเข้ากับระบบ:** นำเข้า (Import) ฟังก์ชันจาก `modules/` มาใช้ในไฟล์หน้าจอ `pages/`
-4. **อัปเดตเมนูนำทาง:** เพิ่มลิงก์หน้าจอใหม่เข้าไปในไฟล์ `app.py`
+ระบบอ่านค่าจาก environment variable ก่อน ถ้าไม่มีจึงอ่านจากไฟล์ใน root โปรเจค (ไฟล์เหล่านี้อยู่ใน `.gitignore` ห้าม commit)
 
-การยึดถือโครงสร้างนี้อย่างเคร่งครัด จะช่วยให้โปรเจกต์ PharmaTalk สามารถ Scale หรือขยายทีมในอนาคตได้อย่างยั่งยืนครับ!
+| บริการ | Environment variable | ไฟล์สำรอง | จำเป็น |
+| --- | --- | --- | --- |
+| Groq (สกัด EMR) | `GROQ_API_KEY` | `.groq_api_key` | ใช่ |
+| Firebase | `FIREBASE_CREDENTIALS` (path), `FIREBASE_STORAGE_BUCKET` | `core_api/serviceAccountKey.json` | สำหรับหน้า History และ Cloud backup |
+| Core API URL | `PHARMATALK_CORE_API_URL` | ค่าเริ่มต้น `http://127.0.0.1:8080` | ไม่ |
+
+รัน `python setup_machine.py` ที่ root เพื่อสร้างไฟล์ key บนเครื่องใหม่ได้ อย่าเขียน key ลงในโค้ดหรือเอกสารใดๆ
+
+## รันเฉพาะส่วนหน้าจอ
+
+ต้องเปิด Core API ก่อน (`core_api/main.py`) จากนั้นที่ root โปรเจค:
+
+```bash
+# Back-office
+streamlit run unified_app/app.py --server.address 127.0.0.1 --server.port 8515
+
+# หน้าจอเภสัชกร (ต้องเปิด api.py สำหรับหน้า Consent ด้วย)
+streamlit run pharmacist_app.py
+```
+
+## การแบ่งความรับผิดชอบ
+
+### Frontend / UI — `pages/`, `components/`, `assets/`
+- เพิ่มหน้าใหม่: สร้างไฟล์ใน `pages/` แล้วเพิ่ม `st.Page` และ `st.page_link` ใน `app.py` (และ `pharmacist_app.py` ถ้าหน้าเภสัชกรต้องใช้)
+- แก้สี ฟอนต์ ระยะห่าง ที่ `assets/style.css`
+- ห้ามเรียกโมเดลหรือ LLM ตรงจากหน้าจอ ให้ส่งงานผ่าน `modules/task_api.py`
+- ข้อความจาก LLM หรือ transcript ที่แสดงผ่าน `unsafe_allow_html=True` ควร escape ด้วย `html.escape()` ก่อน
+
+### Backend / AI — `modules/` และ `core_api/`
+- `stt_typhoon.py`: โหลดโมเดลจาก `models/typhoon-asr-realtime.nemo` ถ้ามี ไม่มีจะดาวน์โหลดจาก Hugging Face
+- `emr_groq.py`: prompt engineering และ parse JSON จาก LLM (ตอนนี้ใช้โมเดล `openai/gpt-oss-120b`)
+- `pharmacy_dict.py`: เพิ่มคำที่ ASR ถอดผิดบ่อยได้ที่นี่
+- เปลี่ยนการทำงานภายในได้อิสระ ตราบใดที่ชื่อฟังก์ชันและรูปแบบค่าที่คืนยังเหมือนเดิม
+
+### Data — `record/`, `core_api/`, Firebase
+- ข้อมูลเสียงและ EMR เป็นข้อมูลสุขภาพของคนไข้ ห้าม commit ขึ้น git และห้ามแชร์นอกทีม
+- ผล EMR เก็บใน `core_api/api_queue.db` และ Firestore collection `patients_emr` ไฟล์เสียงถูกอัปโหลดไป Firebase Storage ที่ `recordings/`
+
+## ขั้นตอนเพิ่มฟีเจอร์ใหม่
+
+1. เขียน logic ใน `modules/` (หรือ endpoint ใหม่ใน `core_api/main.py` ถ้าเป็นงานหนัก)
+2. ถ้าเป็นงานผ่าน Core API ให้เพิ่มฟังก์ชันเรียกใน `modules/task_api.py`
+3. สร้างหรือแก้หน้าใน `pages/` ให้ import จาก `modules/`
+4. เพิ่มลิงก์เมนูใน `app.py`

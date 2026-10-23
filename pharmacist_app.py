@@ -82,14 +82,22 @@ model_ok  = st.session_state.model_loaded
 wav_count = len(list((RECORD_DIR / "audio").glob("*.wav"))) if (RECORD_DIR / "audio").exists() else 0
 
 # ── Pages (Hidden Native Nav) ──
+p_rec = st.Page(str(UNIFIED / "pages/recorder.py"),  title="อัดเสียง",      icon=":material/mic:")
+p_hist = st.Page(str(UNIFIED / "pages/history.py"),   title="ประวัติข้อมูล", icon=":material/history:")
+
 pages = {
-    "เมนูหลัก": [
-        st.Page(str(UNIFIED / "pages/recorder.py"),  title="อัดเสียง",      icon=":material/mic:"),
-        st.Page(str(UNIFIED / "pages/history.py"),   title="ประวัติข้อมูล", icon=":material/history:"),
-    ]
+    "เมนูหลัก": [p_rec, p_hist]
 }
 
 pg = st.navigation(pages, position="hidden")
+
+def _nav_link(page, label: str, icon: str) -> None:
+    """Sidebar link; the current page is wrapped so CSS can highlight it."""
+    if page.url_path == pg.url_path:
+        with st.container(key="nav_active"):
+            st.page_link(page, label=label, icon=icon)
+    else:
+        st.page_link(page, label=label, icon=icon)
 
 # ── Sidebar content ──
 with st.sidebar:
@@ -108,9 +116,9 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # 2. Custom Navigation
-    st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 12px 0 12px 16px;'>เมนูหลัก</div>", unsafe_allow_html=True)
-    st.page_link(str(UNIFIED / "pages/recorder.py"), label="อัดเสียง", icon=":material/mic:")
-    st.page_link(str(UNIFIED / "pages/history.py"), label="ประวัติข้อมูล", icon=":material/history:")
+    st.markdown("<div class='sidebar-section-label'>เมนูหลัก</div>", unsafe_allow_html=True)
+    _nav_link(p_rec, label="อัดเสียง", icon=":material/mic:")
+    _nav_link(p_hist, label="ประวัติข้อมูล", icon=":material/history:")
     
     st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 

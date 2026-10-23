@@ -4,7 +4,7 @@ PharmaTalk — Unified App v3.0  (Multi-page Sidebar Navigation)
 Pages:
   Page 1 : อัดเสียง        (Audio Recorder)
   Page 2 : ถอดเสียง       (Speech-to-Text — Typhoon ASR)
-  Page 3 : วิเคราะห์ EMR  (Azure OpenAI extraction)
+  Page 3 : วิเคราะห์ EMR  (Groq LLM extraction)
   Page 4 : ตั้งค่า         (Settings)
 """
 from __future__ import annotations
@@ -84,10 +84,6 @@ def _init_state() -> None:
 
 _init_state()
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ENV FILE HELPERS  (used by Settings page)
-# ══════════════════════════════════════════════════════════════════════════════
-from unified_app.modules.config import read_env_file, write_env_file
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -98,20 +94,26 @@ model_ok  = st.session_state.model_loaded
 wav_count = len(list((RECORD_DIR / "audio").glob("*.wav"))) if (RECORD_DIR / "audio").exists() else 0
 
 # ── Pages (Hidden Native Nav) ──
+p_recorder = st.Page("pages/recorder.py",  title="อัดเสียง",      icon=":material/mic:")
+p_history  = st.Page("pages/history.py",   title="ประวัติข้อมูล", icon=":material/history:")
+p_emr      = st.Page("pages/emr.py",       title="วิเคราะห์ EMR", icon=":material/medical_services:")
+p_settings = st.Page("pages/settings.py",  title="ตั้งค่า",        icon=":material/settings:")
+
 pages = {
-    "เมนูหลัก": [
-        st.Page("pages/recorder.py",  title="อัดเสียง",      icon=":material/mic:"),
-        st.Page("pages/history.py",   title="ประวัติข้อมูล", icon=":material/history:"),
-    ],
-    "วิเคราะห์": [
-        st.Page("pages/emr.py",       title="วิเคราะห์ EMR", icon=":material/medical_services:"),
-    ],
-    "ระบบ": [
-        st.Page("pages/settings.py",  title="ตั้งค่า",        icon=":material/settings:"),
-    ],
+    "เมนูหลัก": [p_recorder, p_history],
+    "วิเคราะห์": [p_emr],
+    "ระบบ": [p_settings],
 }
 
 pg = st.navigation(pages, position="hidden")
+
+def _nav_link(page, label: str, icon: str) -> None:
+    """Sidebar link; the current page is wrapped so CSS can highlight it."""
+    if page.url_path == pg.url_path:
+        with st.container(key="nav_active"):
+            st.page_link(page, label=label, icon=icon)
+    else:
+        st.page_link(page, label=label, icon=icon)
 
 # ── Sidebar content ──
 with st.sidebar:
@@ -130,15 +132,15 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # 2. Custom Navigation
-    st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 12px 0 12px 16px;'>เมนูหลัก</div>", unsafe_allow_html=True)
-    st.page_link("pages/recorder.py", label="อัดเสียง", icon=":material/mic:")
-    st.page_link("pages/history.py", label="ประวัติข้อมูล", icon=":material/history:")
+    st.markdown("<div class='sidebar-section-label'>เมนูหลัก</div>", unsafe_allow_html=True)
+    _nav_link(p_recorder, label="อัดเสียง", icon=":material/mic:")
+    _nav_link(p_history, label="ประวัติข้อมูล", icon=":material/history:")
     
-    st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 24px 0 12px 16px;'>วิเคราะห์</div>", unsafe_allow_html=True)
-    st.page_link("pages/emr.py", label="วิเคราะห์ EMR", icon=":material/medical_services:")
+    st.markdown("<div class='sidebar-section-label spaced'>วิเคราะห์</div>", unsafe_allow_html=True)
+    _nav_link(p_emr, label="วิเคราะห์ EMR", icon=":material/medical_services:")
     
-    st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.6); margin: 24px 0 12px 16px;'>ระบบ</div>", unsafe_allow_html=True)
-    st.page_link("pages/settings.py", label="ตั้งค่า", icon=":material/settings:")
+    st.markdown("<div class='sidebar-section-label spaced'>ระบบ</div>", unsafe_allow_html=True)
+    _nav_link(p_settings, label="ตั้งค่า", icon=":material/settings:")
     
     st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 

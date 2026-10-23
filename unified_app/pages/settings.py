@@ -20,7 +20,6 @@ except ImportError:
 
 
 
-from unified_app.modules.config import read_env_file, write_env_file
 
 from unified_app.modules.stt_typhoon import ASR_AVAILABLE
 from unified_app.modules.emr_groq import check_credentials

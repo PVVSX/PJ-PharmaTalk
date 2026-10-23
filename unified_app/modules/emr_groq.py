@@ -15,7 +15,7 @@ EMR_FIELDS = [
     "คำแนะนำจากเภสัช",
 ]
 
-def check_credentials() -> tuple[bool, str]:
+def get_groq_key() -> str:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         try:
@@ -25,7 +25,16 @@ def check_credentials() -> tuple[bool, str]:
                 api_key = key_file.read_text(encoding="utf-8").strip()
         except ImportError:
             pass
-    if api_key:
+    return api_key or ""
+
+def get_groq_client() -> Groq:
+    api_key = get_groq_key()
+    if not api_key:
+        raise RuntimeError("ไม่พบ Groq API Key (ตั้งค่า GROQ_API_KEY หรือ .groq_api_key)")
+    return Groq(api_key=api_key)
+
+def check_credentials() -> tuple[bool, str]:
+    if get_groq_key():
         return True, "Groq API Key is configured."
     return False, "Groq API Key is missing."
 
@@ -46,12 +55,10 @@ def _build_prompt(conversation: str, retry: bool = False) -> str:
         if retry else ""
     )
     user_prompt = f"""{system}
-คุณจะได้รับข้อมูล 2 ส่วน:
-1. "ข้อความเนื้อหาภาษาไทย" (จาก Typhoon) ซึ่งคำศัพท์ถูกต้องแม่นยำ แต่เป็นข้อความติดกัน ไม่มีการแยกผู้พูด
-2. "โครงสร้างคนพูด" (จาก Deepgram) ซึ่งแบ่งผู้พูด [Speaker 0], [Speaker 1] ได้แม่นยำตามเนื้อเสียงจริง แต่อาจสะกดคำผิดบ้าง
+คุณจะได้รับ "ข้อความเนื้อหาภาษาไทย" ที่ถอดเสียงด้วย Typhoon ซึ่งคำศัพท์ถูกต้องแม่นยำ แต่เป็นข้อความติดกัน ไม่มีการแยกผู้พูด
 
 หน้าที่ของคุณ:
-ให้นำ "เนื้อหาภาษาไทยที่ถูกต้องจากส่วนที่ 1" มาจัดเรียงบทสนทนาใหม่ โดยยึด "จังหวะและผู้พูดตามโครงสร้างของส่วนที่ 2" เป็นแม่แบบ (ใครเป็นเภสัชกร ใครเป็นผู้ป่วย วิเคราะห์จากบริบท)
+ให้แบ่งข้อความเป็นประโยค แล้วระบุว่าแต่ละประโยคเป็นของเภสัชกรหรือผู้ป่วย โดยวิเคราะห์จากบริบท
 จากนั้นให้สกัดข้อมูลและสรุปเป็น JSON ภาษาไทยตาม key ต่อไปนี้เท่านั้น:
 
 {{
@@ -64,7 +71,7 @@ def _build_prompt(conversation: str, retry: bool = False) -> str:
 }}
 
 หลักการ:
-- บทสนทนาที่จัดเรียงแล้ว: ต้องเป็นเนื้อหาจากส่วนที่ 1 ที่นำมาหั่นและใส่ "เภสัชกร:" / "ผู้ป่วย:" นำหน้าประโยคอย่างถูกต้องตามจังหวะของส่วนที่ 2
+- บทสนทนาที่จัดเรียงแล้ว: ต้องเป็นเนื้อหาจากข้อความที่ได้รับ ที่นำมาหั่นและใส่ "เภสัชกร:" / "ผู้ป่วย:" นำหน้าประโยคตามบริบท ห้ามเพิ่มหรือลดเนื้อหา
 - ประวัติการแพ้ยา: ยาหรือสารที่ผู้ป่วยแพ้ พร้อมอาการแพ้ถ้ามี
 - โรคประจำตัว: โรคเดิม/ภาวะประจำตัว/ยาที่สัมพันธ์กับโรคประจำตัว
 - ประวัติการจ่ายยา: ยาที่เคยได้รับหรือกำลังใช้อยู่ก่อนการจ่ายครั้งนี้

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -108,6 +109,10 @@ def set_state(req: StateModel):
 
 # Serve the static HTML app at the root "/"
 if CONSENT_APP_DIR.exists():
+    @app.get("/", include_in_schema=False)
+    def consent_page():
+        return FileResponse(CONSENT_APP_DIR / "index-popup-scenes.html")
+
     app.mount("/", StaticFiles(directory=str(CONSENT_APP_DIR), html=True), name="consent_app")
 
 if __name__ == "__main__":
