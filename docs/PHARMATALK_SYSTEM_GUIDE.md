@@ -19,7 +19,7 @@ Consent Page -> Bridge API -> Recorder
 
 | ส่วนงาน | URL | หน้าที่ |
 |---|---|---|
-| Consent | `http://127.0.0.1:8502` | แบบฟอร์มยินยอม |
+| Consent | `http://127.0.0.1:8500` | แบบฟอร์มยินยอม |
 | Recorder | `http://127.0.0.1:8515` | อัดเสียงและดูประวัติ |
 | Core API | `http://127.0.0.1:8080` | ประมวลผล task |
 | API Docs | `http://127.0.0.1:8080/docs` | Swagger UI |
@@ -27,45 +27,62 @@ Consent Page -> Bridge API -> Recorder
 
 ## วิธีรันระบบ
 
-เปิด PowerShell แยก 3 หน้าต่าง และใช้คำสั่งจาก root โปรเจกต์
+เปิดเทอร์มินัลแยก 3 หน้าต่าง และรันคำสั่งจาก root ของโปรเจกต์:
 
-### 1. Bridge API และหน้า Consent
+### 1. Bridge API และหน้า Consent (พอร์ต 8500)
 
-```powershell
-Set-Location C:\Users\asus\PJ-PharmaTalk
-.venv\Scripts\python.exe api.py
+**macOS / Linux:**
+```bash
+python3 api.py
 ```
 
-เปิด:
+**Windows (PowerShell / CMD):**
+```powershell
+python api.py
+```
 
+เปิดใช้งานได้ที่:
 ```text
-http://127.0.0.1:8502
+http://127.0.0.1:8500
 ```
 
-### 2. Core API
+---
 
+### 2. Core API (พอร์ต 8080)
+
+**macOS / Linux:**
+```bash
+cd core_api
+python3 main.py
+```
+
+**Windows (PowerShell / CMD):**
 ```powershell
-Set-Location C:\Users\asus\PJ-PharmaTalk\core_api
-..\.venv\Scripts\python.exe main.py
+cd core_api
+python main.py
 ```
 
-ตรวจสอบ:
+ตรวจสอบสถานะ:
+- **macOS / Linux:** `curl http://127.0.0.1:8080/health`
+- **Windows (PowerShell):** `Invoke-RestMethod http://127.0.0.1:8080/health`
 
+ผลที่ควรได้ต้องมี: `asr_available: true` และ `asr_loaded: true`
+
+---
+
+### 3. Streamlit Recorder (พอร์ต 8515)
+
+**macOS / Linux:**
+```bash
+python3 -m streamlit run unified_app/app.py --server.address 127.0.0.1 --server.port 8515
+```
+
+**Windows (PowerShell / CMD):**
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8080/health
+python -m streamlit run unified_app\app.py --server.address 127.0.0.1 --server.port 8515
 ```
 
-ผลที่ควรได้มีค่า `asr_loaded: true`
-
-### 3. Streamlit Recorder
-
-```powershell
-Set-Location C:\Users\asus\PJ-PharmaTalk
-.venv\Scripts\python.exe -m streamlit run unified_app\app.py --server.address 127.0.0.1 --server.port 8515
-```
-
-เปิด:
-
+เปิดใช้งานได้ที่:
 ```text
 http://127.0.0.1:8515
 ```
@@ -212,7 +229,7 @@ YOUR_GEMINI_API_KEY
 ตรวจตามลำดับ:
 
 1. หน้า Consent แสดงผลสำเร็จหรือไม่
-2. ตรวจ `http://127.0.0.1:8502/api/state`
+2. ตรวจ `http://127.0.0.1:8500/api/state`
 3. ตรวจว่าได้สถานะ `READY`
 4. ตรวจหน้า Core API `/health`
 5. ดู log ของ Streamlit และ Core API
@@ -239,7 +256,7 @@ asr_loaded = true
 ## ข้อควรระวัง
 
 - อย่าเปิด static server แยกที่พอร์ต `8520` เพราะไม่มี API เชื่อมต่อกับ Recorder
-- ใช้ `api.py` ที่พอร์ต `8502` สำหรับหน้า Consent
+- ใช้ `api.py` ที่พอร์ต `8500` สำหรับหน้า Consent
 - อย่าลบ `record/pharmatalk.db` หากต้องการเก็บประวัติ consent
 - ไฟล์ฐานข้อมูลและไฟล์เสียงเป็นข้อมูล runtime ไม่ควร commit โดยไม่จำเป็น
 - Cloud upload ต้องเกิดจากการกดปุ่มของผู้ใช้เท่านั้น

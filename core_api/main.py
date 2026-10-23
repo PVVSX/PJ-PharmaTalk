@@ -17,7 +17,7 @@ from firebase_admin import firestore
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR))
 
-from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes, ASR_AVAILABLE
+from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes, ASR_AVAILABLE, is_stt_error
 from unified_app.modules.emr_groq import extract_emr
 
 
@@ -94,12 +94,14 @@ async def process_audio_task(task_id: str, audio_path: str):
             audio_bytes = f.read()
             
         # Strictly use Typhoon; throw error if not available
-        if not getattr(asr_recognizer, "is_loaded", False) and not ASR_AVAILABLE:
+        if not getattr(asr_recognizer, "is_loaded", False) or not ASR_AVAILABLE:
             raise RuntimeError("Typhoon ASR is configured but the module/model is not available.")
-        try:
-            main_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
-        except Exception as stt_error:
-            main_result = f"Main STT Failed: {stt_error}"
+        main_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
+        # The STT module returns error text instead of raising; do not treat it as a transcript.
+        if is_stt_error(main_result):
+            raise RuntimeError(f"Main STT Failed: {main_result}")
+        if not (main_result or "").strip():
+            raise RuntimeError("ไม่พบเสียงพูดในไฟล์เสียง (transcript ว่างเปล่า)")
 
         stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}"
         
@@ -155,15 +157,6 @@ async def process_audio_task(task_id: str, audio_path: str):
                         "status": "COMPLETED"
                     })
                     print(f"Task {task_id} EMR updated to Firestore successfully.")
-                    
-                    # 🚀 AUTOMATICALLY UPLOAD AUDIO TO CLOUD STORAGE
-                    try:
-                        destination = f"recordings/{os.path.basename(audio_path)}"
-                        upload_file_to_storage(audio_path, destination)
-                        print(f"Audio {audio_path} automatically uploaded to Cloud Storage as {destination}")
-                    except Exception as upload_err:
-                        print(f"Warning: Failed to automatically upload audio to Cloud Storage: {upload_err}")
-                        
                 except Exception as fs_error:
                     print(f"Warning: Failed to update EMR to Firestore: {fs_error}")
             

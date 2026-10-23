@@ -87,6 +87,19 @@ class TyphoonASRRecognizer:
         except Exception as e:
             return f"(เกิดข้อผิดพลาดในการถอดเสียง: {e})"
 
+# Strings returned (instead of raised) by the transcribe functions on failure.
+STT_ERROR_PREFIXES = (
+    "(ระบบถอดเสียงยังไม่พร้อม)",
+    "(เกิดข้อผิดพลาดในการถอดเสียง",
+    "(ถอดเสียงล้มเหลว",
+)
+
+
+def is_stt_error(text: str) -> bool:
+    """True if `text` is one of the error messages returned by the STT functions."""
+    return isinstance(text, str) and text.strip().startswith(STT_ERROR_PREFIXES)
+
+
 def transcribe_audio_bytes(recognizer: TyphoonASRRecognizer, audio_bytes: bytes) -> str:
     """
     Write audio bytes to a temp WAV file and transcribe using the recognizer.

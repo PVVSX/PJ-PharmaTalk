@@ -53,9 +53,13 @@ except Exception:
 with status_col1:
   if core_asr_ready:
         st.markdown('<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span><span>โมเดล ASR พร้อมใช้งาน</span></div>', unsafe_allow_html=True)
+  else:
+        st.markdown('<div class="record-status-banner warn"><span class="material-symbols-rounded">warning</span><span>ยังเชื่อมต่อ Core API หรือโมเดล ASR ไม่ได้ (ตรวจว่า Core API รันอยู่ที่พอร์ต 8080)</span></div>', unsafe_allow_html=True)
 with status_col2:
   if core_asr_ready:
         st.markdown('<div class="record-mini-stat"><span class="label">สถานะ</span><strong>พร้อมใช้งาน</strong></div>', unsafe_allow_html=True)
+  else:
+        st.markdown('<div class="record-mini-stat"><span class="label">สถานะ</span><strong>ไม่พร้อม</strong></div>', unsafe_allow_html=True)
 with status_col3:
     audio_total = len(sorted((RECORD_DIR / "audio").glob("*.wav"), key=lambda p: p.stat().st_mtime, reverse=True)) if (RECORD_DIR / "audio").exists() else 0
     st.markdown(f'<div class="record-mini-stat"><span class="label">ไฟล์เสียง</span><strong>{audio_total}</strong></div>', unsafe_allow_html=True)
@@ -190,7 +194,7 @@ with t1L:
                     STT_DIR.mkdir(parents=True, exist_ok=True)
 
                     now = datetime.now()
-                    base_name = now.strftime("%d-%m-%y_%H-%M") + "_000"
+                    base_name = now.strftime("%d-%m-%y_%H-%M-%S") + "_000"
                     audio_filename = f"{base_name}.wav"
                     stt_filename = f"{base_name}_stt.txt"
 
@@ -256,16 +260,24 @@ with t1R:
                     </div>
                     ''', unsafe_allow_html=True)
                     st.audio(str(wf_path))
-                    st.markdown('''
-                    <div style="text-align: center; margin-bottom: 8px; color: #10b981; font-size: 0.9rem;">
-                      <span class="material-symbols-rounded" style="font-size: 1.1rem; vertical-align: middle;">cloud_done</span> แบ็คอัปขึ้น Cloud แล้ว
-                    </div>
-                    ''', unsafe_allow_html=True)
-                    if st.button("ลบไฟล์", icon=":material/delete:", key=f"del_{rec_id}", use_container_width=True):
-                        wf_path.unlink(missing_ok=True)
-                        if stt_file.exists():
-                            stt_file.unlink(missing_ok=True)
-                        st.rerun()
+                    btn_c1, btn_c2 = st.columns(2)
+                    with btn_c1:
+                        if st.button("อัปโหลด Cloud", icon=":material/cloud_upload:", key=f"up_{rec_id}", use_container_width=True):
+                            if upload_file_to_storage is None:
+                                st.error("ระบบ Firebase ยังไม่พร้อมใช้งาน")
+                            else:
+                                try:
+                                    dest = f"recordings/{wf_path.name}"
+                                    upload_file_to_storage(str(wf_path), dest)
+                                    st.success("อัปโหลดขึ้น Cloud สำเร็จแล้ว!")
+                                except Exception as up_err:
+                                    st.error(f"อัปโหลดไม่สำเร็จ: {up_err}")
+                    with btn_c2:
+                        if st.button("ลบไฟล์", icon=":material/delete:", key=f"del_{rec_id}", use_container_width=True):
+                            wf_path.unlink(missing_ok=True)
+                            if stt_file.exists():
+                                stt_file.unlink(missing_ok=True)
+                            st.rerun()
         else:
             st.markdown('''
             <div class="record-empty-state">
