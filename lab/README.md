@@ -82,16 +82,22 @@ pip install -r requirements.txt
    ```
 
 ### ขั้นตอนที่ 3: เริ่มต้นรันระบบ
-สามารถรันผ่านสคริปต์:
-```bash
-chmod +x run.sh
-./run.sh
-```
+สามารถรันได้ด้วยวิธีที่สะดวกที่สุด:
 
-หรือรันผ่านคำสั่ง Streamlit โดยตรง:
-```bash
-python3 -m streamlit run app.py --server.port 8525
-```
+1. **รันผ่านสคริปต์คลิกเดียวที่โฟลเดอร์หลัก (แนะนำ):**
+   - บน macOS / Linux: `./run_lab.sh`
+   - บน Windows: ดับเบิลคลิก `run_lab.bat`
+
+2. **หรือรันจากภายในโฟลเดอร์ lab/:**
+   ```bash
+   chmod +x run.sh
+   ./run.sh
+   ```
+
+3. **หรือรันผ่านคำสั่ง Streamlit โดยตรง:**
+   ```bash
+   python3 -m streamlit run app.py --server.port 8525
+   ```
 
 เปิดเว็บเบราว์เซอร์ไปที่: `http://localhost:8525`
 
