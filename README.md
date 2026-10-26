@@ -1,6 +1,6 @@
 # PharmaTalk — AI-Powered Pharmacy Speech-to-Text & EMR System
 
-PharmaTalk คือระบบปัญญาประดิษฐ์ช่วยบันทึกและสกัดข้อมูลเวชระเบียนการบริบาลทางเภสัชกรรม (Electronic Medical Record: EMR) จากบทสนทนาระหว่างเภสัชกรและผู้ป่วยแบบอัตโนมัติ รองรับการถอดเสียงภาษาไทยความเร็วสูง (Real-time ASR), การตรวจแก้คำศัพท์เภสัชกรรมด้วยพจนานุกรมความปลอดภัย, การวิเคราะห์และสกัด EMR ด้วยโมเดลภาษาขนาดใหญ่ (LLMs), และการส่งออกรายงานเวชระเบียนทางการแพทย์ในรูปแบบ PDF
+PharmaTalk คือระบบปัญญาประดิษฐ์ครบวงจรสำหรับการบันทึกและสกัดข้อมูลเวชระเบียนการบริบาลทางเภสัชกรรม (Electronic Medical Record: EMR) จากบทสนทนาระหว่างเภสัชกรและผู้ป่วยแบบอัตโนมัติ ออกแบบมาเพื่อรองรับทั้ง **การใช้งานจริงในร้านยา/คลินิก (Production & Clinic Application Suite)** และ **การวิจัยทดสอบประสิทธิภาพโมเดล (Research & Benchmark Lab)**
 
 ---
 
@@ -26,97 +26,161 @@ cd PJ-PharmaTalk
 *(ไฟล์ API Key, โมเดล Typhoon ASR, และฐานข้อมูล SQLite จะถูกจัดวางลงตำแหน่งที่ถูกต้องทันที)*
 
 ### ขั้นตอนที่ 3: สั่งรันด้วยคลิกเดียว (One-Click Launch)
-- **สำหรับ Windows:**
-  ดับเบิลคลิกไฟล์:
-  ```text
-  run_lab.bat
-  ```
-- **สำหรับ macOS / Linux:**
-  ```bash
-  ./run_lab.sh
-  ```
 
-ระบบจะสร้าง Virtual Environment, ติดตั้ง Dependencies ที่จำเป็น, และเปิดหน้าเว็บ **PharmaTalk Lab** ที่ `http://localhost:8525` ให้โดยอัตโนมัติ
+สามารถเลือกรันระบบที่ต้องการใช้งานได้ทันที:
+
+#### ก. เปิดแอปพลิเคชันหลัก (PharmaTalk Main Application — พอร์ต 8515)
+- **Windows:** ดับเบิลคลิก `run_main_app.bat`
+- **macOS / Linux:** รันคำสั่ง `./run_main_app.sh`
+- *เปิดใช้งานผ่านเบราว์เซอร์ที่: `http://localhost:8515`*
+
+#### ข. เปิดระบบห้องแล็บทดสอบ (PharmaTalk Lab — พอร์ต 8525)
+- **Windows:** ดับเบิลคลิก `run_lab.bat`
+- **macOS / Linux:** รันคำสั่ง `./run_lab.sh`
+- *เปิดใช้งานผ่านเบราว์เซอร์ที่: `http://localhost:8525`*
+
+ระบบจะสร้าง Virtual Environment, ติดตั้ง Dependencies ทั้งหมด และเปิดหน้าเว็บให้โดยอัตโนมัติ
 
 ---
 
-## 2. องค์ประกอบหลักของระบบ (System Architecture)
+## 2. โครงสร้างระบบและแอปพลิเคชัน (Applications & Components)
 
-ระบบประกอบด้วยโมดูลหลัก 4 ส่วน:
+โปรเจกต์แบ่งออกเป็น 2 ระบบการทำงานหลัก:
+
+### ส่วนที่ 1: ระบบแอปพลิเคชันหลักสำหรับการใช้งานจริง (Production & Clinic Suite)
+
+ระบบหลักสำหรับการปฏิบัติงานของเภสัชกร ประกอบด้วย 4 แอปพลิเคชันย่อยที่เชื่อมต่อกัน:
 
 ```text
-[เสียงบทสนทนา] ──▶ Typhoon ASR / Whisper ──▶ Pharmacy Dict ──▶ LLM EMR Extraction ──▶ PDF Export / Cloud Storage
+[ผู้รับบริการ] ──▶ Consent Page (api.py:8500) ──READY──▶ Pharmacist App (8501) หรือ Unified App (8515)
+                                                                 │
+                                                          อัปโหลดไฟล์เสียง
+                                                                 ▼
+                                                    Core API (core_api:8080)
+                                                                 │
+                                                ┌────────────────┴────────────────┐
+                                                ▼                                 ▼
+                                      Typhoon ASR Engine                 Groq LLM Extraction
+                                     (+ พจนานุกรมศัพท์ยา)                  (เวชระเบียน 5 หมวด)
+                                                │                                 │
+                                                └────────────────┬────────────────┘
+                                                                 ▼
+                                                  Firebase Firestore & Storage
 ```
 
-1. **PharmaTalk Lab (`lab/`):**
-   - ห้องปฏิบัติการทดสอบและประเมินผล (Benchmark & Ablation Lab)
-   - แท็บ 1: ถอดเสียงบทสนทนา, สลับโมดูลย่อย (แก้สระลอย, แยกผู้พูด, จัดแชต), และสกัดเวชระเบียน EMR แบบเลือกโมเดลได้ตามต้องการ
-   - แท็บ 2: ประเมินผลความถูกต้องเทียบกับคลังเฉลยอ้างอิง 25 เคส (Ground Truth Evaluation) ทั้งแบบเคสเดี่ยวและ Batch
-   - พิมพ์รายงานเวชระเบียน PDF ฟอนต์ Kanit มาตรฐานทางการแพทย์
+1. **Unified Application (`unified_app/app.py` — พอร์ต 8515):**
+   - **แอปพลิเคชันหลักสำหรับผู้ดูแลระบบและหลังบ้าน (Back-Office & Standalone Portal)**
+   - ใช้งานได้ทันทีโดยไม่ต้องผ่าน Consent Gate
+   - ประกอบด้วย 4 หน้าการทำงานครบวงจร:
+     - **หน้าบันทึกเสียง (Recorder):** บันทึกเสียงบทสนทนาสดผ่านไมโครโฟน, อัพโหลดไฟล์เสียง WAV, ตรวจสอบความพร้อมของระบบ และส่งเข้าคิวประมวลผล
+     - **หน้าประวัติข้อมูล (History):** ดูรายการเวชระเบียนย้อนหลังที่ดึงจาก Cloud Firestore, ค้นหาตามชื่อ/วันที่, เล่นไฟล์เสียงที่บันทึกไว้ใน Firebase Storage และดาวน์โหลดเอกสารสรุป
+     - **หน้าวิเคราะห์เวชระเบียน (EMR Analysis):** แสดงผลการถอดเสียงบทสนทนา (Transcript) แยกบทบาทเภสัชกร-คนไข้ พร้อมแสดงฟอร์มเวชระเบียนทางการแพทย์ SOAP
+     - **หน้าตั้งค่าระบบ (Settings):** ตรวจสอบสถานะการเชื่อมต่อ Core API, ความพร้อมของโมเดล Typhoon ASR, บัญชี Firebase, และสถานะของ Groq API Key
 
-2. **Unified App (`unified_app/`):**
-   - ส่วนติดต่อผู้ใช้หลักสำหรับทดสอบระบบเต็มรูปแบบและระบบหลังบ้าน (Back-office)
-   - บันทึกเสียงผ่านเบราว์เซอร์, ติดตามสถานะงานถอดเสียง, ดูประวัติย้อนหลังผ่าน Firebase Firestore
+2. **Pharmacist Point-of-Care Portal (`pharmacist_app.py` — พอร์ต 8501):**
+   - **หน้าจอสำหรับเภสัชกรผู้ปฏิบัติงานหน้าร้านยาหรือห้องจ่ายยา**
+   - เชื่อมต่อกับระบบขอความยินยอม (Patient Consent Gate) อย่างเข้มงวด โดยปุ่มบันทึกเสียงจะถูกล็อกไว้จนกว่าผู้ป่วยจะกดยินยอมผ่านหน้าจอ Consent
+   - เน้นความสะดวกในการทำงาน รวดเร็ว และแสดงผลเฉพาะหน้าบันทึกเสียงและประวัติข้อมูล
 
-3. **Pharmacist Point-of-Care App (`pharmacist_app.py`):**
-   - หน้าจอการทำงานจริงสำหรับเภสัชกรหน้าร้านขายยาหรือห้องจ่ายยา
-   - เชื่อมต่อหน้าจอยินยอมของผู้รับบริการ (Consent Gate) และแสดงผลสรุปเวชระเบียน
+3. **Patient Consent Gateway (`api.py` — พอร์ต 8500):**
+   - **เว็บแอปพลิเคชันขอความยินยอมจากผู้รับบริการ (PDPA / Consent Form)**
+   - แสดงข้อกำหนดการบันทึกเสียงเพื่อการบริบาลทางเภสัชกรรมบนแท็บเล็ตหน้าร้าน
+   - เมื่อผู้รับบริการกด "ยินยอม" ระบบจะบันทึกข้อมูลลงฐานข้อมูลและส่งสัญญาณสถานะ `READY` ไปยังหน้าจอเภสัชกรเพื่อปลดล็อกการบันทึกเสียงทันที
 
-4. **Core API Server (`core_api/`):**
-   - บริการหลังบ้านพัฒนาด้วย FastAPI รองรับ Background Task Processing
-   - จัดการคิวงานถอดเสียง (STT), คัดกรองคำศัพท์ยา, เรียก LLM สกัด EMR, และบันทึกลง Cloud
+4. **Core Processing API (`core_api/main.py` — พอร์ต 8080):**
+   - **เซิร์ฟเวอร์ประมวลผลเบื้องหลัง (FastAPI Engine & Background Task Queue)**
+   - ทำงานแบบ Asynchronous รองรับงานหนักโดยไม่ทำให้หน้าเว็บค้าง
+   - จัดการคิวงานถอดเสียงด้วย Typhoon ASR, กรองคำศัพท์เฉพาะทางด้วย Pharmacy Dictionary, วิเคราะห์สกัด EMR ด้วย Groq LLM, และอัพโหลดข้อมูลขึ้น Firebase Firestore และ Storage อัตโนมัติ
 
 ---
 
-## 3. โครงสร้างไดเรกทอรี (Directory Structure)
+### ส่วนที่ 2: ระบบห้องปฏิบัติการทดสอบและวิจัย (Research & Benchmark Lab)
+
+**PharmaTalk Lab (`lab/app.py` — พอร์ต 8525):**
+ออกแบบขึ้นมาเพื่อการทดลอง ประเมินผลเชิงลึก และการพัฒนาด้านการแพทย์โดยเฉพาะ ประกอบด้วย:
+
+1. **แท็บ 1: การประมวลผลเสียงและสกัดเวชระเบียน (Audio Processing & Multi-Model EMR):**
+   - รองรับทั้งโมเดล Typhoon ASR ออฟไลน์ และ Whisper Large v3
+   - มีระบบ Ablation Study สำหรับเปิด/ปิดฟังก์ชันย่อย: ระบบแก้คำศัพท์ยา (Pharmacy Dict), ระบบแยกบทบาทผู้พูด, และระบบจัดแชต
+   - **ระบบเลือกโมเดล EMR แบบอิสระ:** สามารถเลือกประมวลผลพร้อมกันหลายโมเดลได้ตามต้องการ เช่น GPT-OSS-120B, LLaMA 3.3 70B, และ Gemini 2.5 Flash
+   - **ระบบออกเอกสารเวชระเบียน PDF:** ออกแบบใหม่ด้วยฟอนต์ Kanit จัดวางหน้าเวชระเบียนอย่างเป็นทางการ และมีปุ่มดาวน์โหลดทันที
+
+2. **แท็บ 2: การประเมินผลเทียบชุดข้อมูลอ้างอิง (Ground Truth Evaluation):**
+   - เชื่อมต่อคลังเฉลย 25 เคสทางการแพทย์สำหรับการวัดผลความแม่นยำ
+   - รองรับทั้งการประเมินเคสเดี่ยวและการรัน Batch อัตโนมัติ พร้อมคำนวณคะแนนความคล้ายคลึง
+
+---
+
+## 3. วิธีการรันระบบหลักแบบเต็มรูปแบบ (Full Clinic Production Flow)
+
+หากต้องการรันระบบจำลองการทำงานจริงในร้านยา ให้เปิด 3 หน้าต่าง Terminal:
+
+### หน้าต่างที่ 1: เปิดหน้า Consent สำหรับผู้ป่วย (พอร์ต 8500)
+```bash
+python3 api.py
+```
+*เปิดใช้งานสำหรับผู้ป่วยที่: `http://localhost:8500`*
+
+### หน้าต่างที่ 2: เปิด Core API ประมวลผลเบื้องหลัง (พอร์ต 8080)
+```bash
+cd core_api
+python3 main.py
+```
+*ตรวจสอบความพร้อมของระบบได้ที่: `http://localhost:8080/health` (ต้องได้ `asr_available: true`)*
+
+### หน้าต่างที่ 3: เปิดหน้าจอเภสัชกรหน้าร้าน (พอร์ต 8501)
+```bash
+streamlit run pharmacist_app.py --server.port 8501
+```
+*เปิดใช้งานสำหรับเภสัชกรที่: `http://localhost:8501`*
+
+---
+
+## 4. โครงสร้างไฟล์ในโปรเจกต์ (Project Directory Layout)
 
 ```text
 PJ-PharmaTalk/
-├── run_lab.sh                  # สคริปต์เปิด Lab ด้วยคลิกเดียว (macOS / Linux)
-├── run_lab.bat                 # สคริปต์เปิด Lab ด้วยคลิกเดียว (Windows)
-├── pharmacist_app.py           # หน้าจอเภสัชกรหน้าร้าน
-├── api.py                      # เซิร์ฟเวอร์บริการหน้า Consent สำหรับผู้ป่วย
+├── run_main_app.sh             # สคริปต์คลิกเดียวเปิด Unified App (macOS / Linux)
+├── run_main_app.bat            # สคริปต์คลิกเดียวเปิด Unified App (Windows)
+├── run_lab.sh                  # สคริปต์คลิกเดียวเปิด Lab (macOS / Linux)
+├── run_lab.bat                 # สคริปต์คลิกเดียวเปิด Lab (Windows)
+│
+├── pharmacist_app.py           # หน้าจอเภสัชกรหน้าร้าน (พอร์ต 8501)
+├── api.py                      # เซิร์ฟเวอร์หน้า Consent ผู้ป่วย (พอร์ต 8500)
 ├── setup_machine.py            # สคริปต์ตรวจความพร้อมของเครื่อง
 │
-├── fonts/                      # แบบอักษรภาษาไทยมาตรฐาน
-│   ├── Kanit-Regular.ttf
-│   ├── Kanit-Medium.ttf
-│   ├── Kanit-SemiBold.ttf
-│   └── Kanit-Bold.ttf
+├── unified_app/                # แอปหลัก Back-office & Standalone (พอร์ต 8515)
+│   ├── app.py                  # Entry Point ของ Unified App
+│   ├── assets/style.css        # ดีไซน์และธีมของระบบ
+│   ├── components/             # ตัวบันทึกเสียง Custom Browser Component
+│   ├── modules/                # ไคลเอนต์ Task API, State Manager, พจนานุกรมยา
+│   └── pages/                  # หน้าบันทึกเสียง, ประวัติ, เวชระเบียน EMR, ตั้งค่า
 │
-├── lab/                        # ระบบห้องปฏิบัติการทดสอบ ASR และ EMR
-│   ├── app.py                  # Streamlit Web App (พอร์ต 8525)
-│   ├── pipeline.py             # เอนจินถอดเสียงและไปป์ไลน์การประมวลผล
-│   ├── emr_models.py           # เอนจินเรียกโมเดล LLM หลากหลายค่าย
-│   ├── requirements.txt        # ไลบรารีสำหรับ Lab
-│   └── modules/
-│       ├── emr_pdf.py          # ระบบสร้างเอกสารเวชระเบียน PDF (Kanit)
-│       ├── emr_groq.py         # โครงสร้าง Prompt และการสกัด EMR
-│       ├── pharmacy_dict.py    # พจนานุกรมศัพท์ยาและระบบ Fuzzy Match
-│       └── pharmacy_data/      # บัญชียา ขนาดยา และตารางเทียบคำผิด
-│
-├── unified_app/                # แอปพลิเคชันรวม (Streamlit)
-│   ├── app.py                  # หน้าจอหลัก Back-office
-│   ├── modules/                # ไคลเอนต์และตัวจัดการสถานะ
-│   └── pages/                  # หน้าบันทึกเสียง, ประวัติ, เวชระเบียน EMR
-│
-├── core_api/                   # เซิร์ฟเวอร์ประมวลผลหลัก (FastAPI)
-│   ├── main.py                 # API Endpoints
+├── core_api/                   # FastAPI Backend Server (พอร์ต 8080)
+│   ├── main.py                 # API Endpoints (Upload, Task, Health)
 │   ├── database.py             # จัดการคิวงาน SQLite
-│   └── firebase_config.py      # เชื่อมต่อ Firestore & Storage
+│   ├── firebase_config.py      # เชื่อมต่อ Firestore & Storage
+│   └── requirements.txt        # ไลบรารีสำหรับ Core API
 │
-├── ground_truth/               # คลังเฉลยบทสนทนาอ้างอิง 25 เคส
-├── tests/                      # ชุดทดสอบระบบอัตโนมัติ (Automated Tests)
-│   └── run_tests.py            # รันการทดสอบระบบทั้งหมด
-└── docs/                       # เอกสารคู่มือและการวิเคราะห์ทางเทคนิค
+├── lab/                        # ระบบห้องปฏิบัติการทดสอบ (พอร์ต 8525)
+│   ├── app.py                  # Streamlit Web App ของ Lab
+│   ├── pipeline.py             # เอนจินถอดเสียงและ Ablation
+│   ├── emr_models.py           # เอนจินสกัด EMR หลายโมเดล
+│   ├── requirements.txt        # ไลบรารีสำหรับ Lab
+│   └── modules/                # โมดูล PDF (Kanit), Prompt EMR, ฐานข้อมูลยา
+│
+├── fonts/                      # แบบอักษรภาษาไทย Kanit สำหรับเอกสาร PDF
+├── ground_truth/               # ชุดข้อมูลเฉลยบทสนทนาอ้างอิง 25 เคส
+├── tests/                      # สคริปต์ทดสอบระบบอัตโนมัติ (tests/run_tests.py)
+└── docs/                       # เอกสารสถาปัตยกรรมระบบและรายงานผลการทดลอง
 ```
 
 ---
 
-## 4. รายละเอียดโมเดลและการตั้งค่า (Technical Specs)
+## 5. รายละเอียดโมเดลและการตั้งค่า (Technical Specs)
 
-### โมเดลถอดเสียง (Speech-to-Text)
-- **Typhoon ASR Realtime (Conformer-Transducer):** รันออฟไลน์ในเครื่องผ่าน NeMo (`models/typhoon-asr-realtime.nemo`) ความเร็วสูง ~1-2 วินาที
+### โมเดลถอดเสียง (Speech-to-Text Engines)
+- **Typhoon ASR Realtime (Conformer-Transducer):** โมเดลออฟไลน์ในเครื่องผ่าน NeMo (`models/typhoon-asr-realtime.nemo`) ประมวลผลรวดเร็ว ~1-2 วินาที
 - **Whisper Large v3 (Groq API):** ความแม่นยำสูง เว้นวรรคและจับศัพท์การแพทย์ภาษาไทยได้ครบถ้วน
 
 ### โมเดลสกัดเวชระเบียน (EMR LLMs)
@@ -124,18 +188,18 @@ PJ-PharmaTalk/
 - **Google Gemini:** `gemini-2.5-flash`, `gemini-2.5-pro`
 - **Anthropic Claude:** `claude-sonnet-4-5`, `claude-3-5-haiku-latest`
 
-### รูปแบบเวชระเบียน 5 หมวด (Clinical EMR Schema)
-1. **ประวัติการแพ้ยา:** ชื่อยา อาการไม่พึงประสงค์
+### โครงสร้างเวชระเบียน 5 หมวด (Clinical EMR Schema)
+1. **ประวัติการแพ้ยา:** ชื่อยา อาการแพ้ ระดับความรุนแรง
 2. **โรคประจำตัว:** ภาวะสุขภาพ อาการเรื้อรัง
-3. **ประวัติการจ่ายยา / ยาเดิม:** รายการยาที่กำลังใช้อยู่
-4. **บันทึกทางการแพทย์ (Clinical SOAP):** สรุปอาการสำคัญ การประเมินปัญหา
-5. **คำแนะนำจากเภสัชกร:** แผนการใช้ยา คำเตือน และการปรับพฤติกรรม
+3. **ประวัติการจ่ายยา / ยาเดิม:** รายการยาที่ผู้ป่วยกำลังรับประทาน
+4. **บันทึกทางการแพทย์ (Clinical SOAP):** สรุปอาการสำคัญ ผลการประเมิน
+5. **คำแนะนำจากเภสัชกร:** แผนการใช้ยา คำเตือน และการดูแลตนเอง
 
 ---
 
-## 5. การทดสอบความถูกต้องของระบบ (Automated Verification)
+## 6. การทดสอบความถูกต้องของระบบ (Automated Verification)
 
-สามารถตรวจสอบการทำงานของโมเดล Typhoon ASR, การเชื่อมต่อ Groq API, และการสกัด EMR ได้ผ่านคำสั่ง:
+สามารถตรวจสอบการทำงานของโมเดล Typhoon ASR, การเชื่อมต่อ Groq API, และการสกัด EMR ได้ผ่านคำสั่งเดียว:
 
 ```bash
 python3 tests/run_tests.py
@@ -145,7 +209,7 @@ python3 tests/run_tests.py
 
 ---
 
-## 6. ข้อกำหนดด้านความปลอดภัย (Security & Offline Assets)
+## 7. ข้อกำหนดด้านความปลอดภัย (Security & Offline Assets)
 
 ไฟล์ที่มีความอ่อนไหวจะไม่ถูกบันทึกลง Git Repository:
 - ไฟล์ API Keys: `.groq_api_key`, `.gemini_api_key`
@@ -153,4 +217,4 @@ python3 tests/run_tests.py
 - ไฟล์ไบนารีโมเดลขนาดใหญ่: `models/typhoon-asr-realtime.nemo`
 - ฐานข้อมูลและแคช: `*.db`, `lab/cache/`, `lab/cache_emr/`
 
-หากต้องการใช้งานบนเครื่องใหม่ ให้ใช้ไฟล์ `pharmatalk_offline_assets.zip` ตามขั้นตอนใน Quick Start ด้านบน
+เมื่อดาวน์โหลดโปรเจกต์บนเครื่องใหม่ ให้ใช้ไฟล์ `pharmatalk_offline_assets.zip` แตกไฟล์ลงที่โฟลเดอร์โปรเจกต์โดยตรงตามขั้นตอนใน Quick Start
