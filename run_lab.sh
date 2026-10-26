@@ -10,6 +10,24 @@ echo "=========================================="
 echo " Starting PharmaTalk Lab..."
 echo "=========================================="
 
+# 0. Auto-merge if user dragged pharmatalk_offline_assets folder into project
+if [ -d "pharmatalk_offline_assets" ]; then
+    echo "[Info] Detected pharmatalk_offline_assets folder, ensuring files are placed..."
+    cp -n pharmatalk_offline_assets/.groq_api_key ./ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/.gemini_api_key ./ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/api_keys/.groq_api_key ./ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/api_keys/.gemini_api_key ./ 2>/dev/null || true
+    mkdir -p core_api models record lab/cache lab/cache_emr lab/sample_audio
+    cp -n pharmatalk_offline_assets/core_api/serviceAccountKey.json core_api/ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/credentials/serviceAccountKey.json core_api/ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/models/typhoon-asr-realtime.nemo models/ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/core_api/api_queue.db core_api/ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/databases/api_queue.db core_api/ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/record/pharmatalk.db record/ 2>/dev/null || true
+    cp -n pharmatalk_offline_assets/databases/pharmatalk.db record/ 2>/dev/null || true
+    cp -rn pharmatalk_offline_assets/lab/sample_audio/* lab/sample_audio/ 2>/dev/null || true
+fi
+
 # 1. Check & Create Virtual Environment
 if [ ! -d "venv" ]; then
     echo "[Info] Creating virtual environment (venv)..."

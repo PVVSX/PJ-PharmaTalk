@@ -89,10 +89,17 @@ def load_saved_key(provider: str) -> str:
     spec = PROVIDERS[provider]
     key = os.environ.get(spec["env"], "").strip()
     if not key:
-        for p in [APP_DIR / spec["key_file"], APP_DIR.parent / spec["key_file"]]:
+        candidates = [
+            APP_DIR / spec["key_file"],
+            APP_DIR.parent / spec["key_file"],
+            APP_DIR.parent / "pharmatalk_offline_assets" / spec["key_file"],
+            APP_DIR.parent / "pharmatalk_offline_assets" / "api_keys" / spec["key_file"],
+        ]
+        for p in candidates:
             if p.exists():
                 key = p.read_text(encoding="utf-8").strip()
-                break
+                if key:
+                    break
     return key
 
 

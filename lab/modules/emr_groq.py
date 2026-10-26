@@ -21,7 +21,15 @@ EMR_FIELDS = [
 def get_groq_api_key() -> str:
     api_key = os.environ.get("GROQ_API_KEY", "").strip()
     if not api_key:
-        for p in [ROOT / ".groq_api_key", ROOT.parent / ".groq_api_key"]:
+        candidates = [
+            ROOT / ".groq_api_key",
+            ROOT.parent / ".groq_api_key",
+            ROOT / "pharmatalk_offline_assets" / ".groq_api_key",
+            ROOT / "pharmatalk_offline_assets" / "api_keys" / ".groq_api_key",
+            ROOT.parent / "pharmatalk_offline_assets" / ".groq_api_key",
+            ROOT.parent / "pharmatalk_offline_assets" / "api_keys" / ".groq_api_key",
+        ]
+        for p in candidates:
             if p.exists():
                 api_key = p.read_text(encoding="utf-8").strip()
                 if api_key:

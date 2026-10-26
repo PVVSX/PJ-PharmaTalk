@@ -7,6 +7,25 @@ echo ==========================================
 echo  Starting PharmaTalk Lab...
 echo ==========================================
 
+REM 0. Auto-merge if user dragged pharmatalk_offline_assets folder into project
+if exist "pharmatalk_offline_assets" (
+    echo [Info] Detected pharmatalk_offline_assets folder, ensuring files are placed...
+    if exist "pharmatalk_offline_assets\.groq_api_key" copy /Y "pharmatalk_offline_assets\.groq_api_key" ".\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\.gemini_api_key" copy /Y "pharmatalk_offline_assets\.gemini_api_key" ".\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\api_keys\.groq_api_key" copy /Y "pharmatalk_offline_assets\api_keys\.groq_api_key" ".\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\api_keys\.gemini_api_key" copy /Y "pharmatalk_offline_assets\api_keys\.gemini_api_key" ".\" >nul 2>&1
+    if not exist "models" mkdir models
+    if not exist "core_api" mkdir core_api
+    if not exist "record" mkdir record
+    if exist "pharmatalk_offline_assets\models\typhoon-asr-realtime.nemo" copy /Y "pharmatalk_offline_assets\models\typhoon-asr-realtime.nemo" "models\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\core_api\serviceAccountKey.json" copy /Y "pharmatalk_offline_assets\core_api\serviceAccountKey.json" "core_api\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\credentials\serviceAccountKey.json" copy /Y "pharmatalk_offline_assets\credentials\serviceAccountKey.json" "core_api\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\core_api\api_queue.db" copy /Y "pharmatalk_offline_assets\core_api\api_queue.db" "core_api\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\databases\api_queue.db" copy /Y "pharmatalk_offline_assets\databases\api_queue.db" "core_api\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\record\pharmatalk.db" copy /Y "pharmatalk_offline_assets\record\pharmatalk.db" "record\" >nul 2>&1
+    if exist "pharmatalk_offline_assets\databases\pharmatalk.db" copy /Y "pharmatalk_offline_assets\databases\pharmatalk.db" "record\" >nul 2>&1
+)
+
 REM 1. Check & Create Virtual Environment
 if not exist "venv" (
     echo [Info] Creating virtual environment (venv)...
