@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-app = FastAPI(title="PharmaTalk Bridge API")
+app = FastAPI(title="PharmaLog AI Bridge API: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +23,7 @@ app.add_middleware(
 ROOT = Path(__file__).resolve().parent
 RECORD_DIR = ROOT / "record"
 STATE_FILE = RECORD_DIR / "shared_state.json"
-DATABASE_FILE = RECORD_DIR / "pharmatalk.db"
+DATABASE_FILE = RECORD_DIR / "pharmalog.db" if (RECORD_DIR / "pharmalog.db").exists() else RECORD_DIR / "pharmatalk.db"
 CONSENT_APP_DIR = ROOT / "consent_app"
 
 class StateModel(BaseModel):

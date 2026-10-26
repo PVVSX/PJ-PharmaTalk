@@ -7,7 +7,10 @@ from typing import Any
 import requests
 
 
-CORE_API_URL = os.environ.get("PHARMATALK_CORE_API_URL", "http://127.0.0.1:8080").rstrip("/")
+CORE_API_URL = os.environ.get(
+    "PHARMALOG_CORE_API_URL",
+    os.environ.get("PHARMATALK_CORE_API_URL", "http://127.0.0.1:8080")
+).rstrip("/")
 
 
 def queue_audio(audio_bytes: bytes, filename: str) -> str:

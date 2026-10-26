@@ -1,10 +1,10 @@
 """
-วัดการใช้ token จริงของ Groq (openai/gpt-oss-120b) สำหรับการสกัด EMR ของ PharmaTalk
+วัดการใช้ token จริงของ Groq (openai/gpt-oss-120b) สำหรับการสกัด EMR ของ PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์
 
 ใช้ prompt เดียวกับระบบจริง (unified_app.modules.emr_groq._build_prompt)
 และใช้ผลดิบ Typhoon จาก batch_typhoon_full_results.json เป็น input
 
-วิธีใช้ (รันในโฟลเดอร์ Pharmatalk_project):
+วิธีใช้:
     python measure_token_usage.py --limit 10
     python measure_token_usage.py --limit 10 --reasoning-effort low   # ทดสอบแบบลด reasoning
 

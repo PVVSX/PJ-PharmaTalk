@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# PharmaTalk Lab - Standalone Launcher (macOS / Linux)
+# PharmaLog AI Lab - Standalone Launcher (macOS / Linux)
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 
 echo "================================================="
-echo "   PharmaTalk Lab - Benchmark & Ablation Lab"
+echo "   PharmaLog AI Lab: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์"
 echo "================================================="
 
 PORT=8525

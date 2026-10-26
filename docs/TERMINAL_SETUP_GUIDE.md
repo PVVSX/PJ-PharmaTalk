@@ -1,10 +1,11 @@
-# 🚀 PharmaTalk: Terminal Setup & Run Cheat Sheet (คู่มือคำสั่งใน Terminal)
+# PharmaLog AI: Terminal Setup & Run Cheat Sheet (คู่มือคำสั่งใน Terminal)
+## ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์
 
 คู่มือนี้สรุปคำสั่งทั้งหมดสำหรับนำไปรันบนคอมพิวเตอร์เครื่องใหม่ตั้งแต่ต้นจนเปิดใช้งานได้สมบูรณ์
 
 ---
 
-## 📌 ขั้นตอนที่ 1: ติดตั้ง ffmpeg ในเครื่อง
+## ขั้นตอนที่ 1: ติดตั้ง ffmpeg ในเครื่อง
 
 ### สำหรับ macOS:
 ```bash
@@ -18,7 +19,7 @@ winget install Gyan.FFmpeg
 
 ---
 
-## 📌 ขั้นตอนที่ 2: Clone โค้ดลงเครื่อง
+## ขั้นตอนที่ 2: Clone โค้ดลงเครื่อง
 
 ```bash
 git clone -b feature/unified-app-v2 https://github.com/PVVSX/PJ-PharmaTalk.git
@@ -27,7 +28,7 @@ cd PJ-PharmaTalk
 
 ---
 
-## 📌 ขั้นตอนที่ 3: ติดตั้ง Python Dependencies
+## ขั้นตอนที่ 3: ติดตั้ง Python Dependencies
 
 ### สำหรับ macOS / Linux:
 ```bash
@@ -53,7 +54,7 @@ pip install "nemo_toolkit[asr]"
 
 ---
 
-## 📌 ขั้นตอนที่ 4: วางไฟล์คีย์และโมเดล (ที่อยู่นอก Git)
+## ขั้นตอนที่ 4: วางไฟล์คีย์และโมเดล (ที่อยู่นอก Git)
 
 ก๊อปปี้ 3 ไฟล์นี้มาวางในโฟลเดอร์โปรเจกต์:
 
@@ -72,11 +73,11 @@ pip install "nemo_toolkit[asr]"
 
 ---
 
-## 📌 ขั้นตอนที่ 5: คำสั่งเปิดรันโปรแกรม (เปิด 3 หน้าต่าง Terminal)
+## ขั้นตอนที่ 5: คำสั่งเปิดรันโปรแกรม (เปิด 3 หน้าต่าง Terminal)
 
 เปิด Terminal หรือ PowerShell แยกกัน **3 หน้าต่าง** แล้วรันจากโฟลเดอร์ Root ของโปรเจกต์:
 
-### 🟢 หน้าต่างที่ 1: Consent & Bridge API (พอร์ต 8500)
+### หน้าต่างที่ 1: Consent & Bridge API (พอร์ต 8500)
 ```bash
 # macOS / Linux:
 python3 api.py
@@ -87,7 +88,7 @@ python api.py
 
 ---
 
-### 🟢 หน้าต่างที่ 2: Core API ประมวลผล ASR & EMR (พอร์ต 8080)
+### หน้าต่างที่ 2: Core API ประมวลผล ASR & EMR (พอร์ต 8080)
 ```bash
 # macOS / Linux:
 cd core_api && python3 main.py
@@ -100,7 +101,7 @@ python main.py
 
 ---
 
-### 🟢 หน้าต่างที่ 3: หน้าจอเภสัชกร Streamlit (พอร์ต 8515)
+### หน้าต่างที่ 3: หน้าจอเภสัชกร Streamlit (พอร์ต 8515)
 ```bash
 # macOS / Linux:
 python3 -m streamlit run unified_app/app.py --server.address 127.0.0.1 --server.port 8515
@@ -111,7 +112,7 @@ python -m streamlit run unified_app\app.py --server.address 127.0.0.1 --server.p
 
 ---
 
-## 📌 ขั้นตอนที่ 6: เข้าใช้งานในเบราว์เซอร์
+## ขั้นตอนที่ 6: เข้าใช้งานในเบราว์เซอร์
 
 1. **หน้าจอยินยอม (คนไข้):** [http://127.0.0.1:8500](http://127.0.0.1:8500)
 2. **หน้าจอหลัก (เภสัชกร):** [http://127.0.0.1:8515](http://127.0.0.1:8515)

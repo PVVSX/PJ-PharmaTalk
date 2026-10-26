@@ -27,7 +27,7 @@ from unified_app.modules.emr_groq import extract_emr
 from database import SessionLocal, TaskTracker, engine
 from firebase_config import get_firestore_client, upload_file_to_storage
 
-app = FastAPI(title="PharmaTalk Fault-Tolerant API")
+app = FastAPI(title="PharmaLog AI Core API: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์")
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,7 +50,8 @@ async def health_check():
 @app.get("/")
 async def root():
     return {
-        "service": "PharmaTalk Core API",
+        "service": "PharmaLog AI Core API",
+        "title": "PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์",
         "status": "ok",
         "docs": "/docs",
         "health": "/health",
@@ -231,4 +232,5 @@ async def get_task_status(task_id: str, db: Session = Depends(get_db)):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PHARMATALK_CORE_API_PORT", "8080")))
+    port = int(os.environ.get("PHARMALOG_CORE_API_PORT", os.environ.get("PHARMATALK_CORE_API_PORT", "8080")))
+    uvicorn.run(app, host="0.0.0.0", port=port)

@@ -1,8 +1,8 @@
-# PharmaTalk System Guide
+# PharmaLog AI System Guide: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์
 
 ## ภาพรวม
 
-ระบบ PharmaTalk แบ่งการทำงานเป็น 3 ส่วนหลัก:
+ระบบ PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ แบ่งการทำงานเป็น 3 ส่วนหลัก:
 
 ```text
 Consent Page -> Bridge API -> Recorder
@@ -149,7 +149,7 @@ http://127.0.0.1:8515
 ไฟล์ฐานข้อมูล:
 
 ```text
-record/pharmatalk.db
+record/pharmalog.db (หรือ record/pharmatalk.db)
 ```
 
 ตาราง:
@@ -257,7 +257,7 @@ asr_loaded = true
 
 - อย่าเปิด static server แยกที่พอร์ต `8520` เพราะไม่มี API เชื่อมต่อกับ Recorder
 - ใช้ `api.py` ที่พอร์ต `8500` สำหรับหน้า Consent
-- อย่าลบ `record/pharmatalk.db` หากต้องการเก็บประวัติ consent
+- อย่าลบ `record/pharmalog.db` (หรือ `record/pharmatalk.db`) หากต้องการเก็บประวัติ consent
 - ไฟล์ฐานข้อมูลและไฟล์เสียงเป็นข้อมูล runtime ไม่ควร commit โดยไม่จำเป็น
 - Cloud upload ต้องเกิดจากการกดปุ่มของผู้ใช้เท่านั้น
 - การรัน Core API ครั้งแรกอาจใช้เวลาหลายวินาทีเพราะต้องโหลดโมเดล ASR

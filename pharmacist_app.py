@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PharmaTalk — Pharmacist Portal
+PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ — Pharmacist Portal
 Pages:
   Page 1 : อัดเสียง        (Audio Recorder)
   Page 2 : ประวัติข้อมูล     (History)
@@ -14,7 +14,7 @@ from pathlib import Path
 import streamlit as st
 
 # ── Path setup ──────────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent          # …/Pharmatalk_project
+ROOT = Path(__file__).resolve().parent          # …/PharmaLog
 UNIFIED = ROOT / "unified_app"              # …/unified_app
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -26,7 +26,7 @@ from unified_app.modules.emr_groq import check_credentials
 #  PAGE CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title  = "PharmaTalk — ระบบบันทึกเวชระเบียนอัตโนมัติ",
+    page_title  = "PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์",
     page_icon   = ":material/local_hospital:",
     layout      = "wide",
     initial_sidebar_state = "expanded",
@@ -109,8 +109,8 @@ with st.sidebar:
         <span class="material-symbols-rounded" style="font-size:2.2rem;color:#fff;">local_hospital</span>
       </div>
       <div class="sidebar-brand-text">
-        <div class="sidebar-brand-title">PharmaTalk</div>
-        <div class="sidebar-brand-sub">Pharmacy EMR System</div>
+        <div class="sidebar-brand-title">PharmaLog AI</div>
+        <div class="sidebar-brand-sub">ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์</div>
       </div>
     </div>
     <div class="sidebar-divider"></div>

@@ -39,7 +39,7 @@ class ThaiPDF(FPDF):
             return
         self.set_font("Sarabun", "I", 8)
         self.set_text_color(150, 150, 150)
-        self.cell(0, 6, "PharmaTalk - AI Model & Token API Report", align="R", new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 6, "PharmaLog AI - AI Model & Token API Report", align="R", new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(200, 200, 200)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
         self.ln(4)

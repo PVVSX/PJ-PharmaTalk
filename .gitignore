@@ -8,6 +8,8 @@ serviceAccountKey.json
 **/serviceAccountKey.json
 
 # Offline Assets & Archives
+pharmalog_offline_assets/
+pharmalog_offline_assets.zip
 pharmatalk_offline_assets/
 pharmatalk_offline_assets.zip
 *.zip
@@ -15,10 +17,12 @@ pharmatalk_offline_assets.zip
 
 # API Local Data & Databases
 *.db
+core_api/pharmalog_api.db
 core_api/pharmatalk_api.db
 core_api/api_queue.db
 core_api/temp_audio/
 scratch/
+record/pharmalog.db
 record/pharmatalk.db
 record/shared_state.json
 record/audio/

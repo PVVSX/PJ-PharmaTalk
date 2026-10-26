@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-PharmaTalk — Benchmark Lab (compact UI)
+PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ — Benchmark Lab (compact UI)
 Two main tabs: speech-to-text ablation, and EMR model comparison.
 """
 
@@ -53,7 +53,7 @@ except (ImportError, KeyError):
     from lab.modules.emr_pdf import generate_emr_pdf
 
 st.set_page_config(
-    page_title="PharmaTalk Lab",
+    page_title="PharmaLog AI Lab: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์",
     page_icon=":material/biotech:",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -245,7 +245,7 @@ with st.sidebar:
     st.markdown(
         f'<div class="side-brand">'
         f'<div class="side-logo">{icon("biotech")}</div>'
-        f'<div><div class="side-title-row"><span class="side-name">PharmaTalk</span>'
+        f'<div><div class="side-title-row"><span class="side-name">PharmaLog AI</span>'
         f'<span class="side-badge">LAB</span></div>'
         f'<div class="side-sub">Benchmark & Ablation</div></div>'
         f'</div>',
@@ -297,8 +297,8 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown(
     f'<div class="hero-slim"><div class="hero-slim-icon">{icon("biotech")}</div>'
-    '<div><h1 class="hero-slim-title">PharmaTalk Lab</h1>'
-    '<p class="hero-slim-sub">ทดสอบการถอดเสียงและการสกัดเวชระเบียน</p></div></div>',
+    '<div><h1 class="hero-slim-title">PharmaLog AI Lab</h1>'
+    '<p class="hero-slim-sub">ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์</p></div></div>',
     unsafe_allow_html=True,
 )
 

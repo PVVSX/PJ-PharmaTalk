@@ -1,6 +1,6 @@
-# PharmaTalk Lab — Benchmark & Clinical EMR Extraction Lab
+# PharmaLog AI Lab — Benchmark & Clinical EMR Extraction Lab: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์
 
-ระบบห้องปฏิบัติการทดสอบและประเมินผล (Benchmark & Ablation Lab) สำหรับการถอดเสียงบทสนทนาทางคลินิก (Speech-to-Text) และการสกัดข้อมูลเวชระเบียนการบริบาลทางเภสัชกรรม (Clinical EMR Extraction) พร้อมระบบออกเอกสารเวชระเบียนทางการแพทย์ (PDF)
+ระบบห้องปฏิบัติการทดสอบและประเมินผล (Benchmark & Ablation Lab) สำหรับการถอดเสียงบทสนทนาทางคลินิก (Speech-to-Text) และการสกัดข้อมูลเวชระเบียนการบริบาลทางเภสัชกรรม (Clinical EMR Extraction) พร้อมระบบออกเอกสารเวชระเบียนทางการแพทย์ (PDF) ของระบบ PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์
 
 ---
 

@@ -1,5 +1,5 @@
 """
-โมดูลสร้างไฟล์ PDF เวชระเบียนเภสัชกรรมคลินิก (PharmaTalk Clinical EMR PDF Generator)
+โมดูลสร้างไฟล์ PDF เวชระเบียนเภสัชกรรมคลินิก (PharmaLog AI Clinical EMR PDF Generator)
 ใช้ fpdf2 ร่วมกับแบบอักษร Kanit (และสำรองด้วย Sarabun)
 ปรับแต่งรูปแบบให้เป็นทางการ กะทัดรัด ตัวอักษรคมชัด อ่านง่าย และเป็นมาตรฐานเวชระเบียนโรงพยาบาล/คลินิก
 """
@@ -48,8 +48,8 @@ def _clean_text(s: Any) -> str:
     return text if text else "-"
 
 
-class PharmaTalkEMRPDF(FPDF):
-    """FPDF คลาสสำหรับสร้างเอกสารเวชระเบียนคลินิก PharmaTalk ในแบบฟอร์มทางการ"""
+class PharmaLogEMRPDF(FPDF):
+    """FPDF คลาสสำหรับสร้างเอกสารเวชระเบียนคลินิก PharmaLog AI ในแบบฟอร์มทางการ"""
 
     def __init__(self, record_id: str = "", model_name: str = "") -> None:
         super().__init__(orientation="P", unit="mm", format="A4")
@@ -85,7 +85,7 @@ class PharmaTalkEMRPDF(FPDF):
             self.cell(
                 0,
                 5,
-                f"PharmaTalk Clinical EMR  |  รหัสเวชระเบียน: {rec_str}  |  โมเดล: {self.model_name}",
+                f"PharmaLog AI Clinical EMR  |  รหัสเวชระเบียน: {rec_str}  |  โมเดล: {self.model_name}",
                 new_x=XPos.LMARGIN,
                 new_y=YPos.NEXT,
             )
@@ -100,8 +100,12 @@ class PharmaTalkEMRPDF(FPDF):
         self.set_font(self.font_family_name, "", 7.5)
         self.set_text_color(148, 163, 184)
         w_avail = self.w - self.l_margin - self.r_margin
-        self.cell(w_avail / 2, 6, "เอกสารเวชระเบียนอิเล็กทรอนิกส์สร้างโดยระบบ PharmaTalk", align="L")
+        self.cell(w_avail / 2, 6, "เอกสารเวชระเบียนอิเล็กทรอนิกส์สร้างโดยระบบ PharmaLog AI", align="L")
         self.cell(w_avail / 2, 6, f"หน้า {self.page_no()} / {{nb}}", align="R")
+
+
+# เพื่อรักษาความเข้ากันได้ย้อนหลัง
+PharmaTalkEMRPDF = PharmaLogEMRPDF
 
 
 def generate_emr_pdf(
@@ -122,7 +126,7 @@ def generate_emr_pdf(
     Returns:
         bytes: ข้อมูลไบนารีของไฟล์ PDF
     """
-    pdf = PharmaTalkEMRPDF(record_id=record_id, model_name=model_name)
+    pdf = PharmaLogEMRPDF(record_id=record_id, model_name=model_name)
     fname = pdf.font_family_name
     pdf.alias_nb_pages()
     pdf.add_page()
@@ -136,7 +140,7 @@ def generate_emr_pdf(
     # หมวดหมู่ระบบ
     pdf.set_font(fname, "", 7.5)
     pdf.set_text_color(100, 116, 139)  # Slate 500
-    pdf.cell(w_avail - 50, 4, "PHARMATALK INTELLIGENT CLINICAL SYSTEM  |  OPD PHARMACY CARE", new_x=XPos.RIGHT, new_y=YPos.TOP)
+    pdf.cell(w_avail - 50, 4, "PHARMALOG AI INTELLIGENT CLINICAL SYSTEM  |  OPD PHARMACY CARE", new_x=XPos.RIGHT, new_y=YPos.TOP)
 
     # ป้ายชั้นความลับทางการแพทย์
     pdf.set_font(fname, "B", 7.5)

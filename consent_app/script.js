@@ -87,10 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getConsentId() {
-        let consentId = sessionStorage.getItem('pharmatalk_consent_id');
+        let consentId = sessionStorage.getItem('pharmalog_consent_id') || sessionStorage.getItem('pharmatalk_consent_id');
         if (!consentId) {
             consentId = crypto.randomUUID();
-            sessionStorage.setItem('pharmatalk_consent_id', consentId);
+            sessionStorage.setItem('pharmalog_consent_id', consentId);
         }
         return consentId;
     }

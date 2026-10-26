@@ -24,6 +24,10 @@ def get_groq_api_key() -> str:
         candidates = [
             ROOT / ".groq_api_key",
             ROOT.parent / ".groq_api_key",
+            ROOT / "pharmalog_offline_assets" / ".groq_api_key",
+            ROOT / "pharmalog_offline_assets" / "api_keys" / ".groq_api_key",
+            ROOT.parent / "pharmalog_offline_assets" / ".groq_api_key",
+            ROOT.parent / "pharmalog_offline_assets" / "api_keys" / ".groq_api_key",
             ROOT / "pharmatalk_offline_assets" / ".groq_api_key",
             ROOT / "pharmatalk_offline_assets" / "api_keys" / ".groq_api_key",
             ROOT.parent / "pharmatalk_offline_assets" / ".groq_api_key",

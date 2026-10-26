@@ -92,6 +92,8 @@ def load_saved_key(provider: str) -> str:
         candidates = [
             APP_DIR / spec["key_file"],
             APP_DIR.parent / spec["key_file"],
+            APP_DIR.parent / "pharmalog_offline_assets" / spec["key_file"],
+            APP_DIR.parent / "pharmalog_offline_assets" / "api_keys" / spec["key_file"],
             APP_DIR.parent / "pharmatalk_offline_assets" / spec["key_file"],
             APP_DIR.parent / "pharmatalk_offline_assets" / "api_keys" / spec["key_file"],
         ]

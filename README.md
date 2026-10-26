@@ -1,6 +1,6 @@
-# PharmaTalk — AI-Powered Pharmacy Speech-to-Text & EMR System
+# PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์
 
-PharmaTalk คือระบบปัญญาประดิษฐ์ครบวงจรสำหรับการบันทึกและสกัดข้อมูลเวชระเบียนการบริบาลทางเภสัชกรรม (Electronic Medical Record: EMR) จากบทสนทนาระหว่างเภสัชกรและผู้ป่วยแบบอัตโนมัติ ออกแบบมาเพื่อรองรับทั้ง **การใช้งานจริงในร้านยา/คลินิก (Production & Clinic Application Suite)** และ **การวิจัยทดสอบประสิทธิภาพโมเดล (Research & Benchmark Lab)**
+PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ คือระบบปัญญาประดิษฐ์ครบวงจรสำหรับการบันทึกและสกัดข้อมูลเวชระเบียนการบริบาลทางเภสัชกรรม (Electronic Medical Record: EMR) จากบทสนทนาระหว่างเภสัชกรและผู้ป่วยแบบอัตโนมัติ ออกแบบมาเพื่อรองรับทั้ง **การใช้งานจริงในร้านยา/คลินิก (Production & Clinic Application Suite)** และ **การวิจัยทดสอบประสิทธิภาพโมเดล (Research & Benchmark Lab)**
 
 ---
 
@@ -15,7 +15,7 @@ cd PJ-PharmaTalk
 ```
 
 ### ขั้นตอนที่ 2: แตกไฟล์ ZIP Assets ลงในโฟลเดอร์โปรเจกต์
-นำไฟล์ `pharmatalk_offline_assets.zip` มาวางไว้ที่โฟลเดอร์รากของโปรเจกต์ แล้วแตกไฟล์:
+นำไฟล์ `pharmatalk_offline_assets.zip` (หรือ `pharmalog_offline_assets.zip`) มาวางไว้ที่โฟลเดอร์รากของโปรเจกต์ แล้วแตกไฟล์:
 - **macOS / Linux:**
   ```bash
   unzip -o pharmatalk_offline_assets.zip
@@ -29,12 +29,12 @@ cd PJ-PharmaTalk
 
 สามารถเลือกรันระบบที่ต้องการใช้งานได้ทันที:
 
-#### ก. เปิดแอปพลิเคชันหลัก (PharmaTalk Main Application — พอร์ต 8515)
+#### ก. เปิดแอปพลิเคชันหลัก (PharmaLog AI Main Application — พอร์ต 8515)
 - **Windows:** ดับเบิลคลิก `run_main_app.bat`
 - **macOS / Linux:** รันคำสั่ง `./run_main_app.sh`
 - *เปิดใช้งานผ่านเบราว์เซอร์ที่: `http://localhost:8515`*
 
-#### ข. เปิดระบบห้องแล็บทดสอบ (PharmaTalk Lab — พอร์ต 8525)
+#### ข. เปิดระบบห้องแล็บทดสอบ (PharmaLog AI Lab — พอร์ต 8525)
 - **Windows:** ดับเบิลคลิก `run_lab.bat`
 - **macOS / Linux:** รันคำสั่ง `./run_lab.sh`
 - *เปิดใช้งานผ่านเบราว์เซอร์ที่: `http://localhost:8525`*
@@ -96,7 +96,7 @@ cd PJ-PharmaTalk
 
 ### ส่วนที่ 2: ระบบห้องปฏิบัติการทดสอบและวิจัย (Research & Benchmark Lab)
 
-**PharmaTalk Lab (`lab/app.py` — พอร์ต 8525):**
+**PharmaLog AI Lab (`lab/app.py` — พอร์ต 8525):**
 ออกแบบขึ้นมาเพื่อการทดลอง ประเมินผลเชิงลึก และการพัฒนาด้านการแพทย์โดยเฉพาะ ประกอบด้วย:
 
 1. **แท็บ 1: การประมวลผลเสียงและสกัดเวชระเบียน (Audio Processing & Multi-Model EMR):**
@@ -217,4 +217,4 @@ python3 tests/run_tests.py
 - ไฟล์ไบนารีโมเดลขนาดใหญ่: `models/typhoon-asr-realtime.nemo`
 - ฐานข้อมูลและแคช: `*.db`, `lab/cache/`, `lab/cache_emr/`
 
-เมื่อดาวน์โหลดโปรเจกต์บนเครื่องใหม่ ให้ใช้ไฟล์ `pharmatalk_offline_assets.zip` แตกไฟล์ลงที่โฟลเดอร์โปรเจกต์โดยตรงตามขั้นตอนใน Quick Start
+เมื่อดาวน์โหลดโปรเจกต์บนเครื่องใหม่ ให้ใช้ไฟล์ `pharmatalk_offline_assets.zip` (หรือ `pharmalog_offline_assets.zip`) แตกไฟล์ลงที่โฟลเดอร์โปรเจกต์โดยตรงตามขั้นตอนใน Quick Start
