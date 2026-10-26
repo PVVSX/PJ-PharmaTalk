@@ -2,8 +2,10 @@ import sys
 import os
 from pathlib import Path
 
-# Add core_api to path so imports work
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
+CORE_API = ROOT / "core_api"
+if str(CORE_API) not in sys.path:
+    sys.path.insert(0, str(CORE_API))
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 

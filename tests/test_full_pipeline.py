@@ -5,7 +5,10 @@ from pathlib import Path
 from colorama import init, Fore
 import json
 
-init(autoreset=True)
+import sys
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # Import all modules from the pipeline
 from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes
@@ -80,10 +83,11 @@ async def run_full_pipeline_test(wav_path: Path):
         print(Fore.RED + f"   [ERROR] EMR Extraction failed: {e}")
 
 async def main():
-    ROOT = Path(__file__).resolve().parent
+    ROOT = Path(__file__).resolve().parent.parent
     audio_dirs = [
-        ROOT.parent / "Project_record" / "Demo" / "record",
-        ROOT.parent / "Project_record" / "october" / "Week 1"
+        ROOT / "lab" / "sample_audio",
+        ROOT / "record" / "audio",
+        ROOT / "result_record" / "data" / "voice",
     ]
     
     all_wavs = []
@@ -97,7 +101,7 @@ async def main():
         
     all_wavs.sort(key=lambda p: p.stat().st_size)
     
-    test_file = Path("/Users/pvvsx/Desktop/PJ/Project_record/Demo/record/recording_2025-10-09_13-47-26.wav")
+    test_file = all_wavs[0]
     await run_full_pipeline_test(test_file)
 
 if __name__ == "__main__":

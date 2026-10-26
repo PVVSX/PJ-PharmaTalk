@@ -4,7 +4,7 @@ import json
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -69,8 +69,9 @@ def run_pipeline():
         return
 
     audio_dirs = [
-        ROOT.parent / "Project_record" / "Demo" / "record",
-        ROOT.parent / "Project_record" / "october" / "Week 1"
+        ROOT / "lab" / "sample_audio",
+        ROOT / "record" / "audio",
+        ROOT / "result_record" / "data" / "voice",
     ]
     all_wavs = []
     for d in audio_dirs:
@@ -80,8 +81,8 @@ def run_pipeline():
     # Sort to run smallest files first
     all_wavs.sort(key=lambda p: p.stat().st_size)
     
-    report_path = ROOT / "typhoon_full_report.md"
-    json_path = ROOT / "batch_typhoon_full_results.json"
+    report_path = ROOT / "docs" / "reports" / "typhoon_full_report.md"
+    json_path = ROOT / "docs" / "reports" / "batch_typhoon_full_results.json"
     
     # Initialize report file if it doesn't exist
     if not report_path.exists():

@@ -1,0 +1,9 @@
+[server]
+runOnSave = true
+headless = true
+port = 8525
+enableCORS = false
+enableXsrfProtection = false
+
+[client]
+toolbarMode = "minimal"

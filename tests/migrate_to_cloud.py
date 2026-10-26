@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime
 
-ROOT = Path("/Users/pvvsx/Desktop/PJ/Pharmatalk_project")
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 

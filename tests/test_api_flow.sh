@@ -1,6 +1,11 @@
 #!/bin/bash
-echo "Uploading..."
-RESPONSE=$(curl -s -X POST -F "file=@/Users/pvvsx/Desktop/PJ/Pharmatalk_project/record/audio/12-09-26_13-58_000.wav" http://localhost:8080/upload-audio)
+SAMPLE_WAV="${1:-$(find record/audio lab/sample_audio -name '*.wav' 2>/dev/null | head -n 1)}"
+if [ -z "$SAMPLE_WAV" ] || [ ! -f "$SAMPLE_WAV" ]; then
+  echo "Error: No wav file found to test."
+  exit 1
+fi
+echo "Uploading $SAMPLE_WAV..."
+RESPONSE=$(curl -s -X POST -F "file=@$SAMPLE_WAV" http://localhost:8080/upload-audio)
 echo $RESPONSE
 TASK_ID=$(echo $RESPONSE | grep -o '"task_id":"[^"]*' | cut -d'"' -f4)
 echo "Task ID: $TASK_ID"

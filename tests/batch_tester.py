@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 # Add project root to path
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -20,8 +20,9 @@ except ImportError:
 
 def process_audio_files():
     audio_dirs = [
-        ROOT.parent / "Project_record" / "Demo" / "record",
-        ROOT.parent / "Project_record" / "october" / "Week 1"
+        ROOT / "lab" / "sample_audio",
+        ROOT / "record" / "audio",
+        ROOT / "result_record" / "data" / "voice",
     ]
     all_wavs = []
     for d in audio_dirs:

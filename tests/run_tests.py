@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 # Add project root to path
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -13,8 +13,12 @@ from unified_app.modules.stt_typhoon import TyphoonASRRecognizer
 from unified_app.modules.emr_groq import extract_emr
 
 def test_stt():
-    wav_path = ROOT.parent / "Project_record" / "Demo" / "record" / "recording_2025-10-09_13-40-00.wav"
-    if not wav_path.exists():
+    wav_candidates = [
+        ROOT / "lab" / "sample_audio" / "recording_2025-10-10_10-05-37.wav",
+        ROOT / "record" / "audio" / "24-10-26_00-40-24_000.wav",
+    ]
+    wav_path = next((p for p in wav_candidates if p.exists()), None)
+    if not wav_path:
         return "Audio file not found."
     
     print(f"Testing STT on {wav_path.name}...")

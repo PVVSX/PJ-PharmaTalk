@@ -2,12 +2,37 @@
 .gemini_api_key
 .dashscope_api_key
 .groq_api_key
+.*_api_key
 MODELS_AND_APIS.md
 serviceAccountKey.json
+**/serviceAccountKey.json
 
-# API Local Data
+# Offline Assets & Archives
+pharmatalk_offline_assets/
+pharmatalk_offline_assets.zip
+*.zip
+*.tar.gz
+
+# API Local Data & Databases
+*.db
 core_api/pharmatalk_api.db
+core_api/api_queue.db
 core_api/temp_audio/
+scratch/
+record/pharmatalk.db
+record/shared_state.json
+record/audio/
+record/stt/
+record/emr/
+result_record/patient_info/*.json
+result_record/patient_info/*.pdf
+result_record/patient_info/*.csv
+
+# Lab Cache & Sample Audio
+lab/cache/
+lab/cache_emr/
+lab/sample_audio/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -16,14 +41,9 @@ __pycache__/
 venv/
 venv_pyanote/
 
-# Archives (มีซอร์สโค้ดอยู่แล้ว)
-diarization/archives/
-record/record_app.zip
-record/audio/
-record/stt/
-record/emr/
-
 # Model weights (>100MB — ใช้ Hugging Face / local path แทน)
+models/
+*.nemo
 text_classified/output_conditions/
 text_classified/output_drug_allergies/
 text_classified/output_medication_history/
@@ -31,11 +51,9 @@ diarization/model/*.nemo
 speech_to_text/app/backend/typhoon-asr-realtime/*.nemo
 result_record/model_speech_to_text/*.nemo
 
+# Audio files
+*.wav
+
 # OS
 .DS_Store
 Thumbs.db
-
-# Large files added recently
-models/
-*.wav
-*.zip

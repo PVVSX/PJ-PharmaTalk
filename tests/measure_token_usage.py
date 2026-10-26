@@ -19,7 +19,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from groq import Groq  # noqa: E402
@@ -43,7 +43,10 @@ def main():
         sys.exit("ไม่พบ Groq API Key (GROQ_API_KEY หรือ .groq_api_key)")
     client = Groq(api_key=key)
 
-    data = json.loads((ROOT / "batch_typhoon_full_results.json").read_text(encoding="utf-8"))
+    json_path = ROOT / "docs" / "reports" / "batch_typhoon_full_results.json"
+    if not json_path.exists():
+        json_path = ROOT / "batch_typhoon_full_results.json"
+    data = json.loads(json_path.read_text(encoding="utf-8"))
     cases = [(k, v.get("raw_transcript", "")) for k, v in data.items()
              if len(v.get("raw_transcript", "")) > 50]
     cases = cases[: args.limit]

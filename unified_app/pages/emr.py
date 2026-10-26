@@ -39,14 +39,14 @@ if task_id and not st.session_state.get(f"emr_loaded_{task_id}"):
         task = get_task(task_id)
         task_status = task.get("status", "UNKNOWN")
         if task_status not in ("COMPLETED", "ERROR"):
-            st.info(f"⏳ ระบบหลังบ้านกำลังประมวลผลเวชระเบียน: {task_status}...")
+            st.info(f"ระบบหลังบ้านกำลังประมวลผลเวชระเบียน: {task_status}...", icon=":material/hourglass_top:")
         elif task_status == "ERROR":
-            st.error(f"งานประมวลผลไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}")
+            st.error(f"งานประมวลผลไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}", icon=":material/error:")
         elif task.get("emr_json"):
             st.session_state.emr_result = json.loads(task["emr_json"])
             st.session_state.emr_conv_input = task.get("stt_text", "")
             st.session_state[f"emr_loaded_{task_id}"] = True
-            st.success("✅ โหลดข้อมูลจากระบบหลังบ้านสำเร็จ!")
+            st.success("โหลดข้อมูลจากระบบหลังบ้านสำเร็จ!", icon=":material/check_circle:")
     except Exception as exc:
         st.warning(f"เชื่อมต่อระบบหลังบ้านไม่ได้: {exc}")
 

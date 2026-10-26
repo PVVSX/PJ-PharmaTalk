@@ -7,7 +7,8 @@ import re
 from fpdf import FPDF
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-FONT_DIR = os.path.join(SCRIPT_DIR, "fonts")
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+FONT_DIR = os.path.join(ROOT_DIR, "fonts")
 
 FONT_REGULAR = os.path.join(FONT_DIR, "Sarabun-Regular.ttf")
 FONT_BOLD = os.path.join(FONT_DIR, "Sarabun-Bold.ttf")
@@ -16,7 +17,9 @@ FONT_ITALIC = os.path.join(FONT_DIR, "Sarabun-Italic.ttf")
 # ──────────────────────────────────────────────
 # 1. อ่าน Markdown
 # ──────────────────────────────────────────────
-md_path = os.path.join(SCRIPT_DIR, "typhoon_report.md")
+md_path = os.path.join(ROOT_DIR, "docs", "reports", "typhoon_full_report.md")
+if not os.path.exists(md_path):
+    md_path = os.path.join(SCRIPT_DIR, "typhoon_report.md")
 with open(md_path, "r", encoding="utf-8") as f:
     lines = f.readlines()
 
@@ -315,7 +318,7 @@ while i < len(lines):
 # ──────────────────────────────────────────────
 # 5. บันทึก PDF
 # ──────────────────────────────────────────────
-output_path = os.path.join(SCRIPT_DIR, "typhoon_report.pdf")
+output_path = os.path.join(ROOT_DIR, "docs", "reports", "typhoon_full_report.pdf")
 pdf.output(output_path)
 print(f"สร้างไฟล์ PDF สำเร็จ: {output_path}")
 print(f"จำนวนหน้า: {pdf.page_no()}")

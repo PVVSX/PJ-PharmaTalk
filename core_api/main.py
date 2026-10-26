@@ -13,14 +13,16 @@ from sqlalchemy.orm import Session
 from fastapi.concurrency import run_in_threadpool
 from firebase_admin import firestore
 
-# Add root directory to sys.path to import unified_app modules
-ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(ROOT_DIR))
+# Add root directory and core_api directory to sys.path
+CORE_API_DIR = Path(__file__).resolve().parent
+ROOT_DIR = CORE_API_DIR.parent
+if str(CORE_API_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_API_DIR))
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from unified_app.modules.stt_typhoon import TyphoonASRRecognizer, transcribe_audio_bytes, ASR_AVAILABLE, is_stt_error
 from unified_app.modules.emr_groq import extract_emr
-
-
 
 from database import SessionLocal, TaskTracker, engine
 from firebase_config import get_firestore_client, upload_file_to_storage

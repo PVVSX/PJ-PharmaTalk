@@ -93,7 +93,8 @@ pg = st.navigation(pages, position="hidden")
 
 def _nav_link(page, label: str, icon: str) -> None:
     """Sidebar link; the current page is wrapped so CSS can highlight it."""
-    if page.url_path == pg.url_path:
+    is_active = (page == pg) or (getattr(page, "title", None) == getattr(pg, "title", None))
+    if is_active:
         with st.container(key="nav_active"):
             st.page_link(page, label=label, icon=icon)
     else:

@@ -136,7 +136,7 @@ with t1L:
                         st.session_state.last_audio_task_id = task_id
                         st.session_state.audio_task_id = None
                         active_set_state("FINISHED")
-                        st.success("🎉 ประมวลผลเวชระเบียนและแบ็คอัปเสร็จสมบูรณ์ สามารถดูสรุปได้ที่หน้า 'วิเคราะห์เวชระเบียน'")
+                        st.success("ประมวลผลเวชระเบียนและแบ็คอัปเสร็จสมบูรณ์ สามารถดูสรุปได้ที่หน้า 'วิเคราะห์เวชระเบียน'", icon=":material/check_circle:")
                         return
                 except Exception as exc:
                     st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
