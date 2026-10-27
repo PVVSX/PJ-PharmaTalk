@@ -66,8 +66,9 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased; user-select:n
 .intro-feature-title{display:flex;align-items:center;gap:7px;font-size:clamp(15px,1.8vw,17px);line-height:1.35}
 .intro-feature-title .material-symbols-rounded{font-size:20px;color:#3974C6;flex:none}
 .intro-feature p{margin-top:3px;font-size:clamp(14px,1.55vw,16px);line-height:1.4;color:#4A5E78}
-.intro-primary,.intro-secondary{min-height:46px;padding:8px 14px;font-size:17px}
-.intro-secondary{min-height:42px}
+.intro-primary,.intro-secondary{min-height:46px;padding:8px 14px;font-size:16px;border-radius:12px}
+.intro-secondary{min-height:42px;font-size:15px}
+.intro-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px;width:100%}
 .consent-skip-button{min-height:40px;padding:0 12px;white-space:nowrap;font-size:13px}
 @media(max-height:560px){
   .scene[data-index="0"]{padding-top:38px;padding-bottom:66px}
@@ -81,7 +82,8 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased; user-select:n
   .intro-feature{padding:5px 9px}
   .intro-feature-title{font-size:15px}
   .intro-feature p{font-size:13px;line-height:1.2}
-  .intro-primary,.intro-secondary{min-height:38px;padding:5px 12px;font-size:16px}
+  .intro-actions{gap:5px;margin-top:6px}
+  .intro-primary,.intro-secondary{min-height:38px;padding:5px 12px;font-size:15px}
   .consent-skip-button{min-height:36px;padding:0 9px;font-size:12px}
 }
 @media(max-height:400px){
@@ -89,11 +91,12 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased; user-select:n
   .intro-card > .flex.items-center{display:none}
   .intro-title{font-size:23px!important}
   .intro-desc{font-size:14px!important;line-height:1.2!important}
-  .intro-features{margin-top:5px}
-  .intro-feature{padding:4px 8px}
-  .intro-feature-title{font-size:14px}
-  .intro-feature p{font-size:12px;line-height:1.15}
-  .intro-primary{min-height:34px;padding:4px 10px;font-size:15px}
+  .intro-features{margin-top:4px;gap:3px}
+  .intro-feature{padding:3px 7px}
+  .intro-feature-title{font-size:13px}
+  .intro-feature p{font-size:11px;line-height:1.15}
+  .intro-actions{gap:4px;margin-top:4px}
+  .intro-primary,.intro-secondary{min-height:32px;padding:3px 10px;font-size:13px}
 }
 @media(max-width:360px){
   .scene[data-index="0"]{padding-right:8px;padding-left:8px}
@@ -295,11 +298,13 @@ function illustrationHTML(ill,id){
     <div class="intro-feature rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF]"><div class="intro-feature-title font-bold"><span class="material-symbols-rounded" aria-hidden="true">health_and_safety</span>พัฒนาการดูแลรักษา</div><p>ประเมินความปลอดภัยในการใช้ยาและติดตามผล</p></div>
     <div class="intro-feature rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF]"><div class="intro-feature-title font-bold"><span class="material-symbols-rounded" aria-hidden="true">trending_up</span>ต่อยอดระบบสุขภาพ</div><p>พัฒนาระบบผู้ช่วยเภสัชกรอัจฉริยะในอนาคต</p></div>
     <div class="intro-feature rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF]"><div class="intro-feature-title font-bold"><span class="material-symbols-rounded" aria-hidden="true">lock</span>ปลอดภัยสูงสุด</div><p>เก็บข้อมูลเป็นความลับ ไม่เปิดเผยต่อบุคคลภายนอก</p></div>
-    <button type="button" onclick="nextStep()" class="intro-primary mt-2 w-full flex items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] font-bold text-white shadow-md transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
+  </div>
+  <div class="intro-actions">
+    <button type="button" onclick="nextStep()" class="intro-primary w-full flex items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] font-bold text-white shadow-md transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
       <span>เริ่มต้นใช้งาน</span>
       <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
     </button>
-    <button type="button" onclick="skipToConsent()" class="intro-secondary mt-1 w-full flex items-center justify-center gap-2 rounded-[12px] border border-[#DDE9FF] bg-white font-semibold text-[#4A5E78] transition hover:bg-[#F7FAFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
+    <button type="button" onclick="skipToConsent()" class="intro-secondary w-full flex items-center justify-center gap-2 rounded-[12px] border border-[#DDE9FF] bg-white font-semibold text-[#4A5E78] transition hover:bg-[#F7FAFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
       <span class="material-symbols-rounded" aria-hidden="true">skip_next</span>
       <span>ข้ามไปหน้ากดยินยอม</span>
     </button>
@@ -470,6 +475,8 @@ function showScene(idx, dir=1){
   });
   currentScene=idx;
   document.getElementById('controllerBar').classList.toggle('hidden',idx===0);
+  const skipBtn=document.getElementById('skipToConsentBtn');
+  if(skipBtn) skipBtn.classList.toggle('hidden',idx>=steps.length-1);
   upcomingScene=null;
   updateBackground(idx);
   updateDots(idx);
