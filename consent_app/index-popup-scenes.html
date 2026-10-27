@@ -10,7 +10,7 @@
 <style>
 *{font-family:'Noto Sans Thai',sans-serif}
 .material-symbols-rounded{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:'liga';-webkit-font-smoothing:antialiased}
-body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
+body{overscroll-behavior:none; -webkit-font-smoothing:antialiased; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none}
 #mouseGlow{will-change:transform; transition:opacity .35s}
 .blob{will-change:transform; filter:blur(64px); mix-blend-mode:multiply}
 
@@ -30,7 +30,8 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
 @keyframes progressShine{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes watermarkFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 
-.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px 18px 108px;opacity:0;pointer-events:none;transition:opacity .68s cubic-bezier(0.2,0.8,0.2,1), transform .72s cubic-bezier(0.2,0.8,0.2,1), filter .62s ease;transform:scale(.92);filter:blur(16px)}
+.scene{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:58px 18px 116px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior-y:contain;opacity:0;pointer-events:none;transition:opacity .68s cubic-bezier(0.2,0.8,0.2,1), transform .72s cubic-bezier(0.2,0.8,0.2,1), filter .62s ease;transform:scale(.92);filter:blur(16px)}
+.scene > .relative{margin:auto;width:100%}
 .scene.active{opacity:1;pointer-events:auto;transform:scale(1);filter:blur(0);z-index:2}
 .scene.exiting{opacity:0;transform:scale(1.08);filter:blur(18px);z-index:1}
 .watermark{position:absolute;left:50%;top:50%;transform:translate(-50%,-58%);font-size:min(42vw,380px);font-weight:800;line-height:1;opacity:.06;letter-spacing:-.06em;pointer-events:none;user-select:none;animation:watermarkFloat 6s ease-in-out infinite}
@@ -41,8 +42,8 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased}
 .cartoon-ring{transform-origin:center;animation:dingRing 2.2s ease-out infinite}
 .type-cursor{display:inline-block;width:2.5px;height:1.15em;background:#8BC6FF;margin-left:3px;transform:translateY(3px);animation:typeCursor .9s infinite}
 
-#popupOverlay{backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2)}
-.popup-card{animation:bounceIn .62s cubic-bezier(0.34,1.56,0.64,1) forwards}
+#popupOverlay{backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2); overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y}
+.popup-card{animation:bounceIn .62s cubic-bezier(0.34,1.56,0.64,1) forwards; max-height:90dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; margin:auto}
 .popup-card.closing{animation:bounceOut .42s cubic-bezier(0.4,0,0.6,1) forwards}
 .mic-pulse{animation:pulseSoft 1.8s ease-out infinite}
 .ding{position:absolute;inset:0;border-radius:999px;border:2px solid currentColor;animation:dingRing .92s ease-out forwards}
@@ -392,7 +393,7 @@ function initSceneIll(idx){
 function showScene(idx, dir=1){
   const scenes=[...document.querySelectorAll('.scene')];
   scenes.forEach((sc,i)=>{
-    if(i===idx){ sc.classList.remove('exiting'); sc.classList.add('active'); }
+    if(i===idx){ sc.classList.remove('exiting'); sc.classList.add('active'); sc.scrollTop=0; }
     else if(sc.classList.contains('active')){ sc.classList.remove('active'); sc.classList.add('exiting'); setTimeout(()=>sc.classList.remove('exiting'),720); }
     else { sc.classList.remove('active','exiting'); }
   });
@@ -594,9 +595,31 @@ document.addEventListener('keydown', (e)=>{
 });
 
 // Swipe
-let touchStartX=0, touchStartY=0;
-stage.addEventListener('touchstart', e=>{ touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY; }, {passive:true});
-stage.addEventListener('touchend', e=>{ const dx=e.changedTouches[0].clientX-touchStartX; const dy=e.changedTouches[0].clientY-touchStartY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>48){ if(dx<0){ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); } else { if(currentScene<steps.length-1) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); } } else { if(isPopupOpen) hidePopup(()=>showScene((currentScene-1+steps.length)%steps.length)); else { pauseAuto(); showScene((currentScene-1+steps.length)%steps.length); } } } }, {passive:true});
+let touchStartX=0, touchStartY=0, lastMoveX=0, lastMoveY=0, isDragging=false, activeScrollEl=null, lastSwipeTime=0, startScrollTop=0;
+function getActiveScrollContainer(target){ if(isPopupOpen) return popupCard; return (target && target.closest && target.closest('.scene.active')) || document.querySelector('.scene.active'); }
+function goNextByGesture(){ const now=Date.now(); if(now-lastSwipeTime<450) return; lastSwipeTime=now; if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); return; } if(currentScene===0){ nextStep(); return; } if(currentScene<steps.length-1) showTransitionPopup(currentScene, currentScene+1); else showFinalPopup(); }
+function goPrevByGesture(){ const now=Date.now(); if(now-lastSwipeTime<450) return; lastSwipeTime=now; if(isPopupOpen){ hidePopup(()=>showScene((currentScene-1+steps.length)%steps.length)); } else if(currentScene>0){ pauseAuto(); showScene(currentScene-1); } }
+function handleGestureEnd(dx, dy, scrollEl, wasScrolledVertically){
+  if(Math.abs(dx)>Math.abs(dy)*1.15 && Math.abs(dx)>44){
+    if(dx<0) goNextByGesture(); else goPrevByGesture();
+    return;
+  }
+  if(!wasScrolledVertically && Math.abs(dy)>Math.abs(dx)*1.15 && Math.abs(dy)>56){
+    const atBottom=!scrollEl || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 10);
+    const atTop=!scrollEl || (scrollEl.scrollTop <= 10);
+    if(dy<0 && atBottom) goNextByGesture();
+    else if(dy>0 && atTop) goPrevByGesture();
+  }
+}
+document.addEventListener('touchstart', e=>{ if(!e.touches || !e.touches.length) return; touchStartX=lastMoveX=e.touches[0].clientX; touchStartY=lastMoveY=e.touches[0].clientY; activeScrollEl=getActiveScrollContainer(e.target); startScrollTop=activeScrollEl ? activeScrollEl.scrollTop : 0; }, {passive:true});
+document.addEventListener('touchmove', e=>{ if(!e.touches || !e.touches.length) return; lastMoveX=e.touches[0].clientX; lastMoveY=e.touches[0].clientY; }, {passive:true});
+document.addEventListener('touchend', e=>{ const endX=(e.changedTouches && e.changedTouches.length) ? e.changedTouches[0].clientX : lastMoveX; const endY=(e.changedTouches && e.changedTouches.length) ? e.changedTouches[0].clientY : lastMoveY; const dx=endX-touchStartX; const dy=endY-touchStartY; const scrolled=activeScrollEl ? Math.abs(activeScrollEl.scrollTop - startScrollTop) > 12 : false; handleGestureEnd(dx, dy, activeScrollEl, scrolled); }, {passive:true});
+document.addEventListener('touchcancel', ()=>{ const dx=lastMoveX-touchStartX; const dy=lastMoveY-touchStartY; const scrolled=activeScrollEl ? Math.abs(activeScrollEl.scrollTop - startScrollTop) > 12 : false; handleGestureEnd(dx, dy, activeScrollEl, scrolled); }, {passive:true});
+document.addEventListener('pointerdown', e=>{ if(e.target && e.target.closest('button, a, input, label')) return; isDragging=true; touchStartX=lastMoveX=e.clientX; touchStartY=lastMoveY=e.clientY; activeScrollEl=getActiveScrollContainer(e.target); startScrollTop=activeScrollEl ? activeScrollEl.scrollTop : 0; }, {passive:true});
+document.addEventListener('pointermove', e=>{ if(!isDragging) return; const moveDy=e.clientY-lastMoveY; lastMoveX=e.clientX; lastMoveY=e.clientY; if(e.pointerType!=='touch' && activeScrollEl && activeScrollEl.scrollHeight > activeScrollEl.clientHeight){ activeScrollEl.scrollTop -= moveDy; } }, {passive:true});
+document.addEventListener('pointerup', e=>{ if(!isDragging) return; isDragging=false; const dx=e.clientX-touchStartX; const dy=e.clientY-touchStartY; const scrolled=activeScrollEl ? Math.abs(activeScrollEl.scrollTop - startScrollTop) > 12 : false; handleGestureEnd(dx, dy, activeScrollEl, scrolled); }, {passive:true});
+document.addEventListener('pointercancel', ()=>{ if(!isDragging) return; isDragging=false; const dx=lastMoveX-touchStartX; const dy=lastMoveY-touchStartY; const scrolled=activeScrollEl ? Math.abs(activeScrollEl.scrollTop - startScrollTop) > 12 : false; handleGestureEnd(dx, dy, activeScrollEl, scrolled); }, {passive:true});
+document.addEventListener('wheel', e=>{ const scrollEl=getActiveScrollContainer(e.target); if(Math.abs(e.deltaX)>Math.abs(e.deltaY) && Math.abs(e.deltaX)>35){ if(e.deltaX>0) goNextByGesture(); else goPrevByGesture(); return; } if(Math.abs(e.deltaY)>45){ const atBottom=!scrollEl || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 10); const atTop=!scrollEl || (scrollEl.scrollTop <= 10); if(e.deltaY>0 && atBottom) goNextByGesture(); else if(e.deltaY<0 && atTop) goPrevByGesture(); } }, {passive:true});
 
 // Mouse glow & sparkle & tilt kept from gimmick
 let mouseX=innerWidth/2, mouseY=innerHeight/2, glowX=mouseX, glowY=mouseY, rafGlow=null;
@@ -612,7 +635,7 @@ function attachTilt(){
   document.querySelectorAll('.scene-card').forEach(card=>{
     let bounds=null;
     card.addEventListener('mouseenter', ()=>{ bounds=card.getBoundingClientRect(); card.classList.add('hovering'); sparkleCursor.style.opacity='1'; sparkleCursor.style.transform='translate(-50%,-50%) scale(1.2)'; });
-    card.addEventListener('mousemove', e=>{ if(!bounds) return; const x=(e.clientX-bounds.left)/bounds.width-0.5; const y=(e.clientY-bounds.top)/bounds.height-0.5; card.style.transform=`perspective(900px) rotateX(${(-y*8).toFixed(2)}deg) rotateY(${(x*10).toFixed(2)}deg) scale(1.02)`; });
+    card.addEventListener('mousemove', e=>{ if(!bounds || isDragging || (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents)) return; const x=(e.clientX-bounds.left)/bounds.width-0.5; const y=(e.clientY-bounds.top)/bounds.height-0.5; card.style.transform=`perspective(900px) rotateX(${(-y*8).toFixed(2)}deg) rotateY(${(x*10).toFixed(2)}deg) scale(1.02)`; });
     card.addEventListener('mouseleave', ()=>{ card.style.transform='perspective(900px) rotateX(0) rotateY(0) scale(1)'; card.classList.remove('hovering'); sparkleCursor.style.opacity='0'; });
   });
 }

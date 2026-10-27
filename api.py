@@ -111,7 +111,7 @@ def set_state(req: StateModel):
 if CONSENT_APP_DIR.exists():
     @app.get("/", include_in_schema=False)
     def consent_page():
-        return FileResponse(CONSENT_APP_DIR / "index-popup-scenes.html")
+        return FileResponse(CONSENT_APP_DIR / "index-popup-scenes.html", headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
     app.mount("/", StaticFiles(directory=str(CONSENT_APP_DIR), html=True), name="consent_app")
 
