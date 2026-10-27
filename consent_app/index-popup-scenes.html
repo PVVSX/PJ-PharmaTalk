@@ -232,6 +232,10 @@ function illustrationHTML(ill,id){
       <span>เริ่มต้นใช้งาน</span>
       <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
     </button>
+    <button type="button" onclick="skipToConsent()" class="mt-2 w-full flex items-center justify-center gap-2 rounded-[12px] border border-[#DDE9FF] bg-white px-4 py-3 text-[14px] font-semibold text-[#4A5E78] transition hover:bg-[#F7FAFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
+      <span class="material-symbols-rounded" aria-hidden="true">skip_next</span>
+      <span>ข้ามไปหน้ากดยินยอม</span>
+    </button>
   </div>`;
   if(ill==='consent') return `<div class="mt-5 bg-white rounded-[20px] border border-[#DDE9FF] p-4 flex items-center gap-3"><div class="w-14 h-14 rounded-[16px] bg-[#E8F3FF] flex items-center justify-center text-[#4A8FD6]"><span class="material-symbols-rounded text-[30px]">tablet</span></div><div class="text-left"><div class="text-[13px] font-bold">ถามก่อนเริ่มบันทึก</div><div class="text-[12px] text-[#5A6B80]">รอการตัดสินใจจากคุณ</div></div></div>`;
   if(ill==='mic') return `<div class="mt-5 flex justify-center gap-2 text-[#8BC6FF] h-[48px] items-end">${Array(18).fill(0).map((_,k)=>`<span class="wave-bar" style="animation-delay:${k*0.07}s"></span>`).join('')}<span class="ml-3 px-2.5 py-1 rounded-full bg-[#223349] text-white text-[11px] font-bold">เภสัช • คนไข้</span></div><p class="mt-2 text-[11px] text-[#8AA0B8] text-center">แยกเสียงอัตโนมัติ</p>`;
@@ -415,6 +419,13 @@ function nextStep(){
   if(currentScene!==0) return;
   showScene(1);
   resumeAuto();
+}
+
+function skipToConsent(){
+  pauseAuto();
+  clearTimeout(popupTimer);
+  showScene(6);
+  showFinalPopup();
 }
 
 function scheduleNext(){
