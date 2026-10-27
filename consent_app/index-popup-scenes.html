@@ -49,6 +49,68 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased; user-select:n
 .ding{position:absolute;inset:0;border-radius:999px;border:2px solid currentColor;animation:dingRing .92s ease-out forwards}
 .progress-auto{position:relative;overflow:hidden;background:linear-gradient(90deg,rgba(0,0,0,0.08),rgba(255,255,255,0.9),rgba(0,0,0,0.08));background-size:200% 100%;animation:progressShine 1.6s linear infinite}
 .bottom-hint{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-spacing:0}
+
+.scene[data-index="0"]{align-items:center;padding:48px 12px 82px;overflow:hidden}
+.scene[data-index="0"] > .relative{max-width:860px}
+.intro-card{padding:clamp(12px,2.4vh,24px)!important;border-radius:24px!important}
+.intro-card > .flex.items-center{gap:10px;margin-bottom:8px}
+.intro-card > .flex.items-center > div:first-child{width:42px;height:42px;border-radius:13px}
+.intro-card > .flex.items-center > div:first-child .material-symbols-rounded{font-size:24px}
+.intro-card > .flex.items-center > div:nth-child(2) > div:first-child{font-size:13px}
+.intro-card > .flex.items-center > div:nth-child(2) > div:last-child{font-size:13px;padding:3px 9px;margin-top:2px}
+.intro-card > .flex.items-center > div:last-child{width:34px;height:34px;font-size:14px}
+.intro-title{min-height:0!important;font-size:clamp(25px,4.2vw,34px)!important;line-height:1.2!important;letter-spacing:0!important}
+.intro-desc{margin-top:5px!important;font-size:clamp(16px,2.1vw,19px)!important;line-height:1.45!important}
+.intro-features{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.intro-feature{min-width:0;padding:9px 11px;border-radius:14px}
+.intro-feature-title{display:flex;align-items:center;gap:7px;font-size:clamp(15px,1.8vw,17px);line-height:1.35}
+.intro-feature-title .material-symbols-rounded{font-size:20px;color:#3974C6;flex:none}
+.intro-feature p{margin-top:3px;font-size:clamp(14px,1.55vw,16px);line-height:1.4;color:#4A5E78}
+.intro-primary,.intro-secondary{min-height:46px;padding:8px 14px;font-size:17px}
+.intro-secondary{min-height:42px}
+.consent-skip-button{min-height:40px;padding:0 12px;white-space:nowrap;font-size:13px}
+@media(max-height:560px){
+  .scene[data-index="0"]{padding-top:38px;padding-bottom:66px}
+  .intro-card{padding:8px 12px!important}
+  .intro-card > .flex.items-center{margin-bottom:5px}
+  .intro-card > .flex.items-center > div:first-child{width:36px;height:36px}
+  .intro-card > .flex.items-center > div:first-child .material-symbols-rounded{font-size:21px}
+  .intro-title{font-size:clamp(23px,3.8vw,30px)!important}
+  .intro-desc{font-size:16px!important;line-height:1.35!important}
+  .intro-features{gap:4px;margin-top:6px}
+  .intro-feature{padding:5px 9px}
+  .intro-feature-title{font-size:15px}
+  .intro-feature p{font-size:13px;line-height:1.2}
+  .intro-primary,.intro-secondary{min-height:38px;padding:5px 12px;font-size:16px}
+  .consent-skip-button{min-height:36px;padding:0 9px;font-size:12px}
+}
+@media(max-height:400px){
+  .scene[data-index="0"]{padding-bottom:58px}
+  .intro-card > .flex.items-center{display:none}
+  .intro-title{font-size:23px!important}
+  .intro-desc{font-size:14px!important;line-height:1.2!important}
+  .intro-features{margin-top:5px}
+  .intro-feature{padding:4px 8px}
+  .intro-feature-title{font-size:14px}
+  .intro-feature p{font-size:12px;line-height:1.15}
+  .intro-primary{min-height:34px;padding:4px 10px;font-size:15px}
+}
+@media(max-width:360px){
+  .scene[data-index="0"]{padding-right:8px;padding-left:8px}
+  .intro-feature{padding:6px 7px}
+  .intro-feature-title{font-size:14px}
+  .intro-feature p{font-size:12px}
+}
+@media(max-width:420px){
+  #controllerBar .control-group{max-width:calc(100vw - 12px);gap:4px;padding:6px}
+  #controllerBar .control-divider{display:none}
+  #controllerBar .consent-skip-button{gap:3px;padding:0 6px;font-size:11px}
+  #controllerBar .consent-skip-button .material-symbols-rounded{font-size:16px}
+  #prevBtn,#nextBtn{width:32px;height:32px}
+  #playPauseBtn{width:36px;height:36px}
+  #dotsNav{gap:3px}
+  #timerText,#timerText + span,#timerText + span + span{display:none}
+}
 </style>
 </head>
 <body class="bg-[#F7FAFF] text-[#1E3146] w-screen h-[100dvh] overflow-hidden relative selection:bg-[#8BC6FF]/30">
@@ -102,14 +164,19 @@ body{overscroll-behavior:none; -webkit-font-smoothing:antialiased; user-select:n
       <div id="autoProgressBar" class="h-full w-0 bg-gradient-to-r from-[#8BC6FF] via-[#5AA8F5] to-[#6EDB9A] transition-all duration-100 linear"></div>
     </div>
   </div>
-  <div class="pb-[calc(16px+env(safe-area-inset-bottom))] flex justify-center">
-    <div class="pointer-events-auto bg-white/92 backdrop-blur-xl border border-[#E6EEF7] shadow-[0_18px_60px_rgba(34,51,73,0.14)] rounded-full px-3 md:px-5 py-2.5 md:py-3 flex items-center gap-2.5 md:gap-4">
+  <div class="pb-[calc(10px+env(safe-area-inset-bottom))] flex justify-center">
+    <div class="control-group pointer-events-auto bg-white/92 backdrop-blur-xl border border-[#E6EEF7] shadow-[0_18px_60px_rgba(34,51,73,0.14)] rounded-full px-3 md:px-5 py-2.5 md:py-3 flex items-center gap-2.5 md:gap-4">
+      <button type="button" id="skipToConsentBtn" class="consent-skip-button rounded-full bg-[#E8F3FF] border border-[#B7D9FF] text-[#315D91] font-bold flex items-center justify-center gap-1.5 hover:bg-[#DDEEFF] active:scale-95 transition" aria-label="ข้ามไปหน้ายินยอม" title="ข้ามไปหน้ายินยอม">
+        <span class="material-symbols-rounded text-[18px]" aria-hidden="true">verified_user</span>
+        <span>ข้ามไปหน้ายินยอม</span>
+      </button>
+      <div class="control-divider w-px h-6 bg-[#E6EEF7] mx-1"></div>
       <button type="button" id="prevBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">‹</button>
       <button type="button" id="playPauseBtn" class="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1E3146] text-white flex items-center justify-center shadow hover:scale-105 active:scale-95 transition text-[16px]" aria-label="หยุดโมชั่น"><span class="material-symbols-rounded">pause</span></button>
       <button type="button" id="nextBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#F2F6FB] border border-[#E6EEF7] flex items-center justify-center hover:bg-[#E8F0FB] hover:scale-105 active:scale-95 transition text-[16px]">›</button>
-      <div class="w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
+      <div class="control-divider w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
       <div id="dotsNav" class="flex items-center gap-2"></div>
-      <div class="w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
+      <div class="control-divider w-px h-6 bg-[#E6EEF7] mx-1 hidden md:block"></div>
       <div class="flex items-center gap-2 text-[11px] font-bold text-[#7A8CA3]">
         <span id="timerText" class="tabular-nums">5.0s</span>
         <span class="w-1 h-1 rounded-full bg-[#C8D6E8]"></span>
@@ -223,16 +290,16 @@ const popups=[
 // ===== Build scenes DOM =====
 const stage=document.getElementById('sceneStage');
 function illustrationHTML(ill,id){
-  if(ill==='intro') return `<div class="mt-4 grid gap-2.5 text-left">
-    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">📝 แปลงเสียงเป็นข้อความ</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">บันทึกบทสนทนากลายเป็นเวชระเบียนอัตโนมัติเพื่อความถูกต้อง</p></div>
-    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🏥 พัฒนาการดูแลรักษา</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">ใช้ประเมินความปลอดภัยในการใช้ยาและติดตามผลการรักษา</p></div>
-    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🚀 ต่อยอดระบบสุขภาพ</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">พัฒนาระบบผู้ช่วยเภสัชกรอัจฉริยะในอนาคต</p></div>
-    <div class="rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF] px-3.5 py-3"><div class="text-[13px] font-bold">🔒 ปลอดภัยสูงสุด</div><p class="mt-1 text-[11px] leading-[1.5] text-[#5A6B80]">เก็บรักษาเป็นความลับและไม่เปิดเผยต่อบุคคลภายนอก</p></div>
-    <button type="button" onclick="nextStep()" class="mt-3 w-full flex items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] px-4 py-3 text-[15px] font-bold text-white shadow-md transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
+  if(ill==='intro') return `<div class="intro-features text-left">
+    <div class="intro-feature rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF]"><div class="intro-feature-title font-bold"><span class="material-symbols-rounded" aria-hidden="true">description</span>แปลงเสียงเป็นข้อความ</div><p>บันทึกบทสนทนาเป็นเวชระเบียนอัตโนมัติ</p></div>
+    <div class="intro-feature rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF]"><div class="intro-feature-title font-bold"><span class="material-symbols-rounded" aria-hidden="true">health_and_safety</span>พัฒนาการดูแลรักษา</div><p>ประเมินความปลอดภัยในการใช้ยาและติดตามผล</p></div>
+    <div class="intro-feature rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF]"><div class="intro-feature-title font-bold"><span class="material-symbols-rounded" aria-hidden="true">trending_up</span>ต่อยอดระบบสุขภาพ</div><p>พัฒนาระบบผู้ช่วยเภสัชกรอัจฉริยะในอนาคต</p></div>
+    <div class="intro-feature rounded-[16px] border border-[#DDE9FF] bg-[#F7FAFF]"><div class="intro-feature-title font-bold"><span class="material-symbols-rounded" aria-hidden="true">lock</span>ปลอดภัยสูงสุด</div><p>เก็บข้อมูลเป็นความลับ ไม่เปิดเผยต่อบุคคลภายนอก</p></div>
+    <button type="button" onclick="nextStep()" class="intro-primary mt-2 w-full flex items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] font-bold text-white shadow-md transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
       <span>เริ่มต้นใช้งาน</span>
       <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
     </button>
-    <button type="button" onclick="skipToConsent()" class="mt-2 w-full flex items-center justify-center gap-2 rounded-[12px] border border-[#DDE9FF] bg-white px-4 py-3 text-[14px] font-semibold text-[#4A5E78] transition hover:bg-[#F7FAFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
+    <button type="button" onclick="skipToConsent()" class="intro-secondary mt-1 w-full flex items-center justify-center gap-2 rounded-[12px] border border-[#DDE9FF] bg-white font-semibold text-[#4A5E78] transition hover:bg-[#F7FAFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563eb]">
       <span class="material-symbols-rounded" aria-hidden="true">skip_next</span>
       <span>ข้ามไปหน้ากดยินยอม</span>
     </button>
@@ -277,7 +344,7 @@ function buildScenes(){
     el.innerHTML=`
       <div class="watermark select-none">${s.num}</div>
       <div class="relative z-10 w-full max-w-[640px] mx-auto">
-        <div class="scene-card bg-white/90 backdrop-blur-xl border border-white/70 shadow-[0_24px_80px_rgba(34,51,73,0.12),0_8px_24px_rgba(34,51,73,0.08)] rounded-[32px] md:rounded-[40px] p-7 md:p-10 overflow-hidden group">
+        <div class="scene-card ${s.ill==='intro'?'intro-card':''} bg-white/90 backdrop-blur-xl border border-white/70 shadow-[0_24px_80px_rgba(34,51,73,0.12),0_8px_24px_rgba(34,51,73,0.08)] rounded-[32px] md:rounded-[40px] p-7 md:p-10 overflow-hidden group">
           <div class="absolute top-0 left-0 w-[68%] h-[3px] bg-gradient-to-r from-[${s.dot}] to-transparent opacity-60"></div>
           <div class="shine pointer-events-none absolute top-0 left-[-100%] w-[60%] h-full bg-gradient-to-r from-transparent via-white/80 to-transparent skew-x-[-20deg] opacity-0 group-hover:opacity-100 transition-all duration-700 group-hover:left-[130%]" style="background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,0.9) 50%,transparent 100%); transform:skewX(-20deg)"></div>
           <div class="flex items-center gap-3 mb-5">
@@ -285,8 +352,8 @@ function buildScenes(){
             <div><div class="text-[11px] font-bold tracking-widest text-[#8AA0B8]">STEP ${s.num}</div><div class="inline-flex mt-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${s.subColor}">${s.sub}</div></div>
             <div class="ml-auto w-9 h-9 rounded-full bg-[#F2F6FB] border flex items-center justify-center text-[13px] font-bold text-[#7A8CA3]">${i+1}/${steps.length}</div>
           </div>
-          <h2 id="sceneTitle-${i}" class="text-[26px] md:text-[34px] font-extrabold leading-[1.18] tracking-[-0.02em] min-h-[72px]"></h2>
-          <p id="sceneDesc-${i}" class="${s.ill==='intro'?'mt-0':'mt-3'} text-[14px] md:text-[15px] leading-[1.65] text-[#4A5E78] ${s.ill==='intro'?'font-bold':''} opacity-0 translate-y-2"></p>
+          <h2 id="sceneTitle-${i}" class="text-[26px] md:text-[34px] font-extrabold leading-[1.18] tracking-[-0.02em] min-h-[72px] ${s.ill==='intro'?'intro-title':''}"></h2>
+          <p id="sceneDesc-${i}" class="${s.ill==='intro'?'mt-0':'mt-3'} text-[14px] md:text-[15px] leading-[1.65] text-[#4A5E78] ${s.ill==='intro'?'font-bold intro-desc':''} opacity-0 translate-y-2"></p>
           ${sceneCharacterIllustration(s.ill)}
           ${illustrationHTML(s.ill,s.id)}
         </div>
@@ -402,7 +469,7 @@ function showScene(idx, dir=1){
     else { sc.classList.remove('active','exiting'); }
   });
   currentScene=idx;
-  document.getElementById('controllerBar').classList.toggle('hidden', idx===0);
+  document.getElementById('controllerBar').classList.toggle('hidden',idx===0);
   upcomingScene=null;
   updateBackground(idx);
   updateDots(idx);
@@ -424,6 +491,13 @@ function nextStep(){
 function skipToConsent(){
   pauseAuto();
   clearTimeout(popupTimer);
+  if(isPopupOpen){
+    popupOverlay.classList.add('hidden');
+    popupOverlay.classList.remove('flex');
+    popupCard.classList.remove('closing');
+  }
+  isPopupOpen=false;
+  upcomingScene=null;
   showScene(6);
   showFinalPopup();
 }
@@ -592,6 +666,7 @@ function initPopupInner(type, fromIdx){
 
 // controls wiring
 document.getElementById('prevBtn').addEventListener('click',()=>{ pauseAuto(); if(isPopupOpen && upcomingScene===null){ hidePopup(()=>showScene((currentScene-1+steps.length)%steps.length)); } else { showScene((currentScene-1+steps.length)%steps.length); } });
+document.getElementById('skipToConsentBtn').addEventListener('click',skipToConsent);
 document.getElementById('nextBtn').addEventListener('click',()=>{ if(isPopupOpen){ if(upcomingScene!==null) closePopupAndGo(); return; } pauseAuto(); if(currentScene<steps.length-1){ showTransitionPopup(currentScene, currentScene+1); } else { showFinalPopup(); } });
 document.getElementById('playPauseBtn').addEventListener('click',()=>{ if(isPlaying) pauseAuto(); else resumeAuto(); });
 dotsNav.addEventListener('click', e=>{ const btn=e.target.closest('button'); if(!btn) return; const idx=parseInt(btn.dataset.idx); if(idx===currentScene) return; if(isPopupOpen) hidePopup(); pauseAuto(); if(idx>currentScene){ showTransitionPopup(currentScene, idx); /* will jump after popup */ upcomingScene=idx; } else { showScene(idx); } });
