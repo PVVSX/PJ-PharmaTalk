@@ -19,7 +19,7 @@
 
 ### แท็บที่ 2: การสกัดเวชระเบียนและการเปรียบเทียบโมเดล (Clinical EMR Extraction & Evaluation)
 - **รองรับโมเดลภาษาขนาดใหญ่หลากหลายผู้ให้บริการ (Multi-Provider LLM):**
-  - **Groq Cloud:** โมเดลความเร็วสูง เช่น `openai/gpt-oss-120b`, `qwen/qwen3.8-27b`, `openai/gpt-oss-20b`
+  - **Groq Cloud:** โมเดลความเร็วสูง เช่น `openai/gpt-oss-120b`, `llama-3.3-70b-versatile`, `qwen/qwen3-32b`, `openai/gpt-oss-20b`
   - **Google Gemini:** โมเดลตระกูล `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-2.5-pro`
   - **Anthropic Claude:** โมเดลตระกูล `claude-sonnet-4-5`, `claude-3-5-haiku-latest`
 - **รองรับแหล่งที่มาของบทสนทนา 3 รูปแบบ:**

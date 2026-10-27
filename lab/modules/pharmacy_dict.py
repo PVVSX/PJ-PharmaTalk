@@ -2,11 +2,11 @@
 Pharmacy Dictionary -- Comprehensive 5-Layer Hybrid Post-processing Module for STT.
 
 สถาปัตยกรรม 5 เลเยอร์สำหรับแก้ไข Transcript ร้านยา:
-  - Layer 0: Unicode & Acoustic Anomaly Cleaner (ล้างสระลอย, อักขระเสีย, และ Whisper Degeneration Loop)
-  - Layer 1: Empirical Ground-Truth Mapping (คลังคำผิดจริงจากการสกัด 47 เทปเสียง)
-  - Layer 2: Structured Pharmacy Ontology (คลังยาจัดหมวดหมู่: GI, Resp, Pain, Antibiotics, Topicals)
-  - Layer 3: Context-Guarded Regex Engine (กฎไวยากรณ์และบริบทแวดล้อม: จำนวนยา, มื้อยา, เวลาทาน)
-  - Layer 4: Phonetic & Soundex Matching with Medical Trigger Guard (จับคู่เสียงใกล้เคียงเมื่อมีคำบริบทแพทย์)
+  - Layer 0: Unicode & Acoustic Anomaly Cleaner (ล้างสระลอย, สลับวรรณยุกต์หลังสระอะ/อา, และตัด Whisper Degeneration Loop)
+  - Layer 1: Empirical Ground-Truth Mapping (คลังคำผิดจริงจากการสกัดเทปเสียง ทำงานแบบ Single-Pass Regex กันการแก้ทับซ้ำ)
+  - Layer 2: Structured Pharmacy Ontology & Sig Normalizer (คลังยาจัดหมวดหมู่และคลังหน่วยยา/วิธีใช้ยาจาก dosage_and_sig.json)
+  - Layer 3: Context-Guarded Regex Engine (กฎไวยากรณ์และบริบทแวดล้อม: จำนวนยา, มื้อยา, หน่วยยา, รูปแบบยา)
+  - Layer 4: Phonetic & Soundex Matching with Levenshtein & Medical Trigger Guard (จับคู่เสียงใกล้เคียง + Edit Distance เมื่อมีคำบริบทแพทย์)
   - Layer Custom: User-defined Custom Dictionary (คำศัพท์กำหนดเองจากหน้า UI)
 
 Usage:
@@ -16,6 +16,7 @@ Usage:
     corrected, changes = correct_transcript(raw)
 """
 
+from collections import Counter
 import json
 import os
 import re
@@ -36,6 +37,60 @@ CUSTOM_DICT_PATH = Path(__file__).resolve().parent.parent / "custom_dict.json"
 
 
 # ─────────────────────────────────────────────────────────────
+#  Helper: Single-Pass Dictionary Replacement (No Substring Collision)
+# ─────────────────────────────────────────────────────────────
+
+def _apply_single_pass_dict(
+    text: str,
+    mapping: Dict[str, str],
+    tier: str,
+    default_desc: str,
+) -> Tuple[str, List[Dict[str, Any]]]:
+    """
+    Replaces all keys from `mapping` in `text` using a single-pass compiled regex
+    ordered by key length descending. Prevents shorter keys from corrupting
+    already-replaced substrings.
+    """
+    if not text or not mapping:
+        return text, []
+
+    valid_items = {k: v for k, v in mapping.items() if k and v and k != v}
+    if not valid_items:
+        return text, []
+
+    sorted_keys = sorted(valid_items.keys(), key=len, reverse=True)
+    pattern = re.compile(
+        "(?:" + "|".join(re.escape(k) for k in sorted_keys) + r")(?![\u0e31\u0e34-\u0e3a\u0e47-\u0e4e])"
+    )
+
+    match_counts: Counter = Counter()
+    order_seen: List[str] = []
+
+    def _replacer(match: re.Match) -> str:
+        orig = match.group(0)
+        if orig not in match_counts:
+            order_seen.append(orig)
+        match_counts[orig] += 1
+        return valid_items[orig]
+
+    new_text = pattern.sub(_replacer, text)
+    if not match_counts:
+        return text, []
+
+    changes: List[Dict[str, Any]] = [
+        {
+            "tier": tier,
+            "original": orig,
+            "corrected": valid_items[orig],
+            "count": match_counts[orig],
+            "description": default_desc,
+        }
+        for orig in order_seen
+    ]
+    return new_text, changes
+
+
+# ─────────────────────────────────────────────────────────────
 #  Layer 0: THAI UNICODE & ACOUSTIC ANOMALY CLEANER
 # ─────────────────────────────────────────────────────────────
 
@@ -49,7 +104,7 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
 
     changes: List[Dict[str, Any]] = []
 
-    # 0. กำจัดอักขระเสีย Unicode Replacement Character (U+FFFD \ufffd หรือ ) และสระ/วรรณยุกต์ที่เกาะอยู่
+    # 0. กำจัดอักขระเสีย Unicode Replacement Character (U+FFFD \ufffd) และสระ/วรรณยุกต์ที่เกาะอยู่
     if "\ufffd" in text:
         cnt = text.count("\ufffd")
         text = re.sub(r"\ufffd[\u0e31\u0e34-\u0e3a\u0e47-\u0e4e]*", "", text)
@@ -62,7 +117,7 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
             "description": "ลบอักขระเสีย Unicode U+FFFD จากเอนจินเสียง",
         })
 
-    # 1. แก้ไขคำเพี้ยนเฉพาะที่ Whisper มักถอดเป็นสระลอย เช่น ขาู่ไง -> ขายยังไง
+    # 1. แก้ไขคำเพี้ยนเฉพาะที่โมเดลเสียงมักถอดเป็นสระลอย เช่น ขาู่ไง -> ขายยังไง
     if re.search(r"ขา[\u0e38\u0e39][\u0e48-\u0e4c]*ไง", text):
         text = re.sub(r"ขา[\u0e38\u0e39][\u0e48-\u0e4c]*ไง", "ขายยังไง", text)
         changes.append({
@@ -70,7 +125,7 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
             "original": "ขาู่ไง",
             "corrected": "ขายยังไง",
             "count": 1,
-            "description": "แก้สระลอยและเสียงรวบ (Whisper acoustic slur)",
+            "description": "แก้สระลอยและเสียงรวบ (Acoustic slur)",
         })
 
     if re.search(r"ขา[\u0e38\u0e39][\u0e48-\u0e4c]+", text):
@@ -83,19 +138,20 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
             "description": "แก้สระลอย",
         })
 
-    # 2. ย้ายตำแหน่งวรรณยุกต์ที่วางผิดหลังสระอา/ลากข้างยาว เช่น ขา่ -> ข่า
-    if re.search(r"([\u0e01-\u0e2e])([\u0e32\u0e45])([\u0e48-\u0e4c])", text):
-        cnt = len(re.findall(r"([\u0e01-\u0e2e])([\u0e32\u0e45])([\u0e48-\u0e4c])", text))
-        text = re.sub(r"([\u0e01-\u0e2e])([\u0e32\u0e45])([\u0e48-\u0e4c])", r"\1\3\2", text)
+    # 2. ย้ายตำแหน่งวรรณยุกต์ที่วางผิดหลังสระอะ/สระอา/ลากข้างยาว เช่น คะ่ -> ค่ะ, จะ้ -> จ้ะ, ขา่ -> ข่า
+    misplaced_tone_pattern = r"([\u0e01-\u0e2e])([\u0e30\u0e32\u0e45])([\u0e48-\u0e4c])"
+    if re.search(misplaced_tone_pattern, text):
+        cnt = len(re.findall(misplaced_tone_pattern, text))
+        text = re.sub(misplaced_tone_pattern, r"\1\3\2", text)
         changes.append({
             "tier": "0-unicode",
-            "original": "วรรณยุกต์หลังสระอา",
+            "original": "วรรณยุกต์หลังสระอะ/อา",
             "corrected": "สลับวรรณยุกต์ไว้บนพยัญชนะ",
             "count": cnt,
             "description": "จัดตำแหน่งวรรณยุกต์มาตรฐาน",
         })
 
-    # 3. ตัดสระ/วรรณยุกต์ลอยที่ไปเกาะหลังสระอา สระอะ ไม้ยมก หรือเครื่องหมายวรรคตอน (สาเหตุของวงกลมประ ◌)
+    # 3. ตัดสระ/วรรณยุกต์ลอยที่ไปเกาะหลังสระอา สระอะ ไม้ยมก หรือเครื่องหมายวรรคตอน (สาเหตุของวงกลมประ)
     pattern_dangling = r"([ะาๅๆฯ\s.,!?:;\"\'\(\)\[\]])[\u0e31\u0e34-\u0e3a\u0e47-\u0e4e]+"
     if re.search(pattern_dangling, text):
         cnt = len(re.findall(pattern_dangling, text))
@@ -105,7 +161,7 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
             "original": "สระลอย/วรรณยุกต์ลอย",
             "corrected": "ลบสระลอยที่ไม่เกาะพยัญชนะ",
             "count": cnt,
-            "description": "แก้สระลอย OpenType ◌",
+            "description": "แก้สระลอย OpenType",
         })
 
     # 4. ตัดสระ/วรรณยุกต์ลอยที่อยู่ต้นข้อความ
@@ -151,7 +207,7 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
     except Exception:
         pass
 
-    # 8. ตรวจจับและตัดอาการหลอนวนลูปคำซ้ำของ Whisper (Whisper Repetition Degeneration Loop)
+    # 8. ตรวจจับและตัดอาการหลอนวนลูปคำซ้ำของโมเดลเสียง (Repetition Degeneration Loop)
     loop_pattern = re.compile(r"(.{2,50}?)(?:\s*\1){3,}")
     matches = list(loop_pattern.finditer(text))
     if matches:
@@ -165,7 +221,7 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
                 "original": f"{rep_unit} (วนลูป {count} ครั้ง)",
                 "corrected": rep_unit if count < 10 else "",
                 "count": count,
-                "description": "ตัดการหลอนวนลูปคำซ้ำของโมเดลเสียง (Whisper Loop Degeneration)",
+                "description": "ตัดการหลอนวนลูปคำซ้ำของโมเดลเสียง (Loop Degeneration)",
             })
         text = re.sub(r"([A-Za-z0-9\sก-๙]{2,50}?)(?:\s*\1){9,}", "", text)
         text = loop_pattern.sub(r"\1", text)
@@ -174,10 +230,10 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
     single_token_loop = re.compile(r"(\b\w+\b)(?:\s+\1){3,}")
     text = single_token_loop.sub(r"\1", text)
 
-    # 10. ตัดตัวอักษรไทยเดี่ยวที่เบิ้ลซ้ำผิดปกติจากการลากเสียงหรือโมเดลเสียงหลอน (เช่น มอลลลลล -> มอล, ครับบบบบ -> ครับ)
-    if re.search(r'([ก-๙])\1{2,}', text):
-        cnt = len(re.findall(r'([ก-๙])\1{2,}', text))
-        text = re.sub(r'([ก-๙])\1{2,}', r'\1', text)
+    # 10. ตัดตัวอักษรไทยเดี่ยวที่เบิ้ลซ้ำผิดปกติจากการลากเสียง (เช่น มอลลลลล -> มอล, ครับบบบบ -> ครับ)
+    if re.search(r"([ก-๙])\1{2,}", text):
+        cnt = len(re.findall(r"([ก-๙])\1{2,}", text))
+        text = re.sub(r"([ก-๙])\1{2,}", r"\1", text)
         changes.append({
             "tier": "0-repetition",
             "original": "ตัวอักษรเบิ้ลซ้ำ",
@@ -227,7 +283,7 @@ def remove_custom_word(wrong: str) -> None:
 
 
 # ─────────────────────────────────────────────────────────────
-#  Data Loaders: Ground Truth Map & Pharmacy Ontology
+#  Data Loaders: Ground Truth Map, Ontology & Dosage Sig
 # ─────────────────────────────────────────────────────────────
 
 def _load_ground_truth_map() -> Dict[str, str]:
@@ -250,9 +306,57 @@ def _load_drugs_catalog() -> Dict[str, List[Dict[str, Any]]]:
     return {}
 
 
-# In-memory datasets
+def _load_dosage_and_sig() -> Dict[str, List[Dict[str, Any]]]:
+    sig_file = DATA_DIR / "dosage_and_sig.json"
+    if sig_file.exists():
+        try:
+            return json.loads(sig_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+# Words in dosage_and_sig.json that are valid everyday Thai words on their own
+# and MUST only be replaced via context-guarded regex in Layer 3 (never globally).
+_CONTEXT_ONLY_SIG_WORDS = {
+    "เมตร", "สอง", "ส่อง", "แพง", "คดี", "โมชั่น",
+    "มก.", "mg", "มล.", "ml", "cc", "c.c.", "g", "gm", "tsp", "tbsp", "IU", "unit",
+}
+
+
+def _build_ontology_sig_map() -> Dict[str, str]:
+    """
+    Builds a direct replacement map from `dosage_and_sig.json` for unambiguous
+    misheard dosage units, forms, and regimen phrases (excluding context-dependent words).
+    """
+    sig_data = _load_dosage_and_sig()
+    mapping: Dict[str, str] = {}
+
+    for entry in sig_data.get("units", []):
+        std = entry.get("standard", "").strip()
+        for var in entry.get("variants", []):
+            var = var.strip()
+            if std and var and var not in _CONTEXT_ONLY_SIG_WORDS:
+                mapping[var] = std
+
+    for section in ("forms", "regimen"):
+        for entry in sig_data.get(section, []):
+            std = entry.get("standard", "").strip()
+            for mis in entry.get("misheard", []):
+                mis = mis.strip()
+                if std and mis and mis not in _CONTEXT_ONLY_SIG_WORDS:
+                    if mis == "หล่อใหญ่" and std == "หลอด":
+                        mapping[mis] = "หลอดใหญ่"
+                    elif mis == "เป็นพผง" and std == "แผง":
+                        mapping[mis] = "เป็นแผง"
+                    else:
+                        mapping[mis] = std
+
+    return mapping
+
+
+# In-memory datasets (Layer 1 Ground-Truth Map)
 SAFE_DRUG_NAMES: Dict[str, str] = {
-    # Default built-in base terms
     "Setifisine":           "Cetirizine",
     "เซทิริซีน":            "Cetirizine",
     "เซทิริซิน":            "Cetirizine",
@@ -336,35 +440,20 @@ SAFE_DRUG_NAMES: Dict[str, str] = {
 # Merge with external ground_truth_map.json
 SAFE_DRUG_NAMES.update(_load_ground_truth_map())
 
+# Layer 2 Ontology & Sig Dictionary (excluding keys already handled in SAFE_DRUG_NAMES)
+ONTOLOGY_SIG_MAP: Dict[str, str] = {
+    k: v for k, v in _build_ontology_sig_map().items() if k not in SAFE_DRUG_NAMES
+}
+
 
 # ─────────────────────────────────────────────────────────────
 #  Layer 3: REGEX & CONTEXT-GUARDED PATTERNS
 # ─────────────────────────────────────────────────────────────
 
-REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
-    # สระลอย / คำเพี้ยนจาก ASR
-    (
-        re.compile(r"ขา[ูู่่]+ไง"),
-        "ขายยังไง",
-        "ขาู่ไง -> ขายยังไง (แก้สระลอย/สะกดเพี้ยน)"
-    ),
-    (
-        re.compile(r"ขา[ูู่่]+"),
-        "ขายอยู่",
-        "ขาู่ -> ขายอยู่ (แก้สระลอย)"
-    ),
-    (
-        re.compile(r"ขมุดขมุด"),
-        "ขวดละ",
-        "ขมุดขมุด -> ขวดละ"
-    ),
+_THAI_NUM_WORDS = r"(?:หนึ่ง|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|สิบ|ครึ่ง|กี่|หลาย|[๑-๙\d]+)"
 
-    # ซีม่า (Zema ยาฆ่าเชื้อรา)
-    (
-        re.compile(r"(ตีม่า|ทีม่า|ดีมาน|ตีมาน)"),
-        "ซีม่า",
-        "ตีม่า -> ซีม่า (ยาฆ่าเชื้อรา)"
-    ),
+REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
+    # ยาฆ่าเชื้อรา (รูปแบบสะกดเพี้ยนหลากหลาย)
     (
         re.compile(r"ยาศัพท์เชื[า้า]*ร์?ราชนะ"),
         "ยาฆ่าเชื้อรา",
@@ -375,52 +464,60 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
         "จริงจริง",
         "จริงจรียง -> จริงจริง"
     ),
+
+    # บริบทรูปแบบยา: โลชั่น / ครีม / แผง / ซอง
     (
-        re.compile(r"(?<=เอาเป็น)โมชั่น|(?<=เป็น)โมชั่น"),
+        re.compile(r"(?<=เอาเป็น)โมชั่น|(?<=เป็น)โมชั่น|(?<=ทา)โมชั่น"),
         "โลชั่น",
-        "โมชั่น -> โลชั่น"
+        "โมชั่น -> โลชั่น (บริบทยาทา)"
+    ),
+    (
+        re.compile(r"(ทา|ทายา|เอาเป็น|เป็น)\s*คดี"),
+        r"\1ครีม",
+        "คดี -> ครีม (บริบทยาทา)"
+    ),
+    (
+        re.compile(rf"(ยา|เอา|ซื้อ|ยก|เป็น)\s*({_THAI_NUM_WORDS})\s*แพง"),
+        r"\1 \2แผง",
+        "แพง -> แผง (จำนวนแผงยา)"
+    ),
+    (
+        re.compile(rf"(ชง|ละลายน้ำ|เกลือแร่|ผง)\s*({_THAI_NUM_WORDS})\s*(?:สอง|ส่อง)"),
+        r"\1 \2ซอง",
+        "สอง/ส่อง -> ซอง (บริบทผงชง/เกลือแร่)"
+    ),
+    (
+        re.compile(rf"({_THAI_NUM_WORDS})\s*(?:สอง|ส่อง)\s*(ละลายน้ำ|ผสมน้ำ|ชงน้ำ)"),
+        r"\1ซอง\2",
+        "สอง/ส่อง -> ซอง (บริบทละลายน้ำ)"
     ),
 
-    # "หนึ่งเมตร/สองเมตร" -> "หนึ่งเม็ด/สองเม็ด"
+    # "หนึ่งเมตร/สองเมตร" -> "หนึ่งเม็ด/สองเม็ด" (กัน "มิลลิเมตร" ไว้ให้กฎหน่วยยาด้านล่าง)
     (
-        re.compile(r"(?<!มิลลิ)(หนึ่ง|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|สิบ|ครึ่ง|กี่|หลาย|\d+)\s*เมตร"),
+        re.compile(rf"(?<!มิลลิ)({_THAI_NUM_WORDS})\s*เมตร"),
         r"\1เม็ด",
         "เมตร -> เม็ด (จำนวนยา)"
     ),
 
-    # "รถอาการปวด" / "รถปวด" / "รถอักเสบ" -> "ลดอาการปวด"
+    # "ห้าร้อยมิลลิเมตร" / "สองมิลลิเมตร" -> "ห้าร้อยมิลลิกรัม" / "สองมิลลิกรัม"
     (
-        re.compile(r"รถ\s*(อาการ)?\s*(ปวด|อักเสบ|บวม)"),
-        r"ลด\1\2",
-        "รถปวด/รถอักเสบ -> ลดปวด/ลดอักเสบ"
+        re.compile(r"([๑-๙\d]|หนึ่ง|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|สิบ|ร้อย|พัน|กี่)(\s*)มิลลิเมตร"),
+        r"\1\2มิลลิกรัม",
+        "มิลลิเมตร -> มิลลิกรัม (หน่วยยา)"
     ),
 
-    # "รถกด" -> "ลดกรด" (ในบริบทร้านยาเท่านั้น)
+    # "เม็ดละ 500 มิลลิลิตร" -> "เม็ดละ 500 มิลลิกรัม" (เม็ดยาใช้หน่วยเป็นมิลลิกรัม)
     (
-        re.compile(r"รถกด"),
-        "ลดกรด",
-        "รถกด -> ลดกรด"
+        re.compile(r"(เม็ดละ\s*[๑-๙\d]+\s*)มิลลิลิตร"),
+        r"\1มิลลิกรัม",
+        "มิลลิลิตร -> มิลลิกรัม (บริบทเม็ดละ)"
     ),
 
-    # "รถไข้" -> "ลดไข้"
+    # "รถอาการปวด" / "รถปวด" / "รถอักเสบ" / "รถไข้" / "รถกรด" / "รถน้ำมูก" -> "ลด..."
     (
-        re.compile(r"รถไข้"),
-        "ลดไข้",
-        "รถไข้ -> ลดไข้"
-    ),
-
-    # "รถน้ํามูก" / "รถน้ำมูก" -> "ลดน้ำมูก"
-    (
-        re.compile(r"รถ\s*น้[ํำ]ามูก"),
-        "ลดน้ำมูก",
-        "รถน้ำมูก -> ลดน้ำมูก"
-    ),
-
-    # "ของแถลง" -> "ของแสลง" (ในบริบทอาหารแสลง/ของแสลง)
-    (
-        re.compile(r"ของแถลง"),
-        "ของแสลง",
-        "ของแถลง -> ของแสลง"
+        re.compile(r"รถ\s*(อาการ)?\s*(ปวด|อักเสบ|บวม|ไข้|กรด|กด|น้ำมูก|น้ํามูก)"),
+        lambda m: f"ลด{m.group(1) or ''}{'กรด' if m.group(2) == 'กด' else ('น้ำมูก' if m.group(2) == 'น้ํามูก' else m.group(2))}",
+        "รถปวด/รถไข้/รถกรด -> ลดปวด/ลดไข้/ลดกรด"
     ),
 
     # "ทุกครั้งที่ป่วน" -> "ทุกครั้งที่ปวด"
@@ -430,25 +527,18 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
         "ที่ป่วน -> ที่ปวด"
     ),
 
-    # "ปวดเก๋า/เป็นเก๋า" -> "ปวดเก๊า/เป็นเก๊า"
+    # "ปวดเก๋า/ปวดเกา/เป็นเก๋า/โรคเก๋า" -> "ปวดเก๊า/เป็นเก๊า/โรคเก๊า"
     (
-        re.compile(r"(ปวด|เป็น)\s*เก๋า"),
+        re.compile(r"(ปวด|เป็น|โรค)\s*เก๋?า(?!ต์)"),
         r"\1เก๊า",
-        "เก๋า -> เก๊า (โรคเก๊าท์)"
+        "เก๋า/เกา -> เก๊า (โรคเก๊าท์)"
     ),
 
-    # "เด็กโตกดอาการ/เด็กโตกดอากาศ" -> "Dextromethorphan" (กดอาการไอ)
+    # "เด็กโตกดอาการ/เด็กโตกดอากาศ" -> "Dextromethorphan (กดอาการ)"
     (
         re.compile(r"เด็กโตกด\s*(อาการ|อากาศ)"),
         r"Dextromethorphan (กดอาการ)",
         "เด็กโตกด -> Dextromethorphan"
-    ),
-
-    # "ห้าร้อยมิลลิเมตร" / "สองมิลลิเมตร" -> "ห้าร้อยมิลลิกรัม" / "สองมิลลิกรัม" (ในบริบทยา)
-    (
-        re.compile(r"([๑-๙\d]|หนึ่ง|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|สิบ|ร้อย|พัน|กี่)(\s*)มิลลิเมตร"),
-        r"\1\2มิลลิกรัม",
-        "มิลลิเมตร -> มิลลิกรัม (หน่วยยา)"
     ),
 
     # "ห้ามรอมิติกรรม" -> "ห้าร้อยมิลลิกรัม"
@@ -465,9 +555,9 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
         "ห้ามมิติกรรม -> ห้ามิลลิกรัม"
     ),
 
-    # "ได้ครบไปไหนห้าสิบมิลลิกรัม" -> "ไดโคลฟีแนค 50 มิลลิกรัม"
+    # "ได้ครบไปไหน/ได้ครบทีไหนห้าสิบมิลลิกรัม" -> "ไดโคลฟีแนค 50 มิลลิกรัม"
     (
-        re.compile(r"ได้ครบไปไหน\s*(ห้าสิบ|50)\s*มิลลิกรัม"),
+        re.compile(r"ได้ครบ(?:ไป|ที)ไหน\s*(ห้าสิบ|50)\s*มิลลิกรัม"),
         r"ไดโคลฟีแนค \1มิลลิกรัม",
         "ได้ครบไปไหน -> ไดโคลฟีแนค"
     ),
@@ -496,65 +586,98 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
 
 
 # ─────────────────────────────────────────────────────────────
-#  Layer 4: PHONETIC & SOUNDEX WITH MEDICAL TRIGGER GUARD
+#  Layer 4: PHONETIC & SOUNDEX WITH LEVENSHTEIN & TRIGGER GUARD
 # ─────────────────────────────────────────────────────────────
 
 MEDICAL_ANCHORS = {
     "ทาน", "กิน", "ยา", "เม็ด", "มิลลิกรัม", "มก", "อาการ", "รักษา", "ขนาน",
     "แผง", "ขวด", "หลอด", "ฉีด", "หยอด", "พ่น", "ทา", "ซอง", "ซีซี", "มล",
     "แก้ปวด", "ฆ่าเชื้อ", "ลดไข้", "ลดน้ำมูก", "ลดกรด", "ขับลม", "เชื้อรา",
-    "แก้แพ้", "แก้หวัด", "แก้ไอ", "ละลายเสมหะ", "เจ็บคอ", "พ่นคอ", "หยอดตา", "ตัวยา"
+    "แก้แพ้", "แก้หวัด", "แก้ไอ", "ละลายเสมหะ", "เจ็บคอ", "พ่นคอ", "หยอดตา", "ตัวยา",
 }
 
 DISCOURSE_BOUNDARIES = {
     "หรือ", "และ", "กับ", "แต่", "ที่", "ใน", "ของ", "มี", "ไม่", "ได้",
     "เอา", "ขอ", "ไหม", "มั้ย", "ครับ", "ค่ะ", "ฮะ", "นะ", "เนาะ", "เนอะ",
-    "ว่า", "เป็น", "ก็", "จะ", "ให้", "ดี"
+    "ว่า", "เป็น", "ก็", "จะ", "ให้", "ดี",
 }
 
-_PHONETIC_INDEX: Optional[Dict[str, str]] = None
+# Common everyday Thai words that must never be phonetically mutated into drug names
+COMMON_THAI_STOPWORDS = {
+    "อาการ", "อาหาร", "ทาน", "กิน", "เม็ด", "หลอด", "ขวด", "ซอง", "แผง",
+    "เวลา", "ตอนเช้า", "ตอนเย็น", "ก่อนนอน", "หลังอาหาร", "ก่อนอาหาร", "วันนี้",
+    "พรุ่งนี้", "เมื่อวาน", "ปกติ", "ธรรมดา", "ทั้งหมด", "เท่าไหร่", "กี่บาท",
+    "ขอบคุณ", "สวัสดี", "ผู้ป่วย", "คนไข้", "คุณหมอ", "เภสัช", "ท้องเสีย",
+    "ปวดหัว", "ปวดท้อง", "ปวดฟัน", "เจ็บคอ", "น้ำมูก", "ไอแห้ง", "เสมหะ",
+    "ถ่ายเหลว", "อาเจียน", "คลื่นไส้", "เวียนหัว", "หน้ามืด", "ความดัน", "เบาหวาน",
+    "โรคประจำตัว", "แพ้ยา", "ไม่มี", "ไม่ใช่", "ถูกต้อง", "นิดนึง", "หน่อย",
+}
+
+_PHONETIC_INDEX: Optional[Dict[str, List[str]]] = None
 _KNOWN_DRUG_WORDS: Optional[set] = None
 
 
-def _build_phonetic_lookup() -> Tuple[Dict[str, str], set]:
+def _char_similarity(a: str, b: str) -> float:
     """
-    Builds a soundex lookup index and known drug lexicon from the drugs catalog.
-    Maps: soundex_code -> standard drug or brand name
+    Computes normalized Levenshtein similarity in [0.0, 1.0] between two strings.
+    """
+    if a == b:
+        return 1.0
+    la, lb = len(a), len(b)
+    if la == 0 or lb == 0:
+        return 0.0
+
+    prev = list(range(lb + 1))
+    for i, ca in enumerate(a, start=1):
+        curr = [i] + [0] * lb
+        for j, cb in enumerate(b, start=1):
+            cost = 0 if ca == cb else 1
+            curr[j] = min(
+                prev[j] + 1,      # deletion
+                curr[j - 1] + 1,  # insertion
+                prev[j - 1] + cost,  # substitution
+            )
+        prev = curr
+
+    dist = prev[lb]
+    return 1.0 - (dist / max(la, lb))
+
+
+def _build_phonetic_lookup() -> Tuple[Dict[str, List[str]], set]:
+    """
+    Builds a multi-candidate soundex lookup index and known drug lexicon from the drugs catalog.
+    Maps: soundex_code -> list of standard drug or brand names
     """
     if not thai_soundex:
         return {}, set()
 
     catalog = _load_drugs_catalog()
-    lookup: Dict[str, str] = {}
+    lookup: Dict[str, List[str]] = {}
     known_words: set = set()
 
-    for cat, items in catalog.items():
+    def _add_candidate(word: str) -> None:
+        word = word.strip()
+        if not word:
+            return
+        known_words.add(word)
+        if len(word) >= 3 and re.search(r"[ก-๙]", word):
+            try:
+                code = thai_soundex(word, engine="lk82")
+                if code:
+                    bucket = lookup.setdefault(code, [])
+                    if word not in bucket:
+                        bucket.append(word)
+            except Exception:
+                pass
+
+    for _cat, items in catalog.items():
         for item in items:
-            thai_name = item.get("thai", "").strip()
+            _add_candidate(item.get("thai", ""))
             gen_name = item.get("generic", "").strip()
-            if thai_name:
-                known_words.add(thai_name)
-                if len(thai_name) >= 3:
-                    try:
-                        code = thai_soundex(thai_name, engine="lk82")
-                        if code and code not in lookup:
-                            lookup[code] = thai_name
-                    except Exception:
-                        pass
             if gen_name:
                 known_words.add(gen_name)
-
             for b in item.get("brands", []):
-                b = b.strip()
-                if b:
-                    known_words.add(b)
-                    if len(b) >= 3:
-                        try:
-                            code = thai_soundex(b, engine="lk82")
-                            if code and code not in lookup:
-                                lookup[code] = b
-                        except Exception:
-                            pass
+                _add_candidate(b)
 
     return lookup, known_words
 
@@ -562,9 +685,9 @@ def _build_phonetic_lookup() -> Tuple[Dict[str, str], set]:
 def apply_phonetic_matching(text: str) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Scans token spans (1-6 grams) in the text. If a phonetic match is found for a drug
-    in the ontology AND it is guarded by a medical anchor word nearby (+/- 3 tokens),
-    resolves it to the standard drug or brand name.
-    Guarantees zero false positives on everyday conversation.
+    in the ontology, passes the character similarity threshold (>= 0.60), is not a
+    common Thai stopword, AND is guarded by a medical anchor word nearby (+/- 3 tokens),
+    resolves it to the closest standard drug or brand name.
     """
     global _PHONETIC_INDEX, _KNOWN_DRUG_WORDS
     if not thai_soundex:
@@ -576,9 +699,7 @@ def apply_phonetic_matching(text: str) -> Tuple[str, List[Dict[str, Any]]]:
     if not _PHONETIC_INDEX:
         return text, []
 
-    # Check if text contains any medical anchor at all
-    has_anchor = any(anchor in text for anchor in MEDICAL_ANCHORS)
-    if not has_anchor:
+    if not any(anchor in text for anchor in MEDICAL_ANCHORS):
         return text, []
 
     changes: List[Dict[str, Any]] = []
@@ -590,28 +711,24 @@ def apply_phonetic_matching(text: str) -> Tuple[str, List[Dict[str, Any]]]:
     new_tokens = list(tokens)
     matched_indices = set()
 
-    # Try spans from 6 down to 1 (longest match first)
     for k in (6, 5, 4, 3, 2, 1):
         for i in range(n - k + 1):
             if any(idx in matched_indices for idx in range(i, i + k)):
                 continue
 
             span_tokens = tokens[i : i + k]
-            # Avoid spans crossing discourse conjunctions
             if k > 1 and any(tok in DISCOURSE_BOUNDARIES for tok in span_tokens):
                 continue
 
             span = "".join(span_tokens).strip()
-            if len(span) < 3:
+            if len(span) < 3 or span in COMMON_THAI_STOPWORDS or span in MEDICAL_ANCHORS:
                 continue
 
-            # If already spelled correctly as a known drug/brand, protect it
             if span in _KNOWN_DRUG_WORDS:
                 for j in range(i, i + k):
                     matched_indices.add(j)
                 continue
 
-            # Look in +/- 3 window for a medical anchor
             window_start = max(0, i - 3)
             window_end = min(n, i + k + 3)
             window = tokens[window_start:window_end]
@@ -621,23 +738,32 @@ def apply_phonetic_matching(text: str) -> Tuple[str, List[Dict[str, Any]]]:
 
             try:
                 code = thai_soundex(span, engine="lk82")
-                if code in _PHONETIC_INDEX:
-                    clean_target = _PHONETIC_INDEX[code]
-                    # Length sanity check: candidate length must be comparable
-                    if abs(len(span) - len(clean_target)) <= 3 or (0.7 <= len(span) / len(clean_target) <= 1.3):
-                        if span != clean_target and clean_target not in text:
-                            new_tokens[i] = clean_target
-                            for j in range(i + 1, i + k):
-                                new_tokens[j] = ""
-                            for j in range(i, i + k):
-                                matched_indices.add(j)
-                            changes.append({
-                                "tier": "4-phonetic",
-                                "original": span,
-                                "corrected": clean_target,
-                                "count": 1,
-                                "description": f"Phonetic Soundex: {span} -> {clean_target} (Medical context)",
-                            })
+                candidates = _PHONETIC_INDEX.get(code, [])
+                if not candidates:
+                    continue
+
+                best_target = None
+                best_sim = 0.0
+                for cand in candidates:
+                    if abs(len(span) - len(cand)) <= 3 or (0.7 <= len(span) / len(cand) <= 1.3):
+                        sim = _char_similarity(span, cand)
+                        if sim >= 0.60 and sim > best_sim:
+                            best_sim = sim
+                            best_target = cand
+
+                if best_target and span != best_target and best_target not in text:
+                    new_tokens[i] = best_target
+                    for j in range(i + 1, i + k):
+                        new_tokens[j] = ""
+                    for j in range(i, i + k):
+                        matched_indices.add(j)
+                    changes.append({
+                        "tier": "4-phonetic",
+                        "original": span,
+                        "corrected": best_target,
+                        "count": 1,
+                        "description": f"Phonetic Soundex ({best_sim:.0%}): {span} -> {best_target}",
+                    })
             except Exception:
                 pass
 
@@ -660,11 +786,11 @@ def correct_transcript(
     """
     แก้คำผิดและสระลอยใน transcript จาก STT โดยใช้ระบบ 5-Layer Hybrid Pipeline:
       - Layer 0: Unicode & Repetition Loop Purge
-      - Layer 1: Empirical Ground-Truth Mapping
-      - Layer 2: Categorized Pharmacy Ontology
-      - Layer 3: Context-Guarded Pattern Engine
-      - Layer 4: Phonetic & Soundex Matching with Medical Trigger Guard
-      - Layer Custom: User Custom Dictionary
+      - Layer Custom: User Custom Dictionary (Single-Pass Regex)
+      - Layer 1: Empirical Ground-Truth Mapping (Single-Pass Regex)
+      - Layer 2: Categorized Pharmacy Ontology & Dosage Sig Normalizer (Single-Pass Regex)
+      - Layer 3: Context-Guarded Pattern Engine (Regex Lookaround / Context Rules)
+      - Layer 4: Phonetic & Soundex Matching with Levenshtein & Medical Trigger Guard
 
     Returns:
         (corrected_text, changes)
@@ -680,58 +806,46 @@ def correct_transcript(
         corrected, uni_changes = clean_thai_unicode(corrected)
         changes.extend(uni_changes)
 
-    # ── Layer Custom: User-defined Custom Dictionary (Longest Match First) ──
+    # ── Layer Custom: User-defined Custom Dictionary (Single-Pass, Longest Match First) ──
     if apply_custom:
         custom_dict = load_custom_dict()
-        sorted_custom = sorted(custom_dict.items(), key=lambda x: len(x[0]), reverse=True)
-        for wrong, right in sorted_custom:
-            if wrong in corrected:
-                count = corrected.count(wrong)
-                corrected = corrected.replace(wrong, right)
-                changes.append({
-                    "tier": "custom",
-                    "original": wrong,
-                    "corrected": right,
-                    "count": count,
-                    "description": "คำศัพท์กำหนดเองโดยผู้ใช้",
-                })
+        corrected, cust_changes = _apply_single_pass_dict(
+            corrected,
+            custom_dict,
+            tier="custom",
+            default_desc="คำศัพท์กำหนดเองโดยผู้ใช้",
+        )
+        changes.extend(cust_changes)
 
-    # ── Layer 1: Empirical Ground-Truth Mapping (Longest Match First) ──
+    # ── Layer 1: Empirical Ground-Truth Mapping (Single-Pass, Longest Match First) ──
     if apply_safe:
-        sorted_safe = sorted(SAFE_DRUG_NAMES.items(), key=lambda x: len(x[0]), reverse=True)
-        for wrong, right in sorted_safe:
-            if wrong in corrected:
-                count = corrected.count(wrong)
-                corrected = corrected.replace(wrong, right)
-                changes.append({
-                    "tier": "1-safe",
-                    "original": wrong,
-                    "corrected": right,
-                    "count": count,
-                    "description": "ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด",
-                })
+        corrected, safe_changes = _apply_single_pass_dict(
+            corrected,
+            SAFE_DRUG_NAMES,
+            tier="1-safe",
+            default_desc="ชื่อยา/คำทางการแพทย์ที่ถอดเสียงผิด",
+        )
+        changes.extend(safe_changes)
 
-    # ── Layer 2: Categorized Pharmacy Ontology Brands Normalizer ──
+    # ── Layer 2: Categorized Pharmacy Ontology & Dosage Sig Normalizer ──
     if apply_ontology:
-        catalog = _load_drugs_catalog()
-        for cat, items in catalog.items():
-            for item in items:
-                generic_thai = item.get("thai", "")
-                for brand in item.get("brands", []):
-                    # Normalizes phonetic misspellings of brands if safe
-                    if brand in corrected and generic_thai and brand != generic_thai:
-                        # We don't overwrite the brand, but record ontology classification if needed
-                        pass
+        corrected, ont_changes = _apply_single_pass_dict(
+            corrected,
+            ONTOLOGY_SIG_MAP,
+            tier="2-ontology",
+            default_desc="หน่วยยา/วิธีบริหารยาจากคลังข้อมูลเภสัชกรรม",
+        )
+        changes.extend(ont_changes)
 
     # ── Layer 3: Context-Guarded Regex Patterns ──
     if apply_regex:
         for pattern, replacement, description in REGEX_PATTERNS:
-            matches = pattern.findall(corrected)
+            matches = list(pattern.finditer(corrected))
             if matches:
                 count = len(matches)
                 corrected = pattern.sub(replacement, corrected)
-                display_orig = pattern.pattern
-                display_corr = replacement
+                display_orig = matches[0].group(0)
+                display_corr = replacement if isinstance(replacement, str) else ""
                 if " -> " in description:
                     parts = description.split(" (")[0].split(" -> ")
                     if len(parts) == 2:
@@ -745,7 +859,7 @@ def correct_transcript(
                     "description": description,
                 })
 
-    # ── Layer 4: Phonetic & Soundex Matching with Medical Trigger Guard ──
+    # ── Layer 4: Phonetic & Soundex Matching with Levenshtein & Medical Trigger Guard ──
     if apply_phonetic:
         corrected, phon_changes = apply_phonetic_matching(corrected)
         changes.extend(phon_changes)
@@ -761,11 +875,9 @@ def get_stats(changes_list: List[List[Dict[str, Any]]]) -> Dict[str, Any]:
     """
     รวมสถิติจาก changes หลายๆ ไฟล์
     """
-    from collections import Counter
-
     total = 0
-    by_tier = Counter()
-    correction_freq = Counter()
+    by_tier: Counter = Counter()
+    correction_freq: Counter = Counter()
 
     for changes in changes_list:
         for change in changes:

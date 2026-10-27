@@ -157,15 +157,25 @@ def pills_html(changes: list[dict]) -> str:
     return f'<div class="pill-section"><div class="pill-title">คำที่แก้</div>{pills}</div>'
 
 
+def _fmt_emr_val(val: object) -> str:
+    if isinstance(val, list):
+        s = "\n".join(f"- {x}" for x in val if str(x).strip())
+    elif isinstance(val, dict):
+        s = json.dumps(val, ensure_ascii=False)
+    else:
+        s = str(val or "").strip()
+    return s if s else "-"
+
+
 def emr_summary_html(emr_data: dict, model_title: str = "") -> str:
     if not emr_data:
         return '<div class="emr-empty-box">ยังไม่มีข้อมูลเวชระเบียน</div>'
 
-    allergy = str(emr_data.get("ประวัติการแพ้ยา", "-")).strip() or "-"
-    underlying = str(emr_data.get("โรคประจำตัว", "-")).strip() or "-"
-    prev_meds = str(emr_data.get("ประวัติการใช้ยา") or emr_data.get("ประวัติการจ่ายยา") or "-").strip() or "-"
-    assessment = str(emr_data.get("บันทึกทางการแพทย์") or emr_data.get("บันทึกการแพทย์") or "-").strip() or "-"
-    advice = str(emr_data.get("คำแนะนำจากเภสัชกร") or emr_data.get("คำแนะนำจากเภสัช") or "-").strip() or "-"
+    allergy = _fmt_emr_val(emr_data.get("ประวัติการแพ้ยา", "-"))
+    underlying = _fmt_emr_val(emr_data.get("โรคประจำตัว", "-"))
+    prev_meds = _fmt_emr_val(emr_data.get("ประวัติการใช้ยา") or emr_data.get("ประวัติการจ่ายยา") or "-")
+    assessment = _fmt_emr_val(emr_data.get("บันทึกทางการแพทย์") or emr_data.get("บันทึกการแพทย์") or "-")
+    advice = _fmt_emr_val(emr_data.get("คำแนะนำจากเภสัชกร") or emr_data.get("คำแนะนำจากเภสัช") or "-")
 
     # Allergies styling
     is_allergy_free = allergy in ("-", "ไม่มี", "ปฏิเสธ", "ปฏิเสธประวัติแพ้ยา", "ไม่มีประวัติการแพ้ยา", "ไม่แพ้")
@@ -230,7 +240,7 @@ def model_header(model_type: str, title: str, latency: float) -> str:
     )
 
 
-def text_block(text: str, key: str, height: int = 230) -> None:
+def text_block(text: str, key: str, height: int = 260) -> None:
     st.text_area("ข้อความ", value=text, height=height, label_visibility="collapsed", key=key)
 
 
@@ -239,34 +249,34 @@ cached_cases = len(list(CACHE_DIR.glob("*.json"))) if CACHE_DIR.exists() else 0
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  SIDEBAR (controls only)
+#  SIDEBAR (Pharmacist Portal Light Glass Style)
 # ══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown(
-        f'<div class="side-brand">'
-        f'<div class="side-logo">{icon("biotech")}</div>'
-        f'<div><div class="side-title-row"><span class="side-name">PharmaLog AI</span>'
-        f'<span class="side-badge">LAB</span></div>'
-        f'<div class="side-sub">Benchmark & Ablation</div></div>'
-        f'</div>',
+        """
+        <div class="sidebar-brand">
+          <div class="sidebar-logo-wrap">
+            <span class="material-symbols-rounded" style="font-size:2rem;color:#fff;">local_hospital</span>
+          </div>
+          <div class="sidebar-brand-text">
+            <div class="sidebar-brand-title">PharmaLog AI</div>
+            <div class="sidebar-brand-sub">ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ (AI Lab)</div>
+          </div>
+        </div>
+        <div class="sidebar-divider"></div>
+        """,
         unsafe_allow_html=True,
     )
 
-
-    st.markdown(
-        f'<div class="side-section-header">{icon("tune")}<span>แสดงผลโมเดล</span></div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='sidebar-section-label'>แสดงผลโมเดล</div>", unsafe_allow_html=True)
     stt_choice = st.radio(
         "แสดงผลโมเดล",
         ["เทียบ 2 โมเดล", "Typhoon Large v3", "Typhoon Realtime"],
         label_visibility="collapsed",
     )
 
-    st.markdown(
-        f'<div class="side-section-header">{icon("instant_mix")}<span>ฟังก์ชันหลังถอดเสียง</span></div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-section-label'>ฟังก์ชันหลังถอดเสียง</div>", unsafe_allow_html=True)
     toggle_dict = st.toggle(
         "แก้คำศัพท์ยา", value=True,
         help="แก้ชื่อยาและหน่วยที่ถอดเพี้ยน เช่น Setifisine เป็น Cetirizine, เมตร เป็น เม็ด",
@@ -280,29 +290,65 @@ with st.sidebar:
         help="แสดงเป็นกล่องข้อความสลับซ้าย-ขวา (ต้องเปิด แยกผู้พูด ด้วย)",
     )
 
+    st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
     st.markdown(
-        f'<div class="side-foot-card">'
-        f'<div class="side-foot-header">'
-        f'<span class="live-pulse"></span>'
-        f'<span class="side-foot-title">Local Engine Active</span>'
-        f'</div>'
-        f'<div class="side-foot-detail">ประมวลผลในเครื่อง · แคช {cached_cases} เคส</div>'
-        f'</div>',
+        '<span class="sidebar-status"><span class="sidebar-status-dot dot-green"></span>ระบบพร้อมใช้งาน (Local Engine)</span>',
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="sidebar-metrics">
+          <div class="sidebar-metric">
+            <span class="material-symbols-rounded" style="font-size:1.1rem;">audio_file</span>
+            <span>{len(preset_files)} ไฟล์เสียงในคลัง</span>
+          </div>
+          <div class="sidebar-metric">
+            <span class="material-symbols-rounded" style="font-size:1.1rem;">description</span>
+            <span>{cached_cases} เคสในแคช</span>
+          </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  HEADER
+#  HEADER & TOP STATUS BANNER (Pharmacist Portal Style)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown(
-    f'<div class="hero-slim"><div class="hero-slim-icon">{icon("biotech")}</div>'
-    '<div><h1 class="hero-slim-title">PharmaLog AI Lab</h1>'
-    '<p class="hero-slim-sub">ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์</p></div></div>',
+    """
+    <div class="page-header">
+      <span class="material-symbols-rounded page-header-icon">local_hospital</span>
+      <div>
+        <h2 class="page-title">PharmaLog AI Lab — ทดสอบถอดเสียงและวิเคราะห์เวชระเบียน</h2>
+        <p class="page-subtitle">ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ (Speech-to-Text & Clinical EMR Benchmark)</p>
+      </div>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
 
-tab_stt, tab_emr = st.tabs(["1  ถอดเสียง", "2  สกัด EMR"])
+st_col1, st_col2, st_col3 = st.columns([2.2, 1, 1], gap="small")
+with st_col1:
+    st.markdown(
+        '<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span>'
+        '<span>ระบบประมวลผลพร้อมใช้งาน (5-Layer Pharmacy Dict + Hybrid 4-Stage Role Diarization)</span></div>',
+        unsafe_allow_html=True,
+    )
+with st_col2:
+    st.markdown(
+        f'<div class="record-mini-stat"><span class="label">คลังเสียงตัวอย่าง</span><strong>{len(preset_files)} ไฟล์</strong></div>',
+        unsafe_allow_html=True,
+    )
+with st_col3:
+    st.markdown(
+        f'<div class="record-mini-stat"><span class="label">แคชประมวลผลแล้ว</span><strong>{cached_cases} เคส</strong></div>',
+        unsafe_allow_html=True,
+    )
+
+st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+tab_stt, tab_emr = st.tabs(["1  ถอดเสียงสนทนา (Speech-to-Text)", "2  วิเคราะห์เวชระเบียน (EMR)"])
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -313,6 +359,17 @@ selected_filename = ""
 
 with tab_stt:
     with st.container(border=True):
+        st.markdown(
+            f"""
+            <div class="card-accent-bar accent-blue"></div>
+            <div class="section-header">
+              <div class="sh-icon sh-blue"><span class="material-symbols-rounded">graphic_eq</span></div>
+              <span class="section-title">เลือกหรือบันทึกไฟล์เสียงสนทนา</span>
+              <span class="section-sub">{len(preset_files)} ไฟล์ในคลัง</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         source_mode = st.segmented_control(
             "แหล่งไฟล์เสียง",
             ["คลังเสียง", "อัดเสียง", "อัปโหลด"],
@@ -425,7 +482,7 @@ with tab_stt:
                     else:
                         text_block(
                             content if isinstance(content, str) else json.dumps(content, ensure_ascii=False),
-                            key=f"active_text_{mtype}", height=300,
+                            key=f"active_text_{mtype}", height=320,
                         )
                     st.markdown(pills_html(pack.get("active_changes", [])), unsafe_allow_html=True)
 
@@ -444,20 +501,21 @@ with tab_stt:
         with view_steps:
             stage = st.segmented_control(
                 "ขั้นตอน",
-                ["0 ดิบ", "1 แก้คำยา", "2 แยกผู้พูด", "3 จัดเป็นแชต"],
+                ["0 ดิบ", "1 แก้คำยา", "2 แยกผู้พูด", "3 จัดเป็นแชต", "4 เวชระเบียน EMR"],
                 default="0 ดิบ",
                 label_visibility="collapsed",
                 key="stage_pick",
             ) or "0 ดิบ"
             captions = {
                 "0 ดิบ": "ข้อความตรงจากโมเดลเสียง",
-                "1 แก้คำยา": "แก้ชื่อยาและหน่วยด้วยพจนานุกรม",
-                "2 แยกผู้พูด": "ระบุเภสัชกร / ผู้ป่วย",
+                "1 แก้คำยา": "แก้ชื่อยาและหน่วยด้วยพจนานุกรม 5-Layer",
+                "2 แยกผู้พูด": "ระบุเภสัชกร / ผู้ป่วย (Hybrid 4-Stage)",
                 "3 จัดเป็นแชต": "จัดเป็นบทสนทนาสลับฝั่ง",
+                "4 เวชระเบียน EMR": "สรุปเวชระเบียนคลินิกอัตโนมัติ (Clinical EMR)",
             }
             st.caption(captions[stage])
 
-            def stage_body(model_key: str, mtype: str) -> None:
+            def stage_body(model_key: str, mtype: str, title: str) -> None:
                 d = data[model_key]
                 if stage == "0 ดิบ":
                     text_block(d["stage_0_raw"], key=f"st0_{mtype}")
@@ -466,28 +524,54 @@ with tab_stt:
                     st.markdown(pills_html(d.get("dict_changes", [])) or "<span class='chip-hint'>ไม่พบคำที่ต้องแก้</span>",
                                 unsafe_allow_html=True)
                 elif stage == "2 แยกผู้พูด":
-                    text_block(d["stage_2_role"], key=f"st2_{mtype}", height=280)
-                else:
+                    text_block(d["stage_2_role"], key=f"st2_{mtype}", height=300)
+                elif stage == "3 จัดเป็นแชต":
                     turns = d["stage_3_dialogue"]
                     if turns:
                         st.markdown(bubbles_html(turns), unsafe_allow_html=True)
                     else:
                         st.markdown("<span class='chip-hint'>ไม่มีบทสนทนา</span>", unsafe_allow_html=True)
+                else:
+                    emr_obj = d.get("stage_4_emr", {})
+                    st.markdown(emr_summary_html(emr_obj, title), unsafe_allow_html=True)
+                    if emr_obj:
+                        pdf_s4 = generate_emr_pdf(
+                            emr_data=emr_obj,
+                            model_name=title,
+                            record_id=cur_h or "",
+                            dialogue_turns=d.get("stage_3_dialogue", []),
+                        )
+                        if pdf_s4:
+                            st.download_button(
+                                f"ดาวน์โหลดเวชระเบียน PDF ({title})",
+                                data=pdf_s4,
+                                file_name=f"EMR_{(cur_h or 'case')[:8]}_{mtype}.pdf",
+                                mime="application/pdf",
+                                icon=":material/picture_as_pdf:",
+                                use_container_width=True,
+                                key=f"dl_pdf_s4_{mtype}",
+                            )
 
-            sl, sr = st.columns(2, gap="large")
-            with sl:
-                st.markdown(model_header("typhoon", "Typhoon Realtime", data["typhoon"]["latency"]), unsafe_allow_html=True)
-                with st.container(border=True, key="step_body_typhoon"):
-                    stage_body("typhoon", "typhoon")
-            with sr:
-                st.markdown(model_header("typhoon_large", "Typhoon Whisper Large v3", data["typhoon_large"]["latency"]), unsafe_allow_html=True)
-                with st.container(border=True, key="step_body_typhoon_large"):
-                    stage_body("typhoon_large", "typhoon_large")
+            def render_step_col(model_key: str, mtype: str, title: str) -> None:
+                st.markdown(model_header(mtype, title, data[model_key]["latency"]), unsafe_allow_html=True)
+                with st.container(border=True, key=f"step_body_{mtype}"):
+                    stage_body(model_key, mtype, title)
+
+            if stt_choice == "เทียบ 2 โมเดล":
+                sl, sr = st.columns(2, gap="large")
+                with sl:
+                    render_step_col("typhoon_large", "typhoon_large", "Typhoon Whisper Large v3")
+                with sr:
+                    render_step_col("typhoon", "typhoon", "Typhoon Realtime")
+            elif stt_choice == "Typhoon Large v3":
+                render_step_col("typhoon_large", "typhoon_large", "Typhoon Whisper Large v3")
+            else:
+                render_step_col("typhoon", "typhoon", "Typhoon Realtime")
 
         # ── Word & Floating Vowel Fixer ──
         with st.expander("จัดการคำศัพท์ & แก้สระลอย (Word & Vowel Fixer)", expanded=False, icon=":material/spellcheck:"):
             st.markdown(
-                '<div style="font-size: 0.85rem; color: #475569; margin-bottom: 0.75rem;">'
+                '<div style="font-size: 0.92rem; color: #475569; margin-bottom: 0.75rem;">'
                 'ระบบตรวจจับสระลอยและข้อผิดพลาด Unicode อัตโนมัติใน Stage 1 '
                 'ท่านสามารถเพิ่มคำศัพท์เฉพาะทาง หรือคำที่โมเดลฟังเพี้ยน เพื่อให้ระบบแทนที่และปรับปรุงบทสนทนาทันที'
                 '</div>',
@@ -538,7 +622,16 @@ with tab_emr:
     emr_text = ""
 
     with st.container(border=True):
-        st.markdown('<div class="emr-block-title">บทสนทนา</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class="card-accent-bar accent-blue"></div>
+            <div class="section-header">
+              <div class="sh-icon sh-blue"><span class="material-symbols-rounded">chat</span></div>
+              <span class="section-title">บทสนทนาต้นทาง (Transcript Source)</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         src_mode = st.radio(
             "แหล่งบทสนทนา",
             ["ผลถอดเสียง", "ไฟล์เฉลย", "พิมพ์เอง"],
@@ -573,7 +666,7 @@ with tab_emr:
                             {
                                 "provider": "groq",
                                 "label": f"Groq ({which})",
-                                "model": "qwen/qwen3.8-27b",
+                                "model": "openai/gpt-oss-120b",
                                 "from_cache": True,
                                 "ok": True,
                                 "error": "",
@@ -611,37 +704,48 @@ with tab_emr:
                 st.text(emr_text)
 
     with st.container(border=True):
-        st.markdown('<div class="emr-block-title">เลือกโมเดลประมวลผล EMR</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class="card-accent-bar accent-teal"></div>
+            <div class="section-header">
+              <div class="sh-icon sh-teal"><span class="material-symbols-rounded">assignment</span></div>
+              <span class="section-title">เลือกโมเดลประมวลผลเวชระเบียน (EMR Extraction)</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        mode_choice = st.segmented_control(
-            "รูปแบบการประมวลผล",
-            ["ประมวลผล 1 โมเดล (เดี่ยว)", "เปรียบเทียบหลายโมเดล"],
-            default="ประมวลผล 1 โมเดล (เดี่ยว)",
-            label_visibility="collapsed",
-            key="emr_mode_choice",
-        ) or "ประมวลผล 1 โมเดล (เดี่ยว)"
+        c_mode_left, c_mode_right = st.columns([1.1, 1.5], gap="large", vertical_alignment="top")
+        with c_mode_left:
+            st.markdown('<div class="ctrl-label">รูปแบบการประมวลผล:</div>', unsafe_allow_html=True)
+            mode_choice = st.segmented_control(
+                "รูปแบบการประมวลผล",
+                ["ประมวลผล 1 โมเดล (เดี่ยว)", "เปรียบเทียบหลายโมเดล"],
+                default="ประมวลผล 1 โมเดล (เดี่ยว)",
+                label_visibility="collapsed",
+                key="emr_mode_choice",
+            ) or "ประมวลผล 1 โมเดล (เดี่ยว)"
 
         emr_jobs: list[dict] = []
 
         if mode_choice == "ประมวลผล 1 โมเดล (เดี่ยว)":
-            c_sel1, c_sel2 = st.columns([1.2, 2.8], vertical_alignment="center")
-            with c_sel1:
-                st.markdown('<span style="font-weight:600; font-size:0.88rem; color:#334155;">เลือกโมเดลที่ต้องการ:</span>', unsafe_allow_html=True)
-            with c_sel2:
-                single_pid = st.radio(
+            with c_mode_right:
+                st.markdown('<div class="ctrl-label">เลือกผู้ให้บริการโมเดล:</div>', unsafe_allow_html=True)
+                single_pid = st.segmented_control(
                     "ผู้ให้บริการ",
                     list(emr.PROVIDERS.keys()),
                     format_func=lambda pid: emr.PROVIDERS[pid]["label"],
-                    horizontal=True,
+                    default=list(emr.PROVIDERS.keys())[0],
                     label_visibility="collapsed",
                     key="emr_single_pid",
-                )
+                ) or list(emr.PROVIDERS.keys())[0]
 
+            st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
             spec = emr.PROVIDERS[single_pid]
             with st.container(border=True):
-                c_p1, c_p2, c_p3 = st.columns([1.5, 2, 1.2], vertical_alignment="center")
+                c_p1, c_p2, c_p3 = st.columns([1.4, 2.1, 1.3], gap="medium", vertical_alignment="center")
                 with c_p1:
-                    st.markdown(f'<div style="font-weight:600; color:#0f172a; font-size:0.95rem;">{spec["label"]}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="font-weight:800; color:#1E3146; font-size:1rem;">{spec["label"]}</div>', unsafe_allow_html=True)
                     st.caption("โมเดลที่เลือกใช้งาน")
                 with c_p2:
                     model_name = st.selectbox(
@@ -674,10 +778,8 @@ with tab_emr:
                 })
 
         else:
-            c_multi1, c_multi2 = st.columns([1.5, 3], vertical_alignment="center")
-            with c_multi1:
-                st.markdown('<span style="font-weight:600; font-size:0.88rem; color:#334155;">จำนวนโมเดลที่ต้องการเทียบ:</span>', unsafe_allow_html=True)
-            with c_multi2:
+            with c_mode_right:
+                st.markdown('<div class="ctrl-label">จำนวนโมเดลที่ต้องการเทียบ:</div>', unsafe_allow_html=True)
                 multi_count_choice = st.segmented_control(
                     "จำนวนโมเดลเปรียบเทียบ",
                     ["2 โมเดล (Groq + Gemini)", "3 โมเดล (ทั้งหมด)", "กำหนดเอง"],
@@ -685,6 +787,8 @@ with tab_emr:
                     label_visibility="collapsed",
                     key="emr_multi_count_choice",
                 ) or "2 โมเดล (Groq + Gemini)"
+
+            st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
 
             cols = st.columns(len(emr.PROVIDERS), gap="medium")
             for col, (pid, spec) in zip(cols, emr.PROVIDERS.items()):
@@ -795,18 +899,22 @@ with tab_emr:
 
         if ok_results:
             st.caption("คะแนนดูแค่ว่ามีข้อมูลหรือไม่ ไม่ได้วัดความถูกต้อง")
-            for field in [f for f in emr.EMR_FIELDS if f != "บทสนทนาที่จัดเรียงแล้ว"]:
-                st.markdown(f"<div class='emr-field-title'>{html.escape(field)}</div>", unsafe_allow_html=True)
-                fc = st.columns(len(ok_results), gap="medium")
-                for col, r in zip(fc, ok_results):
-                    val = str(r["fields"].get(field, "-")).strip() or "-"
-                    with col:
-                        st.markdown(
-                            f"<div class='emr-cell{' empty' if val == '-' else ''}'>"
-                            f"<div class='emr-cell-model'>{html.escape(r['label'])}</div>"
-                            f"{html.escape(val).replace(chr(10), '<br>')}</div>",
-                            unsafe_allow_html=True,
-                        )
+            if len(ok_results) == 1:
+                r0 = ok_results[0]
+                st.markdown(emr_summary_html(r0["fields"], r0["label"]), unsafe_allow_html=True)
+            else:
+                for field in [f for f in emr.EMR_FIELDS if f != "บทสนทนาที่จัดเรียงแล้ว"]:
+                    st.markdown(f"<div class='emr-field-title'>{html.escape(field)}</div>", unsafe_allow_html=True)
+                    fc = st.columns(len(ok_results), gap="medium")
+                    for col, r in zip(fc, ok_results):
+                        val = _fmt_emr_val(r["fields"].get(field, "-"))
+                        with col:
+                            st.markdown(
+                                f"<div class='emr-cell{' empty' if val == '-' else ''}'>"
+                                f"<div class='emr-cell-model'>{html.escape(r['label'])}</div>"
+                                f"{html.escape(val).replace(chr(10), '<br>')}</div>",
+                                unsafe_allow_html=True,
+                            )
 
             with st.expander("บทสนทนาที่จัดเรียง และ JSON ดิบ"):
                 tabs_raw = st.tabs([r["label"] for r in ok_results])
@@ -819,20 +927,26 @@ with tab_emr:
             with c_dl_pdf:
                 if len(ok_results) == 1:
                     primary_r = ok_results[0]
+                    emr_payload = dict(primary_r["fields"])
+                    if not emr_payload.get("บทสนทนาที่จัดเรียงแล้ว") or emr_payload.get("บทสนทนาที่จัดเรียงแล้ว") == "-":
+                        emr_payload["บทสนทนาที่จัดเรียงแล้ว"] = emr_text
                     pdf_data = generate_emr_pdf(
-                        emr_data=primary_r["fields"],
+                        emr_data=emr_payload,
                         model_name=primary_r["label"],
                         record_id=state["thash"],
                     )
-                    st.download_button(
-                        f"ดาวน์โหลดเวชระเบียน PDF ({primary_r['label']})",
-                        data=pdf_data,
-                        file_name=f"EMR_{state['thash'][:8]}.pdf",
-                        mime="application/pdf",
-                        icon=":material/picture_as_pdf:",
-                        use_container_width=True,
-                        key="emr_dl_pdf",
-                    )
+                    if pdf_data:
+                        st.download_button(
+                            f"ดาวน์โหลดเวชระเบียน PDF ({primary_r['label']})",
+                            data=pdf_data,
+                            file_name=f"EMR_{state['thash'][:8]}.pdf",
+                            mime="application/pdf",
+                            icon=":material/picture_as_pdf:",
+                            use_container_width=True,
+                            key="emr_dl_pdf",
+                        )
+                    else:
+                        st.caption("ติดตั้ง fpdf2 เพื่อส่งออกไฟล์ PDF (pip install fpdf2)")
                 elif len(ok_results) > 1:
                     sel_pdf_model = st.selectbox(
                         "เลือกโมเดลเพื่อดาวน์โหลด PDF",
@@ -841,20 +955,26 @@ with tab_emr:
                         key="sel_pdf_model_key",
                     )
                     target_r = next((r for r in ok_results if r["label"] == sel_pdf_model), ok_results[0])
+                    emr_payload = dict(target_r["fields"])
+                    if not emr_payload.get("บทสนทนาที่จัดเรียงแล้ว") or emr_payload.get("บทสนทนาที่จัดเรียงแล้ว") == "-":
+                        emr_payload["บทสนทนาที่จัดเรียงแล้ว"] = emr_text
                     pdf_data = generate_emr_pdf(
-                        emr_data=target_r["fields"],
+                        emr_data=emr_payload,
                         model_name=target_r["label"],
                         record_id=state["thash"],
                     )
-                    st.download_button(
-                        f"ดาวน์โหลดเวชระเบียน PDF ({target_r['label']})",
-                        data=pdf_data,
-                        file_name=f"EMR_{state['thash'][:8]}_{target_r.get('provider', 'model')}.pdf",
-                        mime="application/pdf",
-                        icon=":material/picture_as_pdf:",
-                        use_container_width=True,
-                        key="emr_dl_pdf",
-                    )
+                    if pdf_data:
+                        st.download_button(
+                            f"ดาวน์โหลดเวชระเบียน PDF ({target_r['label']})",
+                            data=pdf_data,
+                            file_name=f"EMR_{state['thash'][:8]}_{target_r.get('provider', 'model')}.pdf",
+                            mime="application/pdf",
+                            icon=":material/picture_as_pdf:",
+                            use_container_width=True,
+                            key="emr_dl_pdf",
+                        )
+                    else:
+                        st.caption("ติดตั้ง fpdf2 เพื่อส่งออกไฟล์ PDF (pip install fpdf2)")
 
             with c_dl_json:
                 st.download_button(

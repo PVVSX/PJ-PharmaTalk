@@ -22,8 +22,8 @@ winget install Gyan.FFmpeg
 ## ขั้นตอนที่ 2: Clone โค้ดลงเครื่อง
 
 ```bash
-git clone -b feature/unified-app-v2 https://github.com/PVVSX/PJ-PharmaTalk.git
-cd PJ-PharmaTalk
+git clone https://github.com/PVVSX/PharmaLog.git
+cd PharmaLog
 ```
 
 ---
@@ -60,15 +60,15 @@ pip install "nemo_toolkit[asr]"
 
 1. **โมเดลเสียง:** สร้างโฟลเดอร์ `models` แล้ววาง `typhoon-asr-realtime.nemo` ไว้ที่:
    ```text
-   PJ-PharmaTalk/models/typhoon-asr-realtime.nemo
+   PharmaLog/models/typhoon-asr-realtime.nemo
    ```
 2. **Groq API Key:** สร้างไฟล์ `.groq_api_key` ไว้ที่ Root ของโปรเจกต์:
    ```text
-   PJ-PharmaTalk/.groq_api_key
+   PharmaLog/.groq_api_key
    ```
 3. **Firebase Key:** นำไฟล์ `serviceAccountKey.json` ไปวางในโฟลเดอร์ `core_api/`:
    ```text
-   PJ-PharmaTalk/core_api/serviceAccountKey.json
+   PharmaLog/core_api/serviceAccountKey.json
    ```
 
 ---

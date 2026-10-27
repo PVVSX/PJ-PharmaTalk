@@ -10,36 +10,40 @@ PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกร
 
 ### ขั้นตอนที่ 1: โคลนโค้ดจาก Git
 ```bash
-git clone https://github.com/PVVSX/PJ-PharmaTalk.git
-cd PJ-PharmaTalk
+git clone https://github.com/PVVSX/PharmaLog.git
+cd PharmaLog
 ```
 
 ### ขั้นตอนที่ 2: แตกไฟล์ ZIP Assets ลงในโฟลเดอร์โปรเจกต์
-นำไฟล์ `pharmatalk_offline_assets.zip` (หรือ `pharmalog_offline_assets.zip`) มาวางไว้ที่โฟลเดอร์รากของโปรเจกต์ แล้วแตกไฟล์:
+นำไฟล์ `pharmalog_offline_assets.zip` มาวางไว้ที่โฟลเดอร์รากของโปรเจกต์ แล้วแตกไฟล์:
 - **macOS / Linux:**
   ```bash
-  unzip -o pharmatalk_offline_assets.zip
+  unzip -o pharmalog_offline_assets.zip
   ```
 - **Windows:**
-  คลิกขวาที่ไฟล์ `pharmatalk_offline_assets.zip` แล้วเลือก **Extract Here** (แตกไฟล์ลงในโฟลเดอร์ปัจจุบัน)
+  คลิกขวาที่ไฟล์ `pharmalog_offline_assets.zip` แล้วเลือก **Extract Here** (แตกไฟล์ลงในโฟลเดอร์ปัจจุบัน)
 
 *(ไฟล์ API Key, โมเดล Typhoon ASR, และฐานข้อมูล SQLite จะถูกจัดวางลงตำแหน่งที่ถูกต้องทันที)*
 
-### ขั้นตอนที่ 3: สั่งรันด้วยคลิกเดียว (One-Click Launch)
+### ขั้นตอนที่ 3: เริ่มต้นรันระบบ
 
-สามารถเลือกรันระบบที่ต้องการใช้งานได้ทันที:
+สามารถเลือกรันระบบที่ต้องการใช้งานได้ดังนี้:
 
-#### ก. เปิดแอปพลิเคชันหลัก (PharmaLog AI Main Application — พอร์ต 8515)
-- **Windows:** ดับเบิลคลิก `run_main_app.bat`
-- **macOS / Linux:** รันคำสั่ง `./run_main_app.sh`
+#### ก. เปิดแอปพลิเคชันหลัก (PharmaLog AI Main Application — พอร์ต 8080 & 8515)
+1. รันเซิร์ฟเวอร์ประมวลผลเบื้องหลัง (Core API — พอร์ต 8080):
+   ```bash
+   python core_api/main.py
+   ```
+2. เปิดหน้าเว็บแอปพลิเคชันหลัก (Unified App — พอร์ต 8515):
+   ```bash
+   streamlit run unified_app/app.py --server.port 8515
+   ```
 - *เปิดใช้งานผ่านเบราว์เซอร์ที่: `http://localhost:8515`*
 
 #### ข. เปิดระบบห้องแล็บทดสอบ (PharmaLog AI Lab — พอร์ต 8525)
 - **Windows:** ดับเบิลคลิก `run_lab.bat`
 - **macOS / Linux:** รันคำสั่ง `./run_lab.sh`
 - *เปิดใช้งานผ่านเบราว์เซอร์ที่: `http://localhost:8525`*
-
-ระบบจะสร้าง Virtual Environment, ติดตั้ง Dependencies ทั้งหมด และเปิดหน้าเว็บให้โดยอัตโนมัติ
 
 ---
 
@@ -139,9 +143,7 @@ streamlit run pharmacist_app.py --server.port 8501
 ## 4. โครงสร้างไฟล์ในโปรเจกต์ (Project Directory Layout)
 
 ```text
-PJ-PharmaTalk/
-├── run_main_app.sh             # สคริปต์คลิกเดียวเปิด Unified App (macOS / Linux)
-├── run_main_app.bat            # สคริปต์คลิกเดียวเปิด Unified App (Windows)
+PharmaLog/
 ├── run_lab.sh                  # สคริปต์คลิกเดียวเปิด Lab (macOS / Linux)
 ├── run_lab.bat                 # สคริปต์คลิกเดียวเปิด Lab (Windows)
 │
@@ -217,4 +219,4 @@ python3 tests/run_tests.py
 - ไฟล์ไบนารีโมเดลขนาดใหญ่: `models/typhoon-asr-realtime.nemo`
 - ฐานข้อมูลและแคช: `*.db`, `lab/cache/`, `lab/cache_emr/`
 
-เมื่อดาวน์โหลดโปรเจกต์บนเครื่องใหม่ ให้ใช้ไฟล์ `pharmatalk_offline_assets.zip` (หรือ `pharmalog_offline_assets.zip`) แตกไฟล์ลงที่โฟลเดอร์โปรเจกต์โดยตรงตามขั้นตอนใน Quick Start
+เมื่อดาวน์โหลดโปรเจกต์บนเครื่องใหม่ ให้ใช้ไฟล์ `pharmalog_offline_assets.zip` แตกไฟล์ลงที่โฟลเดอร์โปรเจกต์โดยตรงตามขั้นตอนใน Quick Start

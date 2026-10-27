@@ -5,10 +5,20 @@ from firebase_admin import credentials, firestore, storage
 def init_firebase():
     # Only initialize if not already initialized
     if not firebase_admin._apps:
-        # Use absolute path relative to this file
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        cred_path = os.environ.get("FIREBASE_CREDENTIALS", os.path.join(current_dir, "serviceAccountKey.json"))
-        
+        root_dir = os.path.dirname(current_dir)
+        env_cred = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
+        candidate_paths = [
+            p for p in [
+                env_cred,
+                os.path.join(current_dir, "serviceAccountKey.json"),
+                os.path.join(root_dir, "serviceAccountKey.json"),
+                os.path.join(root_dir, "pharmalog_offline_assets", "core_api", "serviceAccountKey.json"),
+                os.path.join(root_dir, "pharmalog_offline_assets", "credentials", "serviceAccountKey.json"),
+            ] if p
+        ]
+        cred_path = next((p for p in candidate_paths if os.path.exists(p)), candidate_paths[0])
+
         if os.path.exists(cred_path):
             try:
                 cred = credentials.Certificate(cred_path)

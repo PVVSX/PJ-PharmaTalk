@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-เปรียบเทียบผลสกัด Gemini กับ Ground Truth (Grount_truth.xlsx)
+เปรียบเทียบผลสกัด Gemini กับ Ground Truth (Ground_truth.xlsx)
 โดยคำนวณ F1 แบบ token overlap (แนวคิดคลาย NER: แบ่งหน่วยความหมายด้วย token / span)
 
 แมปคอลัมน์ GT → CSV:
@@ -39,7 +39,7 @@ from collections import Counter
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[1]
-GT_XLSX = BASE / "report" / "Grount_truth.xlsx"
+GT_XLSX = BASE / "report" / "Ground_truth.xlsx"
 SPEECH_CSV = BASE / "report" / "speech_to_form" / "speech_gemini_extract.csv"
 TEXT_CSV = BASE / "report" / "text_to_form" / "text_gemini_extract.csv"
 OUT_DIR = BASE / "report" / "evaluation"
@@ -435,7 +435,7 @@ def plot_comparison(
     ax1.bar([i - w / 2 for i in x], tok_sp, width=w, label="speech → form (token / type-F1)")
     ax1.bar([i + w / 2 for i in x], tok_tx, width=w, label="text → form (token / type-F1)")
     ax1.set_ylabel("F1")
-    ax1.set_title("เปรียบเทียบ F1 กับ Grount_truth.xlsx (token overlap / ประเภท = multi-label F1)")
+    ax1.set_title("เปรียบเทียบ F1 กับ Ground_truth.xlsx (token overlap / ประเภท = multi-label F1)")
     ax1.set_xticks(list(x))
     ax1.set_xticklabels(fields, rotation=22, ha="right")
     ax1.legend()

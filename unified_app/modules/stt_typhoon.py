@@ -6,14 +6,14 @@ import os
 import io
 import sys
 import tempfile
-import torch
-
 try:
+    import torch
     import nemo.collections.asr as nemo_asr
     ASR_AVAILABLE = True
 except ImportError:
+    torch = None
     ASR_AVAILABLE = False
-    print("Warning: NeMo is not installed. Please install 'nemo_toolkit[asr]' to use Typhoon ASR.")
+    print("Warning: PyTorch / NeMo is not installed. Please install 'nemo_toolkit[asr]' to use Typhoon ASR.")
 
 class TyphoonASRRecognizer:
     def __init__(self, model_name: str = "typhoon-ai/typhoon-asr-realtime"):
@@ -36,10 +36,16 @@ class TyphoonASRRecognizer:
         print(f"Loading Typhoon ASR Model: {self.model_name} (This may take a while...)")
         try:
             # Check if there is a local model file bundled
-            local_model_path = os.path.join(os.path.dirname(__file__), "..", "..", "models", "typhoon-asr-realtime.nemo")
-            local_model_path = os.path.abspath(local_model_path)
-            
-            if os.path.exists(local_model_path):
+            root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            candidate_paths = [
+                os.path.join(root_dir, "models", "typhoon-asr-realtime.nemo"),
+                os.path.join(root_dir, "pharmalog_offline_assets", "models", "typhoon-asr-realtime.nemo"),
+                os.path.join(root_dir, "pharmatalk_offline_assets", "models", "typhoon-asr-realtime.nemo"),
+                os.path.join(root_dir, "lab", "models", "typhoon-asr-realtime.nemo"),
+            ]
+            local_model_path = next((p for p in candidate_paths if os.path.exists(p)), None)
+
+            if local_model_path:
                 print(f"Found local model at {local_model_path}. Restoring from local file...")
                 self.model = nemo_asr.models.ASRModel.restore_from(local_model_path)
             else:
@@ -120,12 +126,13 @@ def transcribe_audio_bytes(recognizer: TyphoonASRRecognizer, audio_bytes: bytes)
         result = recognizer.transcribe_audio(tmp_path)
         text = result if isinstance(result, str) else str(result)
 
-        # ── Post-process: แก้ชื่อยาและคำทางการแพทย์ที่ถอดเสียงผิด ──
-        try:
-            from unified_app.modules.pharmacy_dict import correct_transcript
-            text, _changes = correct_transcript(text)
-        except Exception:
-            pass  # Fail silently -- dictionary is optional
+        # ── Post-process: แก้ชื่อยาและคำทางการแพทย์ที่ถอดเสียงผิด (เฉพาะเมื่อไม่ใช่ข้อความ error) ──
+        if text and not is_stt_error(text):
+            try:
+                from unified_app.modules.pharmacy_dict import correct_transcript
+                text, _changes = correct_transcript(text)
+            except Exception:
+                pass  # Fail silently -- dictionary is optional
 
         return text
     except Exception as exc:

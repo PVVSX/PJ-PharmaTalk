@@ -11,18 +11,8 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-try:
-    import pyaudio
-    PYAUDIO_AVAILABLE = True
-except ImportError:
-    PYAUDIO_AVAILABLE = False
-
-
-
-
-
-from unified_app.modules.stt_typhoon import ASR_AVAILABLE
 from unified_app.modules.emr_groq import check_credentials
+from unified_app.modules.task_api import get_core_health
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONTENT
@@ -69,23 +59,15 @@ with t4R:
           <span class="section-title">สถานะระบบ (Diagnostics)</span>
         </div>""", unsafe_allow_html=True)
         
-        # Check Audio
-        import sys
-        try:
-            import pyaudio
-            has_audio = True
-        except ImportError:
-            has_audio = False
-            
-        st.markdown(f"""
+        # Check Browser Audio Recorder Component
+        st.markdown("""
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--grey-200);">
-          <span style="font-weight:500;">ระบบอัดเสียง (Native)</span>
-          {'<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>พร้อมใช้งาน</span>'}
+          <span style="font-weight:500;">ระบบอัดเสียง (Browser Audio Recorder)</span>
+          <span class="status-pill pill-ok"><span class="status-dot dot-green"></span>พร้อมใช้งาน</span>
         </div>
         """, unsafe_allow_html=True)
-        
+
         # Check ASR (from Core API)
-        from unified_app.modules.task_api import get_core_health
         try:
             core_health = get_core_health()
             model_ok = bool(core_health.get("asr_loaded"))

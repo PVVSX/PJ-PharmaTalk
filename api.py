@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import time
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -23,7 +24,7 @@ app.add_middleware(
 ROOT = Path(__file__).resolve().parent
 RECORD_DIR = ROOT / "record"
 STATE_FILE = RECORD_DIR / "shared_state.json"
-DATABASE_FILE = RECORD_DIR / "pharmalog.db" if (RECORD_DIR / "pharmalog.db").exists() else RECORD_DIR / "pharmatalk.db"
+DATABASE_FILE = RECORD_DIR / "pharmalog.db"
 CONSENT_APP_DIR = ROOT / "consent_app"
 
 class StateModel(BaseModel):
@@ -33,7 +34,7 @@ class StateModel(BaseModel):
 
 def init_database() -> None:
     RECORD_DIR.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(DATABASE_FILE) as connection:
+    with closing(sqlite3.connect(DATABASE_FILE)) as connection:
         connection.execute("""
             CREATE TABLE IF NOT EXISTS consent_records (
                 consent_id TEXT PRIMARY KEY,
@@ -73,7 +74,7 @@ def set_state_internal(status: str, consent: Optional[dict] = None):
     STATE_FILE.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     if current_consent and current_consent.get("consent_id"):
         init_database()
-        with sqlite3.connect(DATABASE_FILE) as connection:
+        with closing(sqlite3.connect(DATABASE_FILE)) as connection:
             if status == "READY":
                 connection.execute("""
                     INSERT OR IGNORE INTO consent_records

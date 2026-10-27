@@ -17,8 +17,6 @@ RECORD_DIR = ROOT / "record"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from unified_app.modules.stt_typhoon import transcribe_audio_bytes
-from unified_app.modules.emr_groq import extract_emr, EMR_FIELDS
 from unified_app.modules.state_manager import get_state, set_state
 from unified_app.modules.task_api import get_core_health, get_task, queue_audio
 from unified_app.components.auto_recorder import auto_recorder
@@ -28,7 +26,8 @@ try:
 except Exception:
   upload_file_to_storage = None
 
-st_autorefresh(interval=2000, key="recorder_state_refresh")
+if not st.session_state.get("is_backoffice", False) or st.session_state.get("audio_task_id"):
+    st_autorefresh(interval=2000, key="recorder_state_refresh")
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONTENT
@@ -118,9 +117,11 @@ with t1L:
                         st.error(f"ประมวลผลเสียงไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}")
                         stt_text = task.get("stt_text")
                         if stt_text:
-                            saved_path = Path(st.session_state.last_saved_path)
-                            stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
-                            stt_path.write_text(stt_text, encoding="utf-8")
+                            if st.session_state.get("last_saved_path"):
+                                saved_path = Path(st.session_state.last_saved_path)
+                                stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
+                                stt_path.parent.mkdir(parents=True, exist_ok=True)
+                                stt_path.write_text(stt_text, encoding="utf-8")
                             st.session_state.emr_conv_input = stt_text
                             st.warning("ระบบสามารถถอดเสียงได้สำเร็จ แต่มีข้อผิดพลาดบางอย่างในขั้นตอนถัดไป คุณสามารถตรวจสอบข้อความได้")
                         st.session_state.audio_task_id = None
@@ -128,9 +129,11 @@ with t1L:
 
                     stt_text = task.get("stt_text") or ""
                     if st.session_state.get("audio_task_completed") != task_id:
-                        saved_path = Path(st.session_state.last_saved_path)
-                        stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
-                        stt_path.write_text(stt_text, encoding="utf-8")
+                        if st.session_state.get("last_saved_path"):
+                            saved_path = Path(st.session_state.last_saved_path)
+                            stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
+                            stt_path.parent.mkdir(parents=True, exist_ok=True)
+                            stt_path.write_text(stt_text, encoding="utf-8")
                         st.session_state.emr_conv_input = stt_text
                         st.session_state.audio_task_completed = task_id
                         st.session_state.last_audio_task_id = task_id
@@ -166,18 +169,30 @@ with t1L:
             </div>
             ''', unsafe_allow_html=True)
 
-            st.markdown('''
-            <div class="record-callout info">
-              <span class="material-symbols-rounded">mic_external_on</span>
-              <div>
-                <strong>พร้อมบันทึกเสียง</strong>
-                <div>กรุณากดปุ่ม <b>เริ่มอัดเสียง</b> ภายใน 30 วินาที หากเกินเวลาต้องให้คนไข้กดยืนยันใหม่</div>
-              </div>
-            </div>
-            ''', unsafe_allow_html=True)
+            if is_backoffice:
+                st.markdown('''
+                <div class="record-callout info">
+                  <span class="material-symbols-rounded">mic_external_on</span>
+                  <div>
+                    <strong>พร้อมบันทึกเสียง (โหมด Back-Office)</strong>
+                    <div>กดปุ่ม <b>เริ่มอัดเสียง</b> เพื่อบันทึกบทสนทนาได้ทันทีโดยไม่ต้องรอหน้าจอขอความยินยอม</div>
+                  </div>
+                </div>
+                ''', unsafe_allow_html=True)
+            else:
+                st.markdown('''
+                <div class="record-callout info">
+                  <span class="material-symbols-rounded">mic_external_on</span>
+                  <div>
+                    <strong>พร้อมบันทึกเสียง</strong>
+                    <div>กรุณากดปุ่ม <b>เริ่มอัดเสียง</b> ภายใน 30 วินาที หากเกินเวลาต้องให้คนไข้กดยืนยันใหม่</div>
+                  </div>
+                </div>
+                ''', unsafe_allow_html=True)
             audio_key = f"native_audio_recorder_{st.session_state.get('audio_key_counter', 0)}"
             audio_value = auto_recorder(
                 cooldown_seconds=0,
+                api_url="" if is_backoffice else "http://localhost:8500/api/state",
                 key=audio_key,
             )
 

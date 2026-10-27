@@ -20,7 +20,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None  # type: ignore
 
 APP_DIR = Path(__file__).resolve().parent
 if str(APP_DIR) not in sys.path:
@@ -63,7 +66,7 @@ PROVIDERS: Dict[str, Dict[str, Any]] = {
     "groq": {
         "label": "Groq (ระบบปัจจุบัน)",
         "default_model": "openai/gpt-oss-120b",
-        "suggestions": ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
+        "suggestions": ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "qwen/qwen3-32b", "openai/gpt-oss-20b"],
         "key_file": ".groq_api_key",
         "env": "GROQ_API_KEY",
     },
@@ -94,8 +97,6 @@ def load_saved_key(provider: str) -> str:
             APP_DIR.parent / spec["key_file"],
             APP_DIR.parent / "pharmalog_offline_assets" / spec["key_file"],
             APP_DIR.parent / "pharmalog_offline_assets" / "api_keys" / spec["key_file"],
-            APP_DIR.parent / "pharmatalk_offline_assets" / spec["key_file"],
-            APP_DIR.parent / "pharmatalk_offline_assets" / "api_keys" / spec["key_file"],
         ]
         for p in candidates:
             if p.exists():

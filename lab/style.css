@@ -1,46 +1,98 @@
 /* ==========================================================================
-   PharmaLog AI Lab — compact design system
+   PharmaLog AI Lab — Unified Pharmacist Portal Design System
+   Matches pharmacist_app.py & unified_app/assets/style.css:
+   Noto Sans Thai, soft sky / sunshine / mint palette, light glass sidebar,
+   white rounded cards with accent bars, and comfortable desktop sizing.
    ========================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
-@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --blue: #0284c7;
-  --blue-dark: #0369a1;
-  --green: #059669;
-  --indigo: #4f46e5;
-  --ink: #0f172a;
-  --ink-2: #475569;
-  --ink-3: #94a3b8;
-  --line: #e2e8f0;
-  --font: 'Prompt', -apple-system, sans-serif;
+  /* Pharmacist Portal / Consent Palette */
+  --ink: #1E3146;
+  --ink-2: #223349;
+  --ink-3: #7A8CA3;
+  --line: #E6EEF7;
+  --soft: #F2F6FB;
+  --sky: #8BC6FF;
+  --sky-500: #5AA8F5;
+  --sky-600: #4A8FD6;
+  --sky-50: #E8F3FF;
+  --sun: #FFC93D;
+  --sun-50: #FFF7D6;
+  --sun-ink: #8A6A00;
+  --mint: #6EDB9A;
+  --mint-50: #E8FDF0;
+  --mint-ink: #2E8A57;
+  --orange: #FFAD5A;
+  --orange-50: #FFF4E8;
+  --rose-50: #FFE9EC;
+  --rose-ink: #C2415A;
+  --btn-blue: #2563EB;
+  --btn-blue-2: #1D4ED8;
+
+  --blue: var(--sky-600);
+  --blue-dark: var(--btn-blue-2);
+  --green: var(--mint-ink);
+  --bg-color: #F7FAFF;
+  --bg-card: #FFFFFF;
+  --text-main: var(--ink);
+  --text-muted: #7A8CA3;
+  --grey-50: #F7FAFF;
+  --grey-100: #F2F6FB;
+  --grey-200: #E6EEF7;
+  --grey-300: #C8D6E8;
+  --grey-400: #9AAABD;
+  --grey-500: #7A8CA3;
+  --grey-600: #5A6B80;
+  --grey-700: #3A4C62;
+  --grey-800: #223349;
+  --green-500: #3AAD6E;
+  --green-600: #2E8A57;
+  --amber-500: #E5A91A;
+  --red-500: #E5536B;
+  --shadow-soft: 0 24px 64px rgba(34, 51, 73, 0.11), 0 8px 20px rgba(34, 51, 73, 0.07);
+  --shadow-card: 0 18px 56px rgba(34, 51, 73, 0.08), 0 6px 18px rgba(34, 51, 73, 0.05);
+  --font: 'Noto Sans Thai', -apple-system, sans-serif;
   --mono: 'JetBrains Mono', monospace;
 }
 
-/* ── Icons ── */
-.material-symbols-rounded {
-  font-family: 'Material Symbols Rounded' !important;
-  font-weight: normal; font-style: normal;
-  font-size: 1.25rem; line-height: 1;
-  text-transform: none; letter-spacing: normal;
-  display: inline-block; white-space: nowrap;
-  direction: ltr; font-feature-settings: 'liga';
+/* ── Base & Background ── */
+html, body {
+  background: var(--bg-color);
   -webkit-font-smoothing: antialiased;
-  flex-shrink: 0; vertical-align: middle;
 }
 
-/* ── Base ── */
-html, body, [data-testid="stAppViewContainer"] { font-family: var(--font) !important; color: var(--ink); }
-code, pre { font-family: var(--mono) !important; }
-[data-testid="stAppViewContainer"] {
+.stApp, [data-testid="stAppViewContainer"] {
   background:
-    radial-gradient(900px 380px at 90% -8%, rgba(2,132,199,0.08), transparent 60%),
-    radial-gradient(700px 340px at -5% 35%, rgba(5,150,105,0.05), transparent 60%),
-    #f6f8fb;
+    radial-gradient(560px circle at 0% 0%, rgba(224, 240, 255, 0.95), transparent 70%),
+    radial-gradient(620px circle at 100% 35%, rgba(255, 244, 214, 0.85), transparent 70%),
+    radial-gradient(520px circle at 30% 100%, rgba(232, 253, 240, 0.9), transparent 70%),
+    var(--bg-color) !important;
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font) !important;
 }
-[data-testid="stHeader"] {
+
+.stApp, .stApp p, .stApp li, .stApp label, .stApp input, .stApp textarea, .stApp button,
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+.stMarkdown, .markdown-text-container {
+  font-family: var(--font) !important;
+}
+
+code, pre {
+  font-family: var(--mono) !important;
+  font-size: 0.9rem !important;
+}
+
+::selection { background: rgba(139, 198, 255, 0.3); }
+
+/* ── Top Header & Toolbar ── */
+[data-testid="stHeader"],
+header[data-testid="stHeader"] {
   background: transparent !important;
+  color: var(--text-main) !important;
   z-index: 99999 !important;
 }
 [data-testid="stToolbar"] {
@@ -57,450 +109,982 @@ code, pre { font-family: var(--mono) !important; }
   display: inline-flex !important;
   visibility: visible !important;
   opacity: 1 !important;
-  color: #0284c7 !important;
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
-  border-radius: 8px !important;
-  padding: 4px 8px !important;
+  color: var(--sky-600) !important;
+  background: #FFFFFF !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 4px 12px rgba(34, 51, 73, 0.08) !important;
+  border-radius: 999px !important;
+  padding: 5px 9px !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
 }
 [data-testid="stExpandSidebarButton"]:hover,
 [data-testid="collapsedControl"]:hover {
-  background: #f1f5f9 !important;
-  border-color: #0284c7 !important;
-  color: #0369a1 !important;
+  background: var(--sky-50) !important;
+  border-color: var(--sky-500) !important;
 }
-.block-container { padding-top: 1.6rem !important; max-width: 1240px; }
 
-/* ── Sidebar ── */
+.main .block-container,
+[data-testid="stMainBlockContainer"],
+.block-container {
+  padding-top: 2.1rem !important;
+  padding-bottom: 3rem !important;
+  max-width: 1500px !important;
+}
+
+/* ── Material Symbols ── */
+span.material-symbols-rounded,
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded' !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  font-size: 1.25rem;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* =========================================================================
+   Sidebar Styling — Light Glass Panel (matches Pharmacist App)
+   ========================================================================= */
 [data-testid="stSidebar"] {
-  background: radial-gradient(circle at 50% 0%, rgba(2, 132, 199, 0.18), transparent 70%),
-              linear-gradient(180deg, #090e1a 0%, #0f172a 55%, #020617 100%) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  min-width: 285px !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-right: 1px solid var(--line) !important;
+  box-shadow: 0 18px 60px rgba(34, 51, 73, 0.06);
+}
+[data-testid="stSidebar"] * {
+  color: var(--ink);
 }
 [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
-  padding-top: 1.4rem !important;
-  padding-left: 1.1rem !important;
-  padding-right: 1.1rem !important;
+  padding: 1.1rem 0.9rem 1.2rem !important;
 }
-[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
-[data-testid="stSidebar"] label p { font-size: 0.88rem; line-height: 1.4; font-weight: 500; }
+[data-testid="stSidebar"] label p {
+  font-size: 0.92rem !important;
+  line-height: 1.4 !important;
+  font-weight: 600 !important;
+  color: var(--ink) !important;
+}
 [data-testid="stSidebar"] [data-testid="stTooltipIcon"] svg,
 [data-testid="stSidebar"] [data-testid="stTooltipHoverTarget"] svg {
-  color: #64748b !important; fill: #64748b !important; opacity: 1 !important;
+  color: var(--grey-500) !important;
+  fill: var(--grey-500) !important;
 }
 
-/* Brand */
-.side-brand {
-  display: flex; align-items: center; gap: 12px;
-  padding: 4px 0 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 16px;
+/* Sidebar Brand (Identical to Pharmacist App) */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 6px;
+  margin-bottom: 4px;
 }
-.side-logo {
-  width: 42px; height: 42px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #0284c7, #2563eb);
-  box-shadow: 0 0 20px rgba(2, 132, 199, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.sidebar-logo-wrap {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, var(--sky-500) 0%, var(--sky-600) 55%, #3AAD6E 130%);
+  border-radius: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(74, 143, 214, 0.28);
+  flex-shrink: 0;
 }
-.side-logo .material-symbols-rounded { font-size: 1.5rem; color: #fff !important; }
-.side-title-row { display: flex; align-items: center; gap: 8px; }
-.side-name { font-weight: 700; font-size: 1.12rem; color: #fff !important; line-height: 1.2; letter-spacing: -0.01em; }
-.side-badge {
-  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em;
-  background: rgba(56, 189, 248, 0.15); color: #38bdf8 !important;
-  border: 1px solid rgba(56, 189, 248, 0.35); padding: 1px 6px; border-radius: 6px;
+[data-testid="stSidebar"] .sidebar-logo-wrap .material-symbols-rounded {
+  color: #FFFFFF !important;
+  font-size: 2rem !important;
 }
-.side-sub { font-size: 0.72rem; color: #94a3b8 !important; margin-top: 2px; }
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-brand-title {
+  font-size: 1.32rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--ink) !important;
+}
+[data-testid="stSidebar"] .sidebar-brand-sub {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #7A8CA3 !important;
+  line-height: 1.3;
+  margin-top: 2px;
+}
 
-/* Section Header */
-.side-section-header {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: #94a3b8 !important;
-  margin: 16px 0 8px;
-  padding-left: 2px;
-}
-.side-section-header .material-symbols-rounded {
-  font-size: 0.95rem; color: #38bdf8 !important;
+.sidebar-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 12px 6px;
 }
 
-/* Radio buttons styled as modern dark cards */
+[data-testid="stSidebar"] .sidebar-section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #7A8CA3 !important;
+  margin: 10px 0 7px 8px;
+  text-transform: uppercase;
+}
+
+/* Sidebar Radio & Toggle Controls (Light Pill Cards) */
 [data-testid="stSidebar"] [role="radiogroup"] {
   gap: 6px !important;
 }
 [data-testid="stSidebar"] [role="radiogroup"] label {
-  background: rgba(255, 255, 255, 0.035) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 11px !important;
+  background: var(--soft) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
   padding: 8px 12px !important;
   margin: 0 !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
   width: 100% !important;
   cursor: pointer !important;
 }
 [data-testid="stSidebar"] [role="radiogroup"] label:hover {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border-color: rgba(56, 189, 248, 0.3) !important;
+  background: var(--sky-50) !important;
+  border-color: #B7D9FF !important;
+  transform: translateX(2px);
 }
 [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(14, 165, 233, 0.12)) !important;
-  border-color: rgba(56, 189, 248, 0.55) !important;
-  box-shadow: 0 0 14px rgba(2, 132, 199, 0.25) !important;
+  background: linear-gradient(90deg, var(--btn-blue), var(--btn-blue-2)) !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22) !important;
 }
-[data-testid="stSidebar"] [role="radiogroup"] label input:checked + div,
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) div:first-of-type {
-  border-color: #38bdf8 !important;
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) * {
+  color: #FFFFFF !important;
 }
 
-/* Toggles styled as clean setting rows */
 [data-testid="stSidebar"] div[data-testid="stCheckbox"],
 [data-testid="stSidebar"] div[data-testid="stToggle"] {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  border-radius: 11px !important;
+  background: #FFFFFF !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
   padding: 7px 12px !important;
-  margin-bottom: 7px !important;
+  margin-bottom: 6px !important;
   transition: all 0.2s ease !important;
 }
 [data-testid="stSidebar"] div[data-testid="stCheckbox"]:hover,
 [data-testid="stSidebar"] div[data-testid="stToggle"]:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(56, 189, 248, 0.2) !important;
+  background: var(--soft) !important;
+  border-color: #B7D9FF !important;
 }
 [data-testid="stSidebar"] div[data-testid="stCheckbox"]:has(input:checked),
 [data-testid="stSidebar"] div[data-testid="stToggle"]:has(input:checked) {
-  border-color: rgba(56, 189, 248, 0.35) !important;
-  background: rgba(2, 132, 199, 0.08) !important;
+  background: var(--sky-50) !important;
+  border-color: #A9D4FF !important;
 }
 
-/* Premium Footer Card */
-.side-foot-card {
-  margin-top: 24px;
-  padding: 10px 13px;
-  border-radius: 12px;
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+/* Sidebar Status & Metrics (Identical to Pharmacist App) */
+.sidebar-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px;
+  padding: 8px 14px;
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(34, 51, 73, 0.05);
 }
-.side-foot-header {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 3px;
+.sidebar-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  animation: blink 1.2s infinite alternate;
 }
-.live-pulse {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 8px #34d399;
-  display: inline-block;
-  animation: pulse-glow 2s infinite ease-in-out;
+@keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
+.dot-green { background-color: var(--mint) !important; }
+.dot-amber { background-color: var(--sun) !important; }
+.dot-red   { background-color: var(--red-500) !important; }
+
+.sidebar-metrics {
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px #34d399; }
-  50% { opacity: 0.6; transform: scale(0.85); box-shadow: 0 0 3px #34d399; }
+.sidebar-metric {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 14px;
+  background: var(--soft);
+  border: 1px solid var(--line);
 }
-.side-foot-title {
-  font-size: 0.76rem; font-weight: 700; color: #6ee7b7 !important;
-  letter-spacing: 0.02em;
-}
-.side-foot-detail {
-  font-size: 0.72rem; color: #94a3b8 !important;
-  padding-left: 15px;
+[data-testid="stSidebar"] .sidebar-metric .material-symbols-rounded {
+  color: var(--sky-600) !important;
 }
 
-/* ── Header ── */
-.hero-slim { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
-.hero-slim-icon { width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #0284c7, #0369a1); box-shadow: 0 6px 16px rgba(2,132,199,0.3); }
-.hero-slim-icon .material-symbols-rounded { font-size: 1.7rem; color: #fff; }
-.hero-slim h1.hero-slim-title { font-size: 1.45rem !important; font-weight: 700 !important; line-height: 1.2 !important;
-  padding: 0 !important; margin: 0 !important; color: var(--ink) !important; }
-.hero-slim-sub { margin: 2px 0 0 !important; font-size: 0.88rem; color: var(--ink-2); }
+/* =========================================================================
+   Page Header & Top Status Banner (Matches recorder.py & emr.py)
+   ========================================================================= */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.page-header-icon {
+  font-size: 2.1rem !important;
+  color: var(--sky-600) !important;
+  background-color: var(--sky-50);
+  border: 2px solid #A9D4FF;
+  padding: 11px;
+  border-radius: 20px;
+}
+.page-title {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 1.65rem !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  line-height: 1.25 !important;
+}
+.page-subtitle {
+  margin: 2px 0 0 !important;
+  color: var(--grey-600);
+  font-size: 0.92rem;
+}
 
-/* ── Cards (native bordered containers) ── */
+.record-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  font-size: 0.86rem;
+  min-height: 58px;
+}
+.record-status-banner.ok {
+  background: var(--mint-50);
+  color: var(--mint-ink);
+  border-color: #A8EFC3;
+}
+.record-mini-stat {
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 58px;
+  justify-content: center;
+}
+.record-mini-stat .label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--grey-500);
+  letter-spacing: 0.04em;
+}
+.record-mini-stat strong {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* =========================================================================
+   Cards, Accent Bars & Section Headers (Matches Pharmacist App)
+   ========================================================================= */
 [data-testid="stVerticalBlockBorderWrapper"] {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
   border: 1px solid var(--line) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 3px 14px rgba(15,23,42,0.04);
+  border-radius: 24px !important;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
 }
 
-/* ── Tabs ── */
-[data-baseweb="tab-list"] { gap: 4px; border-bottom: 1px solid var(--line); }
-[data-baseweb="tab"] { height: 42px; padding: 0 16px; font-weight: 600; color: var(--ink-2); border-radius: 10px 10px 0 0; }
-[data-baseweb="tab"][aria-selected="true"] { color: var(--blue) !important; }
-[data-baseweb="tab-highlight"] { background-color: var(--blue) !important; height: 3px !important; }
-
-/* ── Inputs / buttons ── */
-[data-baseweb="select"] > div, [data-testid="stTextArea"] textarea, [data-testid="stTextInput"] input {
-  border-radius: 10px !important; border-color: #cbd5e1 !important;
+.card-accent-bar {
+  height: 4px;
+  margin-top: -1rem;
+  margin-left: -1rem;
+  width: calc(100% + 2rem);
+  margin-bottom: 0.9rem;
 }
-[data-testid="stTextArea"] textarea { font-family: var(--font) !important; line-height: 1.65; }
+.accent-blue { background: linear-gradient(90deg, var(--sky), var(--sky-500), var(--mint)); }
+.accent-teal { background: linear-gradient(90deg, var(--sky-500), var(--mint)); }
+.accent-amber { background: linear-gradient(90deg, var(--sun), var(--orange)); }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.sh-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.sh-icon span { font-size: 1.15rem !important; }
+.sh-blue { background-color: var(--sky-50); }
+.sh-blue span { color: var(--sky-600) !important; }
+.sh-teal { background-color: var(--mint-50); }
+.sh-teal span { color: var(--mint-ink) !important; }
+.sh-amber { background-color: var(--sun-50); }
+.sh-amber span { color: var(--sun-ink) !important; }
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+.section-sub {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--sky-600);
+  margin-left: auto;
+  background-color: var(--sky-50);
+  border: 1px solid #DDE9FF;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* =========================================================================
+   Tabs, Segmented Controls, Inputs & Buttons
+   ========================================================================= */
+[data-baseweb="tab-list"] {
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+}
+button[data-baseweb="tab"] {
+  border-radius: 999px !important;
+  padding: 8px 18px !important;
+  height: 42px;
+  background: transparent;
+  font-weight: 600;
+}
+button[data-baseweb="tab"] p {
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+  background: var(--sky-50) !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] p {
+  color: var(--sky-600) !important;
+  font-weight: 800 !important;
+}
+[data-baseweb="tab-highlight"] {
+  background-color: var(--sky-500) !important;
+}
+
+[data-testid="stButtonGroup"],
+[data-testid="stButtonGroup"] > div,
+[data-testid="stSegmentedControl"],
+[data-testid="stSegmentedControl"] > div,
+[data-baseweb="button-group"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-top: 4px !important;
+  margin-bottom: 8px !important;
+  background: transparent !important;
+}
+
+[data-testid="stButtonGroup"] button,
+[data-testid="stSegmentedControl"] button,
+[data-baseweb="button-group"] button {
+  border-radius: 999px !important;
+  font-size: 0.9rem !important;
+  padding: 7px 16px !important;
+  margin: 0 !important;
+  border: 1px solid var(--grey-300) !important;
+  background-color: #FFFFFF !important;
+  color: var(--ink) !important;
+  transition: all 0.18s ease !important;
+}
+[data-testid="stButtonGroup"] button:hover,
+[data-testid="stSegmentedControl"] button:hover,
+[data-baseweb="button-group"] button:hover {
+  border-color: var(--sky-500) !important;
+  background-color: var(--sky-50) !important;
+}
+[data-testid="stButtonGroup"] button p,
+[data-testid="stSegmentedControl"] button p,
+[data-baseweb="button-group"] button p {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+}
+[data-testid="stBaseButton-segmented_controlActive"],
+button[kind="segmented_controlActive"],
+[data-baseweb="button-group"] button[aria-pressed="true"],
+[data-baseweb="button-group"] button[aria-checked="true"] {
+  background: linear-gradient(90deg, var(--btn-blue), var(--btn-blue-2)) !important;
+  border-color: transparent !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22) !important;
+}
+[data-testid="stBaseButton-segmented_controlActive"] *,
+button[kind="segmented_controlActive"] *,
+[data-baseweb="button-group"] button[aria-pressed="true"] *,
+[data-baseweb="button-group"] button[aria-checked="true"] * {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+[data-testid="stMain"] [data-testid="stRadio"] [role="radiogroup"] {
+  gap: 14px !important;
+  padding: 4px 0 8px 0 !important;
+}
+.ctrl-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+
+.stTextInput input, .stTextArea textarea, [data-baseweb="select"] > div {
+  background-color: #FFFFFF !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
+  font-size: 0.94rem !important;
+}
+[data-testid="stTextArea"] textarea {
+  font-family: var(--font) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.65 !important;
+  background-color: var(--grey-50) !important;
+}
+
+/* Buttons — Pharmacist Portal blue gradient primary & soft sky secondary */
+button[kind="primary"],
+[data-testid="stBaseButton-primary"],
 div.stButton > button[kind="primary"] {
-  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
-  color: #fff !important; font-weight: 600 !important; border: none !important;
-  border-radius: 12px !important; padding: 10px 20px !important;
-  box-shadow: 0 4px 14px rgba(2,132,199,0.32) !important; transition: transform .15s, box-shadow .15s;
+  background: linear-gradient(90deg, var(--btn-blue), var(--btn-blue-2)) !important;
+  color: #FFFFFF !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 0.94rem !important;
+  border: none !important;
+  padding: 8px 18px !important;
+  min-height: 42px;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.24) !important;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, filter 0.2s ease !important;
 }
-div.stButton > button[kind="primary"]:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(2,132,199,0.42) !important; }
-div.stButton > button[kind="primary"]:disabled { background: #cbd5e1 !important; box-shadow: none !important; transform: none; }
+button[kind="primary"] *,
+[data-testid="stBaseButton-primary"] * {
+  color: #FFFFFF !important;
+}
+button[kind="primary"]:hover,
+[data-testid="stBaseButton-primary"]:hover {
+  transform: translateY(-1px) !important;
+  filter: brightness(1.08) !important;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.30) !important;
+}
+button[kind="primary"]:disabled {
+  background: var(--grey-300) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
 
-/* ── Small elements ── */
-.status-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
-.status-chip .material-symbols-rounded { font-size: 1.1rem; }
-.status-chip.ok { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-.status-chip.new { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+button[kind="secondary"],
+[data-testid="stBaseButton-secondary"],
+.stDownloadButton > button {
+  border-radius: 12px !important;
+  border: 1px solid #DDE9FF !important;
+  background-color: #F7FAFF !important;
+  color: var(--ink) !important;
+  font-weight: 600 !important;
+  font-size: 0.92rem !important;
+  min-height: 42px;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.2s ease !important;
+}
+button[kind="secondary"]:hover,
+[data-testid="stBaseButton-secondary"]:hover,
+.stDownloadButton > button:hover {
+  background-color: var(--sky-50) !important;
+  border-color: #B7D9FF !important;
+  transform: translateY(-1px);
+}
 
-.empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 44px 0; color: var(--ink-3); font-size: 0.95rem; }
-.empty-state .material-symbols-rounded { font-size: 2.6rem; }
+/* =========================================================================
+   Status Pills, Callouts & Chips
+   ========================================================================= */
+.status-chip, .status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.status-chip.ok, .pill-ok {
+  background: var(--mint-50);
+  color: var(--mint-ink);
+  border: 1px solid #A8EFC3;
+}
+.status-chip.new, .pill-warn {
+  background: var(--sun-50);
+  color: var(--sun-ink);
+  border: 1px solid #FFE9A8;
+}
 
-.chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 12px; }
-.chip { padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
-.chip.on { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
-.chip.off { background: #f1f5f9; color: var(--ink-3); border: 1px solid var(--line); text-decoration: line-through; }
-.chip-hint { font-size: 0.82rem; color: var(--ink-3); }
+.empty-state, .record-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 150px;
+  padding: 32px 0;
+  border: 1.5px dashed var(--grey-300);
+  border-radius: 22px;
+  background: rgba(247, 250, 255, 0.8);
+  color: var(--grey-500);
+  font-weight: 600;
+  font-size: 0.94rem;
+}
+.empty-state .material-symbols-rounded {
+  font-size: 2.2rem;
+  color: var(--grey-400);
+}
 
-/* ── Model header bar (sits on top of the body card) ── */
-.arena-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; margin-bottom: -1px;
-  border-radius: 10px 10px 0 0; color: #fff; font-weight: 600; font-size: 0.88rem; }
-.arena-header.typhoon { background: linear-gradient(135deg, #065f46, #059669); }
-.arena-header.typhoon_large { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
-.lat-chip { font-size: 0.72rem; font-weight: 700; background: rgba(0,0,0,0.25); padding: 2px 8px; border-radius: 999px; }
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+.chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.chip.on {
+  background: var(--sky-50);
+  color: var(--sky-600);
+  border: 1px solid #B7D9FF;
+}
+.chip.off {
+  background: var(--soft);
+  color: var(--grey-400);
+  border: 1px solid var(--line);
+  text-decoration: line-through;
+}
+.chip-hint {
+  font-size: 0.84rem;
+  color: var(--grey-500);
+}
+
+/* =========================================================================
+   Model Arena Header & Chat Bubbles (Balanced Sizing + Pharmacist Palette)
+   ========================================================================= */
+.arena-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  border-radius: 18px 18px 0 0;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.96rem;
+}
+.arena-header.typhoon {
+  background: linear-gradient(135deg, #2E8A57, #3AAD6E);
+}
+.arena-header.typhoon_large {
+  background: linear-gradient(135deg, var(--btn-blue-2), var(--sky-500));
+}
+.lat-chip {
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF !important;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
 [class*="st-key-arena_body_"], [class*="st-key-step_body_"] {
-  border-top-left-radius: 0 !important; border-top-right-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
 }
 
-/* ── Chat bubbles (compact dialogue view) ── */
-.chat-stream { display: flex; flex-direction: column; gap: 7px; padding: 2px 0; max-height: 460px; overflow-y: auto; }
-.bubble-row { display: flex; gap: 6px; align-items: flex-start; }
-.bubble-row.patient { flex-direction: row-reverse; }
-.bubble-avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
-.bubble-avatar .material-symbols-rounded { font-size: 0.82rem; }
-.bubble-avatar.pharmacist { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-.bubble-avatar.patient { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
-.bubble-content { max-width: 85%; padding: 5px 10px; border-radius: 8px; font-size: 0.82rem; line-height: 1.4; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
-.bubble-content.pharmacist { background: #fff; border: 1px solid #bbf7d0; border-left: 2.5px solid #16a34a; border-top-left-radius: 2px; color: #14532d; }
-.bubble-content.patient { background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border-top-right-radius: 2px; }
-.bubble-speaker-tag { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.02em; margin-bottom: 1px; }
-.bubble-content.pharmacist .bubble-speaker-tag { color: #16a34a; }
-.bubble-content.patient .bubble-speaker-tag { color: #bae6fd; }
+.chat-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 6px 4px;
+  max-height: 540px;
+  overflow-y: auto;
+}
+.bubble-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.bubble-row.patient {
+  flex-direction: row-reverse;
+}
+.bubble-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.bubble-avatar .material-symbols-rounded {
+  font-size: 1rem;
+}
+.bubble-avatar.pharmacist {
+  background: var(--mint-50);
+  color: var(--mint-ink);
+  border: 1px solid #A8EFC3;
+}
+.bubble-avatar.patient {
+  background: var(--sky-50);
+  color: var(--sky-600);
+  border: 1px solid #B7D9FF;
+}
+.bubble-content {
+  max-width: 85%;
+  padding: 8px 13px;
+  border-radius: 14px;
+  font-size: 0.93rem;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgba(34, 51, 73, 0.04);
+}
+.bubble-content.pharmacist {
+  background: #FFFFFF;
+  border: 1px solid #C5F2D7;
+  border-left: 3.5px solid var(--green-500);
+  border-top-left-radius: 4px;
+  color: var(--ink);
+}
+.bubble-content.patient {
+  background: linear-gradient(135deg, var(--btn-blue), var(--sky-600));
+  color: #FFFFFF !important;
+  border-top-right-radius: 4px;
+}
+.bubble-content.patient div {
+  color: #FFFFFF !important;
+}
+.bubble-speaker-tag {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+.bubble-content.pharmacist .bubble-speaker-tag {
+  color: var(--mint-ink) !important;
+}
+.bubble-content.patient .bubble-speaker-tag {
+  color: #DCEEFF !important;
+}
 
-/* ── Drug pills ── */
-.pill-section { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; }
-.pill-title { font-size: 0.74rem; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-.drug-pill { display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #86efac; color: #166534;
-  padding: 3px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin: 3px 6px 3px 0; }
-.drug-pill .original-wrong { text-decoration: line-through; color: #dc2626; opacity: 0.85; }
-.drug-pill .arrow-sep { color: var(--ink-3); font-size: 0.75rem; }
-.drug-pill .corrected-right { color: #15803d; font-weight: 700; }
+/* ── Drug Correction Pills ── */
+.pill-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--grey-300);
+}
+.pill-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--grey-600);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.drug-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--mint-50);
+  border: 1px solid #A8EFC3;
+  color: var(--mint-ink);
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 3px 6px 3px 0;
+}
+.drug-pill .original-wrong {
+  text-decoration: line-through;
+  color: var(--rose-ink);
+  opacity: 0.88;
+}
+.drug-pill .arrow-sep {
+  color: var(--grey-500);
+  font-size: 0.8rem;
+}
+.drug-pill .corrected-right {
+  color: var(--mint-ink);
+  font-weight: 700;
+}
 
-/* ── EMR tab ── */
-.emr-block-title { font-weight: 700; font-size: 0.98rem; margin-bottom: 8px; }
-.key-ok { font-size: 0.78rem; color: #059669; font-weight: 600; }
-.key-miss { font-size: 0.78rem; color: #d97706; font-weight: 600; }
+/* =========================================================================
+   EMR Cards & Pharmacist Form Layout (Matches unified_app/pages/emr.py)
+   ========================================================================= */
+.emr-block-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-bottom: 10px;
+  color: var(--ink);
+}
+.key-ok { font-size: 0.82rem; color: var(--mint-ink); font-weight: 700; }
+.key-miss { font-size: 0.82rem; color: var(--sun-ink); font-weight: 700; }
 
-.emr-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 15px 17px; box-shadow: 0 3px 12px rgba(15,23,42,0.04); height: 100%; }
-.emr-card.err { border-color: #fecaca; background: #fef2f2; }
-.emr-card-title { font-weight: 700; font-size: 1.02rem; }
-.emr-card-model { font-family: var(--mono); font-size: 0.76rem; color: var(--ink-2); margin-bottom: 6px; word-break: break-all; }
-.emr-badges { min-height: 22px; margin-bottom: 4px; }
-.emr-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-right: 6px; }
-.emr-badge.fast { background: #dcfce7; color: #166534; }
-.emr-badge.full { background: #e0f2fe; color: #075985; }
-.emr-badge.cache { background: #f1f5f9; color: var(--ink-2); }
+.emr-card {
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 15px 18px;
+  box-shadow: var(--shadow-card);
+  height: 100%;
+}
+.emr-card.err {
+  border-color: #FFC7D0;
+  background: var(--rose-50);
+}
+.emr-card-title { font-weight: 800; font-size: 1.04rem; color: var(--ink); }
+.emr-card-model { font-family: var(--mono); font-size: 0.8rem; color: var(--grey-500); margin-bottom: 6px; word-break: break-all; }
+.emr-badges { min-height: 24px; margin-bottom: 4px; }
+.emr-badge { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; margin-right: 6px; }
+.emr-badge.fast { background: var(--mint-50); color: var(--mint-ink); border: 1px solid #A8EFC3; }
+.emr-badge.full { background: var(--sky-50); color: var(--sky-600); border: 1px solid #B7D9FF; }
+.emr-badge.cache { background: var(--soft); color: var(--grey-600); border: 1px solid var(--line); }
 .emr-stats { display: flex; gap: 26px; margin: 6px 0 10px; }
-.emr-stats b { display: block; font-size: 1.35rem; line-height: 1.1; }
-.emr-stats small { color: var(--ink-2); font-size: 0.75rem; }
-.emr-bar { height: 8px; background: #e2e8f0; border-radius: 8px; overflow: hidden; }
-.emr-bar span { display: block; height: 100%; background: linear-gradient(90deg, #0284c7, #10b981); border-radius: 8px; }
-.emr-err { color: #b91c1c; font-size: 0.85rem; line-height: 1.5; word-break: break-word; }
+.emr-stats b { display: block; font-size: 1.4rem; font-weight: 800; color: var(--sky-600); line-height: 1.15; }
+.emr-stats small { color: var(--grey-500); font-size: 0.78rem; font-weight: 600; }
+.emr-bar { height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; }
+.emr-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--sky-500), var(--mint)); border-radius: 999px; }
+.emr-err { color: var(--rose-ink); font-size: 0.88rem; line-height: 1.5; word-break: break-word; }
 
-.emr-field-title { margin: 20px 0 8px; font-weight: 700; font-size: 1rem; padding-left: 10px; border-left: 4px solid var(--blue); }
-.emr-cell { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; font-size: 0.93rem; line-height: 1.6; color: #1e293b; min-height: 60px; height: 100%; }
-.emr-cell.empty { background: #f8fafc; color: var(--ink-3); border-style: dashed; }
-.emr-cell-model { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--blue); margin-bottom: 4px; }
+.emr-field-title {
+  margin: 18px 0 8px;
+  font-weight: 800;
+  font-size: 0.98rem;
+  padding-left: 10px;
+  border-left: 4px solid var(--sky-500);
+  color: var(--ink);
+}
+.emr-cell {
+  background: #F7FAFF;
+  border: 1px solid #DDE9FF;
+  border-radius: 16px;
+  padding: 12px 15px;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--grey-800);
+  min-height: 60px;
+  height: 100%;
+}
+.emr-cell.empty {
+  background: var(--soft);
+  color: var(--grey-400);
+  border-style: dashed;
+}
+.emr-cell-model {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sky-600);
+  margin-bottom: 4px;
+}
 
-/* ── EMR Summary Card (Inside Speech-to-Text Tab & Step 4) ── */
+/* ── EMR Summary Card (Matches Pharmacist Portal .emr-field style) ── */
 .emr-summary-card {
-  margin-top: 14px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  margin-top: 12px;
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 20px rgba(34, 51, 73, 0.05);
 }
 .emr-summary-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
 }
 .emr-head-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 0.88rem;
-  color: #0369a1;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--ink);
 }
 .emr-head-title .material-symbols-rounded {
-  font-size: 1.15rem;
-  color: #0284c7;
+  font-size: 1.25rem;
+  color: var(--sky-600);
+  background: var(--sky-50);
+  padding: 6px;
+  border-radius: 999px;
 }
 .emr-model-tag {
-  font-size: 0.72rem;
-  font-weight: 600;
-  background: #f0fdf4;
-  color: #166534;
-  padding: 2px 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: var(--mint-50);
+  color: var(--mint-ink);
+  padding: 3px 10px;
   border-radius: 999px;
-  border: 1px solid #bbf7d0;
+  border: 1px solid #A8EFC3;
 }
 .emr-quick-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 .emr-quick-item {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 6px 10px;
+  background: #F7FAFF;
+  border: 1px solid #DDE9FF;
+  border-radius: 16px;
+  padding: 10px 14px;
 }
 .emr-quick-label {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #64748b;
-  margin-bottom: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--grey-600);
+  margin-bottom: 5px;
+  letter-spacing: 0.03em;
 }
 .emr-quick-label .material-symbols-rounded {
-  font-size: 0.95rem;
+  font-size: 1rem;
+  color: var(--sky-600);
 }
 .emr-quick-val {
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 .emr-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 .emr-tag .material-symbols-rounded {
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 .emr-tag.emr-badge-safe {
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+  background: var(--mint-50);
+  color: var(--mint-ink);
+  border: 1px solid #A8EFC3;
 }
 .emr-tag.emr-badge-alert {
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--rose-50);
+  color: var(--rose-ink);
+  border: 1px solid #FFC7D0;
 }
 .emr-tag.emr-badge-info {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: var(--sky-50);
+  color: var(--sky-600);
+  border: 1px solid #B7D9FF;
 }
 .emr-tag-empty {
-  color: #94a3b8;
+  color: var(--grey-400);
   font-style: italic;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
 }
 .emr-box-row {
-  margin-top: 6px;
-  border-radius: 8px;
-  padding: 7px 10px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  margin-top: 10px;
+  background: #F7FAFF;
+  border: 1px solid #DDE9FF;
+  border-radius: 16px;
+  padding: 11px 14px;
 }
 .emr-box-row.assessment {
-  background: #fafafa;
-  border-left: 3px solid #0284c7;
+  border-left: 4px solid var(--sky-500);
 }
 .emr-box-row.plan {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-left: 3px solid #16a34a;
+  background: var(--mint-50);
+  border-color: #A8EFC3;
+  border-left: 4px solid var(--green-500);
 }
 .emr-box-label {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.73rem;
-  font-weight: 700;
-  color: #475569;
-  margin-bottom: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--grey-600);
+  margin-bottom: 6px;
+  letter-spacing: 0.03em;
 }
 .emr-box-label .material-symbols-rounded {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
+  color: var(--sky-600);
 }
-.emr-box-row.plan .emr-box-label {
-  color: #166534;
+.emr-box-row.plan .emr-box-label,
+.emr-box-row.plan .emr-box-label .material-symbols-rounded {
+  color: var(--mint-ink);
 }
 .emr-box-val {
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: #1e293b;
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--grey-800);
 }
 .emr-box-val.empty {
-  color: #94a3b8;
+  color: var(--grey-400);
   font-style: italic;
 }
 .emr-empty-box {
-  padding: 12px;
+  padding: 16px;
   text-align: center;
-  color: #94a3b8;
-  font-size: 0.82rem;
-  border: 1px dashed #cbd5e1;
-  border-radius: 8px;
+  color: var(--grey-500);
+  font-size: 0.9rem;
+  border: 1.5px dashed var(--grey-300);
+  border-radius: 16px;
   margin-top: 10px;
 }
 
-/* ── PDF Download Buttons ── */
-.stDownloadButton {
-  margin-top: 8px;
+/* Expander styling to match Pharmacist App */
+div[data-testid="stExpander"] details,
+div[data-testid="stExpander"] {
+  border-radius: 18px !important;
+  border: 1px solid var(--line) !important;
+  background-color: #FFFFFF !important;
 }
-.stDownloadButton > button {
-  border-radius: 8px !important;
-  font-size: 0.82rem !important;
-  font-weight: 500 !important;
-  padding: 0.45rem 1rem !important;
-  border: 1px solid #cbd5e1 !important;
-  background: #ffffff !important;
-  color: #0f172a !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-  transition: all 0.2s ease !important;
+div[data-testid="stExpander"] summary p {
+  font-size: 0.93rem !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
 }
-.stDownloadButton > button:hover {
-  background: #f0f9ff !important;
-  border-color: #0284c7 !important;
-  color: #0369a1 !important;
-  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.12) !important;
-  transform: translateY(-1px);
-}
-.stDownloadButton > button .material-symbols-rounded {
-  color: #0284c7 !important;
-  margin-right: 4px;
-}
-
-

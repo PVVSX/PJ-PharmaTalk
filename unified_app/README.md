@@ -2,7 +2,7 @@
 
 `unified_app/` คือส่วนหน้าจอ (Streamlit) ของ PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ ใช้อัดเสียงบทสนทนาระหว่างเภสัชกรกับคนไข้ ส่งไปถอดเสียงและสรุปเป็นเวชระเบียน (EMR) แล้วแสดงผลและประวัติ เอกสารนี้อธิบายโครงสร้างโค้ดและการแบ่งความรับผิดชอบ เพื่อให้ทีมแก้โค้ดได้โดยไม่กระทบส่วนอื่น
 
-ขั้นตอนการรันระบบทั้งหมดดูได้ที่ [`docs/PHARMATALK_SYSTEM_GUIDE.md`](../docs/PHARMATALK_SYSTEM_GUIDE.md)
+ขั้นตอนการรันระบบทั้งหมดดูได้ที่ [`docs/PHARMALOG_SYSTEM_GUIDE.md`](../docs/PHARMALOG_SYSTEM_GUIDE.md)
 
 ## ภาพรวมการทำงาน
 
@@ -60,7 +60,7 @@ record/
 ├── audio/              # ไฟล์เสียง .wav ที่อัดจากหน้า Recorder
 ├── stt/                # transcript (*_stt.txt)
 ├── shared_state.json   # สถานะ consent: WAITING / READY / RECORDING / FINISHED
-└── pharmalog.db (หรือ pharmatalk.db) # บันทึก consent (SQLite)
+└── pharmalog.db        # บันทึก consent (SQLite)
 
 core_api/
 ├── api_queue.db        # คิวงานและผล EMR (SQLite)
@@ -86,7 +86,7 @@ core_api/
 | --- | --- | --- | --- |
 | Groq (สกัด EMR) | `GROQ_API_KEY` | `.groq_api_key` | ใช่ |
 | Firebase | `FIREBASE_CREDENTIALS` (path), `FIREBASE_STORAGE_BUCKET` | `core_api/serviceAccountKey.json` | สำหรับหน้า History และ Cloud backup |
-| Core API URL | `PHARMALOG_CORE_API_URL` (หรือ `PHARMATALK_CORE_API_URL`) | ค่าเริ่มต้น `http://127.0.0.1:8080` | ไม่ |
+| Core API URL | `PHARMALOG_CORE_API_URL` | ค่าเริ่มต้น `http://127.0.0.1:8080` | ไม่ |
 
 รัน `python setup_machine.py` ที่ root เพื่อสร้างไฟล์ key บนเครื่องใหม่ได้ อย่าเขียน key ลงในโค้ดหรือเอกสารใดๆ
 

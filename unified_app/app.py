@@ -22,15 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 RECORD_DIR = ROOT / "record"
 
-try:
-    import pyaudio
-    PYAUDIO_AVAILABLE = True
-except ImportError:
-    PYAUDIO_AVAILABLE = False
-
-
-
 from unified_app.modules.emr_groq import check_credentials
+from unified_app.modules.task_api import get_core_health
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONFIG
@@ -52,29 +45,12 @@ if _css.exists():
 # ══════════════════════════════════════════════════════════════════════════════
 def _init_state() -> None:
     defaults = {
-        # Recorder
-        "recording":           False,
-        "audio_data":          [],
-        "recording_thread":    None,
-        "last_saved_path":     None,
-        "rec_error":           None,
-        "cfg_rate":            44100,
-        "cfg_channels":        1,
-        "cfg_chunk":           1024,
-        "cfg_device_index":    None,
-        "device_options_cache": None,
-        # STT
-        "recognizer":          None,
-        "model_loaded":        False,
-        "model_error":         "",
-        "stt_result":          "",
-        # EMR
-        "emr_conv_input":      "",
-        "emr_result":          None,
-        "emr_error":           "",
-        "emr_history":         [],
-        "audio_task_id":       None,
-        "last_audio_task_id":  None,
+        "last_saved_path":      None,
+        "model_loaded":         False,
+        "emr_conv_input":       "",
+        "emr_result":           None,
+        "audio_task_id":        None,
+        "last_audio_task_id":   None,
         "audio_task_completed": None,
     }
     for k, v in defaults.items():
@@ -90,7 +66,12 @@ _init_state()
 #  SIDEBAR BRANDING + NAVIGATION
 # ══════════════════════════════════════════════════════════════════════════════
 api_ok, _ = check_credentials()
-model_ok  = st.session_state.model_loaded
+try:
+    _core_health = get_core_health()
+    model_ok = bool(_core_health.get("asr_loaded"))
+except Exception:
+    model_ok = False
+st.session_state.model_loaded = model_ok
 wav_count = len(list((RECORD_DIR / "audio").glob("*.wav"))) if (RECORD_DIR / "audio").exists() else 0
 
 # ── Pages (Hidden Native Nav) ──
@@ -148,9 +129,11 @@ with st.sidebar:
     # 3. Status indicator
     if model_ok and api_ok:
         status_html = '<span class="sidebar-status status-ok"><span class="sidebar-status-dot dot-green"></span>ระบบพร้อมใช้งาน</span>'
-        st.markdown(status_html, unsafe_allow_html=True)
+    elif model_ok or api_ok:
+        status_html = '<span class="sidebar-status"><span class="sidebar-status-dot dot-amber"></span>พร้อมบางส่วน (ตรวจสอบตั้งค่า)</span>'
     else:
-        pass
+        status_html = '<span class="sidebar-status"><span class="sidebar-status-dot dot-red"></span>รอการเชื่อมต่อระบบหลังบ้าน</span>'
+    st.markdown(status_html, unsafe_allow_html=True)
 
 # ── Sidebar footer metrics ──
 with st.sidebar:

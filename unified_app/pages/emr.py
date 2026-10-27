@@ -2,11 +2,13 @@
 """Page 3 — EMR Analysis (วิเคราะห์ EMR)"""
 from __future__ import annotations
 
+import html
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
 
+from sqlalchemy import text
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
@@ -63,12 +65,12 @@ with t3L:
             <span class="section-title">บทสนทนา (Transcript)</span>
         </div>""", unsafe_allow_html=True)
         
-        # Load tasks from local DB to populate the dropdown
+        # Load latest 20 tasks from local DB ordered newest-first by SQLite rowid
         db = SessionLocal()
-        tasks = db.query(TaskTracker).limit(20).all()
-        # reverse manually to show newest first if assuming sequential ID or rowid
-        tasks = reversed(tasks)
-        db.close()
+        try:
+            tasks = db.query(TaskTracker).order_by(text("rowid DESC")).limit(20).all()
+        finally:
+            db.close()
         
         task_options = {"--- งานล่าสุดที่กำลังทำ ---": None}
         for t in tasks:
@@ -124,7 +126,7 @@ with t3R:
             ''', unsafe_allow_html=True)
         else:
             for field in EMR_FIELDS:
-                label = field
+                label = html.escape(str(field))
                 val = emr_data.get(field, "-")
                 if isinstance(val, list):
                     val = "\n".join(f"- {x}" for x in val)
@@ -133,10 +135,15 @@ with t3R:
                 else:
                     val = str(val)
 
+                if val != "-" and val.strip():
+                    rendered_val = html.escape(val).replace("\n", "<br>")
+                else:
+                    rendered_val = "<span style='color:var(--grey-400);font-style:italic;'>ไม่มีข้อมูล</span>"
+
                 st.markdown(f"""
                 <div class="emr-field">
                     <div class="emr-field-label">{label}</div>
-                    <div class="emr-field-value">{val if val != "-" else "<span style='color:var(--grey-400);font-style:italic;'>ไม่มีข้อมูล</span>"}</div>
+                    <div class="emr-field-value">{rendered_val}</div>
                 </div>
                 """, unsafe_allow_html=True)
 

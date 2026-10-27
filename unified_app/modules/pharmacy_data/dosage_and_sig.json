@@ -1,0 +1,36 @@
+{
+  "units": [
+    {"standard": "มิลลิกรัม", "variants": ["มก.", "mg", "มิลลิกรับ", "มิติกรรม"]},
+    {"standard": "มิลลิลิตร", "variants": ["มล.", "ml", "มิลลิลิต"]},
+    {"standard": "ซีซี", "variants": ["cc", "c.c."]},
+    {"standard": "กรัม", "variants": ["g", "gm"]},
+    {"standard": "ช้อนชา", "variants": ["tsp"]},
+    {"standard": "ช้อนโต๊ะ", "variants": ["tbsp"]},
+    {"standard": "ยูนิต", "variants": ["IU", "unit"]}
+  ],
+  "forms": [
+    {"standard": "เม็ด", "misheard": ["เมตร", "เหม็ด"]},
+    {"standard": "แคปซูล", "misheard": ["แคปซูน", "แก๊ปซูล"]},
+    {"standard": "ซอง", "misheard": ["สอง", "ส่อง"]},
+    {"standard": "แผง", "misheard": ["เป็นพผง", "แพง"]},
+    {"standard": "หลอดใหญ่", "misheard": ["หล่อใหญ่"]},
+    {"standard": "ขวดละ", "misheard": ["ขมุดขมุด", "ขวดล่ะ"]},
+    {"standard": "โลชั่น", "misheard": ["โมชั่น"]},
+    {"standard": "ครีม", "misheard": ["คดี"]},
+    {"standard": "ดรอปไซส์", "misheard": ["รอบไซน์"]}
+  ],
+  "regimen": [
+    {"standard": "ก่อนอาหาร", "misheard": ["กลอนอาหาร", "กอนอาหาร"]},
+    {"standard": "หลังอาหารทันที", "misheard": ["หลังอาหารทั้นที"]},
+    {"standard": "หลังอาหาร", "misheard": ["หลังอาหาน"]},
+    {"standard": "ก่อนนอน", "misheard": ["กอนนอน"]},
+    {"standard": "ต่อมื้อ", "misheard": ["ต่อมือ", "ตอมือ"]},
+    {"standard": "ทานตามอาการ", "misheard": ["ทานตามประกัน", "ทันตามอาการ"]},
+    {"standard": "ลดการหลั่งกรด", "misheard": ["รถกำลังกด", "รถการรังกด", "ลดการรังกด"]},
+    {"standard": "ลดกรด", "misheard": ["รถกด"]},
+    {"standard": "ลดไข้", "misheard": ["รถไข้"]},
+    {"standard": "ลดน้ำมูก", "misheard": ["รถน้ำมูก", "รถน้ํามูก"]},
+    {"standard": "ลดอาการปวด", "misheard": ["รถอาการปวด", "รถปวด"]},
+    {"standard": "ของแสลง", "misheard": ["ของแถลง"]}
+  ]
+}

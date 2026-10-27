@@ -4,7 +4,10 @@ import os
 import time
 from typing import Any
 from pathlib import Path
-from groq import Groq
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None  # type: ignore
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -28,10 +31,6 @@ def get_groq_api_key() -> str:
             ROOT / "pharmalog_offline_assets" / "api_keys" / ".groq_api_key",
             ROOT.parent / "pharmalog_offline_assets" / ".groq_api_key",
             ROOT.parent / "pharmalog_offline_assets" / "api_keys" / ".groq_api_key",
-            ROOT / "pharmatalk_offline_assets" / ".groq_api_key",
-            ROOT / "pharmatalk_offline_assets" / "api_keys" / ".groq_api_key",
-            ROOT.parent / "pharmatalk_offline_assets" / ".groq_api_key",
-            ROOT.parent / "pharmatalk_offline_assets" / "api_keys" / ".groq_api_key",
         ]
         for p in candidates:
             if p.exists():
@@ -125,10 +124,40 @@ def _extract_json(raw: str) -> dict[str, Any]:
     return {}
 
 
+def _validate_dialogue_field(dialogue: str) -> str:
+    if not dialogue or dialogue.strip() in ("", "-"):
+        return "-"
+    try:
+        from pipeline import validate_speaker_roles
+    except ImportError:
+        try:
+            from lab.pipeline import validate_speaker_roles
+        except ImportError:
+            return dialogue
+    # Preserve colon format if input uses colon format
+    use_colon = bool(re.search(r"(?:เภสัชกร|ผู้ป่วย|คนไข้)\s*:", dialogue)) and not bool(
+        re.search(r"\[(?:เภสัชกร|ผู้ป่วย|คนไข้)\]", dialogue)
+    )
+    validated = validate_speaker_roles(dialogue)
+    if use_colon:
+        out_lines = []
+        for line in validated.split("\n"):
+            m = re.match(r"^\[(เภสัชกร|ผู้ป่วย)\]\s*(.*)$", line.strip())
+            if m:
+                out_lines.append(f"{m.group(1)}: {m.group(2)}")
+            elif line.strip():
+                out_lines.append(line.strip())
+        return "\n".join(out_lines)
+    return validated
+
+
 def _parse_fields(raw: str) -> dict[str, str]:
     data = _extract_json(raw)
     if data:
-        return {f: str(data.get(f) or "-").strip() or "-" for f in EMR_FIELDS}
+        parsed = {f: str(data.get(f) or "-").strip() or "-" for f in EMR_FIELDS}
+        if parsed.get("บทสนทนาที่จัดเรียงแล้ว", "-") != "-":
+            parsed["บทสนทนาที่จัดเรียงแล้ว"] = _validate_dialogue_field(parsed["บทสนทนาที่จัดเรียงแล้ว"])
+        return parsed
 
     # Fallback: regex parse
     text = (raw or "").strip()
@@ -145,8 +174,11 @@ def _parse_fields(raw: str) -> dict[str, str]:
         m = re.search(pattern, text)
         if m:
             value = m.group("value").strip().strip(',"\' \n\r\t')
-            value = re.sub(r"\n+", " ", value).strip()
+            if field != "บทสนทนาที่จัดเรียงแล้ว":
+                value = re.sub(r"\n+", " ", value).strip()
             result[field] = value or "-"
+    if result.get("บทสนทนาที่จัดเรียงแล้ว", "-") != "-":
+        result["บทสนทนาที่จัดเรียงแล้ว"] = _validate_dialogue_field(result["บทสนทนาที่จัดเรียงแล้ว"])
     return result
 
 
@@ -162,10 +194,13 @@ def _is_sparse(result: dict[str, str], conversation: str) -> bool:
 
 # ── API call ──────────────────────────────────────────────────
 def _call_groq(api_key: str, model_name: str, prompt: str) -> str:
+    if Groq is None:
+        raise RuntimeError("ยังไม่ได้ติดตั้งแพ็กเกจ groq (pip install groq)")
     client = Groq(api_key=api_key)
     models_to_try = [
         model_name,
-        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-120b",
+        "llama-3.3-70b-versatile",
         "openai/gpt-oss-20b",
     ]
     # Remove duplicates while preserving order
@@ -215,7 +250,7 @@ def extract_emr(conversation: str) -> dict[str, str]:
         return {f: "-" for f in EMR_FIELDS}
 
     api_key = get_groq_api_key()
-    model_name = "qwen/qwen3.8-27b"
+    model_name = "openai/gpt-oss-120b"
 
     if not api_key:
         raise RuntimeError("ไม่พบ Groq API Key (ตั้งค่า GROQ_API_KEY หรือ .groq_api_key)")

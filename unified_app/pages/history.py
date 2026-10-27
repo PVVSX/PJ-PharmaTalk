@@ -2,6 +2,7 @@
 """Page — History (ประวัติข้อมูล Cloud) — v2 Improved UX"""
 from __future__ import annotations
 
+import html as html_lib
 import json
 import sys
 from collections import OrderedDict
@@ -94,14 +95,26 @@ def _render_record_card(rec: dict) -> None:
     tags_html = ""
     if has_emr and isinstance(emr_data, dict):
         tags = []
-        for key in ("อาการสำคัญ", "การวินิจฉัย", "ยาที่จ่าย"):
+        tag_keys = (
+            "บันทึกทางการแพทย์",
+            "คำแนะนำจากเภสัช",
+            "ประวัติการแพ้ยา",
+            "โรคประจำตัว",
+            "ประวัติการจ่ายยา",
+            # Legacy fallback keys
+            "อาการสำคัญ",
+            "การวินิจฉัย",
+            "ยาที่จ่าย",
+        )
+        for key in tag_keys:
             val = emr_data.get(key, "")
             if val and val != "-":
                 items = val if isinstance(val, list) else [val]
                 for v in items[:2]:
                     s = str(v).strip()
                     if s and s != "-":
-                        tags.append(s if len(s) < 30 else s[:27] + "...")
+                        short_s = s if len(s) < 30 else s[:27] + "..."
+                        tags.append(html_lib.escape(short_s))
         if tags:
             tags_html = '<div class="history-tags">' + "".join(
                 f'<span class="history-tag">{t}</span>' for t in tags[:4]
@@ -113,9 +126,10 @@ def _render_record_card(rec: dict) -> None:
         clean = stt_text.replace(
             "--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---", ""
         ).strip()
-        stt_preview = clean[:150].strip()
+        raw_preview = clean[:150].strip()
         if len(clean) > 150:
-            stt_preview += "..."
+            raw_preview += "..."
+        stt_preview = html_lib.escape(raw_preview)
 
     # ── Render card ──
     with st.container(border=True):
@@ -147,6 +161,11 @@ def _render_record_card(rec: dict) -> None:
             try:
                 bucket = storage.bucket()
                 blob = bucket.blob(f"recordings/{audio_filename}")
+                if not blob.exists() and "_" in audio_filename:
+                    alt_name = audio_filename.split("_", 1)[1]
+                    alt_blob = bucket.blob(f"recordings/{alt_name}")
+                    if alt_blob.exists():
+                        blob = alt_blob
                 if blob.exists():
                     url = blob.generate_signed_url(expiration=timedelta(hours=1))
                     st.audio(url)
@@ -158,16 +177,17 @@ def _render_record_card(rec: dict) -> None:
         # Expandable: Raw STT
         if has_stt:
             with st.expander("ข้อความถอดเสียงดิบ (ไม่ได้แยกผู้พูด)", expanded=False):
+                safe_stt = html_lib.escape(str(stt_text)).replace("\n", "<br>")
                 st.markdown(
                     f"<div style='background:#F8FAFC;padding:15px;border-radius:8px;"
                     f"border:1px solid #E2E8F0;color:#1E293B;font-size:0.95rem;"
-                    f"line-height:1.6;'>{stt_text}</div>",
+                    f"line-height:1.6;'>{safe_stt}</div>",
                     unsafe_allow_html=True,
                 )
 
         # Expandable: Dialogue + EMR
         if has_emr:
-            dialogue = emr_data.get("บทสนทนาที่จัดเรียงแล้ว")
+            dialogue = emr_data.get("บทสนทนาที่จัดเรียงแล้ว") if isinstance(emr_data, dict) else None
             if dialogue and dialogue != "-":
                 with st.expander("บทสนทนา (AI จัดเรียงใหม่)", expanded=False):
                     lines_html = (
@@ -175,14 +195,15 @@ def _render_record_card(rec: dict) -> None:
                         "border:1px solid #E2E8F0;color:#1E293B;font-size:0.95rem;"
                         "line-height:1.6;'>"
                     )
-                    for line in dialogue.split("\n"):
+                    for line in str(dialogue).split("\n"):
                         line = line.strip()
                         if not line:
                             continue
+                        safe_line = html_lib.escape(line)
                         if any(r in line for r in ("เภสัชกร:", "ผู้ป่วย:", "คนไข้:")):
-                            lines_html += f"<div style='margin-bottom:4px;'><strong>{line}</strong></div>"
+                            lines_html += f"<div style='margin-bottom:4px;'><strong>{safe_line}</strong></div>"
                         else:
-                            lines_html += f"<div style='margin-bottom:4px;padding-left:15px;'>{line}</div>"
+                            lines_html += f"<div style='margin-bottom:4px;padding-left:15px;'>{safe_line}</div>"
                     lines_html += "</div>"
                     st.markdown(lines_html, unsafe_allow_html=True)
 

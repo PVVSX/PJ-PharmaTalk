@@ -77,7 +77,7 @@ if ASR_AVAILABLE:
 
 
 # --- BACKGROUND WORKER WITH RETRY ---
-async def process_audio_task(task_id: str, audio_path: str):
+async def process_audio_task(task_id: str, audio_path: str, original_filename: str = ""):
     db = SessionLocal()
     task = db.query(TaskTracker).filter(TaskTracker.id == task_id).first()
     if not task:
@@ -86,116 +86,123 @@ async def process_audio_task(task_id: str, audio_path: str):
 
     max_retries = 3
     base_wait = 5 # seconds
+    recorded_filename = original_filename or os.path.basename(audio_path)
 
-    # Step 1: STT Processing
     try:
-        task.status = "STT_PROCESSING"
-        db.commit()
-        
-        # Call STT based strictly on configuration
-        with open(audio_path, "rb") as f:
-            audio_bytes = f.read()
-            
-        # Strictly use Typhoon; throw error if not available
-        if not getattr(asr_recognizer, "is_loaded", False) or not ASR_AVAILABLE:
-            raise RuntimeError("Typhoon ASR is configured but the module/model is not available.")
-        main_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
-        # The STT module returns error text instead of raising; do not treat it as a transcript.
-        if is_stt_error(main_result):
-            raise RuntimeError(f"Main STT Failed: {main_result}")
-        if not (main_result or "").strip():
-            raise RuntimeError("ไม่พบเสียงพูดในไฟล์เสียง (transcript ว่างเปล่า)")
-
-        stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}"
-        
-        task.stt_text = stt_result
-        task.status = "STT_DONE"
-        db.commit()
-        
-        # Save to Firestore EARLY so it shows up in History page immediately
-        firestore_db = get_firestore_client()
-        if firestore_db:
-            try:
-                doc_ref = firestore_db.collection("patients_emr").document(task_id)
-                doc_ref.set({
-                    "task_id": task_id,
-                    "stt_text": task.stt_text,
-                    "emr_data": {},
-                    "audio_filename": os.path.basename(audio_path),
-                    "created_at": firestore.SERVER_TIMESTAMP,
-                    "status": "EMR_PROCESSING"
-                })
-                print(f"Task {task_id} saved to Firestore (STT only) successfully.")
-            except Exception as fs_error:
-                print(f"Warning: Failed to save STT to Firestore: {fs_error}")
-
-    except Exception as e:
-        task.status = "ERROR"
-        task.error_message = f"STT Failed: {str(e)}"
-        db.commit()
-        db.close()
-        return # Optionally implement retry for STT here too
-
-    # Step 2: EMR Processing (LLM) with Retry Mechanism for API failure
-    for attempt in range(max_retries):
+        # Step 1: STT Processing
         try:
-            task.status = "EMR_PROCESSING"
+            task.status = "STT_PROCESSING"
             db.commit()
             
-            # Call actual Groq extraction
-            emr_dict = await run_in_threadpool(extract_emr, task.stt_text)
-            emr_result = json.dumps(emr_dict, ensure_ascii=False)
+            # Call STT based strictly on configuration
+            with open(audio_path, "rb") as f:
+                audio_bytes = f.read()
+                
+            # Strictly use Typhoon; throw error if not available
+            if not getattr(asr_recognizer, "is_loaded", False) or not ASR_AVAILABLE:
+                raise RuntimeError("Typhoon ASR is configured but the module/model is not available.")
+            main_result = await run_in_threadpool(transcribe_audio_bytes, asr_recognizer, audio_bytes)
+            # The STT module returns error text instead of raising; do not treat it as a transcript.
+            if is_stt_error(main_result):
+                raise RuntimeError(f"Main STT Failed: {main_result}")
+            if not (main_result or "").strip():
+                raise RuntimeError("ไม่พบเสียงพูดในไฟล์เสียง (transcript ว่างเปล่า)")
+
+            stt_result = f"--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---\n{main_result}"
             
-            task.emr_json = emr_result
-            task.status = "COMPLETED"
+            task.stt_text = stt_result
+            task.status = "STT_DONE"
             db.commit()
             
-            # Update to Firestore
+            # Save to Firestore EARLY so it shows up in History page immediately
             firestore_db = get_firestore_client()
             if firestore_db:
                 try:
                     doc_ref = firestore_db.collection("patients_emr").document(task_id)
-                    doc_ref.update({
-                        "emr_data": emr_dict,
-                        "status": "COMPLETED"
+                    doc_ref.set({
+                        "task_id": task_id,
+                        "stt_text": task.stt_text,
+                        "emr_data": {},
+                        "audio_filename": recorded_filename,
+                        "created_at": firestore.SERVER_TIMESTAMP,
+                        "status": "EMR_PROCESSING"
                     })
-                    print(f"Task {task_id} EMR updated to Firestore successfully.")
+                    print(f"Task {task_id} saved to Firestore (STT only) successfully.")
                 except Exception as fs_error:
-                    print(f"Warning: Failed to update EMR to Firestore: {fs_error}")
-            
-            break # Success!
+                    print(f"Warning: Failed to save STT to Firestore: {fs_error}")
+
         except Exception as e:
-            if attempt < max_retries - 1:
-                wait_time = base_wait * (2 ** attempt) # Exponential backoff: 5s, 10s...
-                task.retry_count += 1
-                task.status = f"RETRYING_EMR_IN_{wait_time}S"
-                task.error_message = str(e)
-                db.commit()
-                await asyncio.sleep(wait_time)
-            else:
-                task.status = "ERROR"
-                task.error_message = f"EMR API Failed after retries: {str(e)}"
+            task.status = "ERROR"
+            task.error_message = f"STT Failed: {str(e)}"
+            db.commit()
+            return
+
+        # Step 2: EMR Processing (LLM) with Retry Mechanism for API failure
+        for attempt in range(max_retries):
+            try:
+                task.status = "EMR_PROCESSING"
                 db.commit()
                 
-                # Update status in Firestore
+                # Call actual Groq extraction
+                emr_dict = await run_in_threadpool(extract_emr, task.stt_text)
+                emr_result = json.dumps(emr_dict, ensure_ascii=False)
+                
+                task.emr_json = emr_result
+                task.status = "COMPLETED"
+                db.commit()
+                
+                # Update to Firestore
                 firestore_db = get_firestore_client()
                 if firestore_db:
                     try:
                         doc_ref = firestore_db.collection("patients_emr").document(task_id)
                         doc_ref.update({
-                            "status": "EMR_ERROR",
-                            "error_message": task.error_message
+                            "emr_data": emr_dict,
+                            "status": "COMPLETED"
                         })
+                        print(f"Task {task_id} EMR updated to Firestore successfully.")
                     except Exception as fs_error:
-                        pass
-
-    db.close()
+                        print(f"Warning: Failed to update EMR to Firestore: {fs_error}")
+                
+                break # Success!
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = base_wait * (2 ** attempt) # Exponential backoff: 5s, 10s...
+                    task.retry_count += 1
+                    task.status = f"RETRYING_EMR_IN_{wait_time}S"
+                    task.error_message = str(e)
+                    db.commit()
+                    await asyncio.sleep(wait_time)
+                else:
+                    task.status = "ERROR"
+                    task.error_message = f"EMR API Failed after retries: {str(e)}"
+                    db.commit()
+                    
+                    # Update status in Firestore
+                    firestore_db = get_firestore_client()
+                    if firestore_db:
+                        try:
+                            doc_ref = firestore_db.collection("patients_emr").document(task_id)
+                            doc_ref.update({
+                                "status": "EMR_ERROR",
+                                "error_message": task.error_message
+                            })
+                        except Exception as fs_error:
+                            pass
+    finally:
+        db.close()
+        if audio_path and os.path.exists(audio_path):
+            try:
+                os.remove(audio_path)
+            except OSError:
+                pass
 
 
 @app.post("/upload-audio")
 async def upload_audio(background_tasks: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(get_db)):
     task_id = str(uuid.uuid4())
-    file_path = os.path.join(AUDIO_DIR, f"{task_id}_{file.filename}")
+    safe_filename = os.path.basename(file.filename or "audio.wav")
+    file_path = os.path.join(AUDIO_DIR, f"{task_id}_{safe_filename}")
     
     # 1. Save file safely first
     with open(file_path, "wb") as buffer:
@@ -211,7 +218,7 @@ async def upload_audio(background_tasks: BackgroundTasks, file: UploadFile = Fil
     db.commit()
     
     # 3. Trigger Background Processing
-    background_tasks.add_task(process_audio_task, task_id, file_path)
+    background_tasks.add_task(process_audio_task, task_id, file_path, safe_filename)
     
     return {"message": "Audio received and queued", "task_id": task_id}
 
@@ -232,5 +239,5 @@ async def get_task_status(task_id: str, db: Session = Depends(get_db)):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PHARMALOG_CORE_API_PORT", os.environ.get("PHARMATALK_CORE_API_PORT", "8080")))
+    port = int(os.environ.get("PHARMALOG_CORE_API_PORT", "8080"))
     uvicorn.run(app, host="0.0.0.0", port=port)

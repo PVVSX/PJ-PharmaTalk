@@ -13,7 +13,7 @@
     {"standard": "แคปซูล", "misheard": ["แคปซูน", "แก๊ปซูล"]},
     {"standard": "ซอง", "misheard": ["สอง", "ส่อง"]},
     {"standard": "แผง", "misheard": ["เป็นพผง", "แพง"]},
-    {"standard": "หลอด", "misheard": ["หล่อใหญ่", "หลอดใหญ่"]},
+    {"standard": "หลอดใหญ่", "misheard": ["หล่อใหญ่"]},
     {"standard": "ขวดละ", "misheard": ["ขมุดขมุด", "ขวดล่ะ"]},
     {"standard": "โลชั่น", "misheard": ["โมชั่น"]},
     {"standard": "ครีม", "misheard": ["คดี"]},

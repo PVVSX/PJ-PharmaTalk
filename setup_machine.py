@@ -41,7 +41,7 @@ def main():
     print("\n" + "="*60)
     print("[Completed] การตั้งค่าเบื้องต้นเสร็จสิ้น")
     print("อย่าลืมตรวจสอบโมเดล Typhoon ASR (.nemo) ว่ามีอยู่ในโฟลเดอร์ models/ แล้วหรือไม่")
-    print("จากนั้นสามารถรันระบบด้วย ./run_main_app.sh หรือ ./run_lab.sh ได้เลย")
+    print("จากนั้นสามารถรันระบบตามคำสั่งใน README.md หรือรัน ./run_lab.sh ได้เลย")
     print("="*60 + "\n")
 
 

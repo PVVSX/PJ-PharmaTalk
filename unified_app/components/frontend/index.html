@@ -166,7 +166,7 @@
       if (!event.data || event.data.type !== "streamlit:render" || initialized) return;
       initialized = true;
       const seconds = Number(event.data.args.cooldown_seconds || 0);
-      if (event.data.args.api_url) apiUrl = event.data.args.api_url;
+      if ("api_url" in event.data.args) apiUrl = event.data.args.api_url;
       
       if (seconds > 0) {
         scheduleAutomaticStart(seconds);

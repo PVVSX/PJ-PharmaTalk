@@ -8,9 +8,6 @@
 
 ```
 result_record/
-├── launch_streamlit_emr_app.bat # เปิดแอป EMR บน Windows (ดับเบิลคลิก)
-├── demo_app/                  # wrapper + requirements สำหรับ Streamlit
-├── streamlit_emr_app.py       # แอป EMR หลัก
 ├── diarize_final.py           # Speaker diarization (pyannote 3.1)
 ├── speech_to_text.py          # ถอดเสียง Typhoon Isan ASR
 ├── nemo_asr_isolated_worker.py # NeMo worker (subprocess บน Windows)
@@ -19,29 +16,16 @@ result_record/
 ├── docs/                      # คู่มือและตารางประเมิน
 ├── model_speech_to_text/      # โมเดล typhoon-isan-asr-realtime.nemo
 ├── data/                      # ข้อมูลทดสอบ (เสียง, transcript, 500 เคส)
-├── report/                    # ผลการประเมินและรายงาน
-└── patient_info/              # ผลลัพธ์ runtime จาก demo app
+├── report/                    # ผลการประเมินและรายงาน (รวม Ground_truth.xlsx)
+└── patient_info/              # ข้อมูลเวชระเบียนผู้ป่วยรายเคส
 ```
 
-## วิธีรัน Demo App
+## วิธีเปิดเว็บแอปหลักของโปรเจกต์ (PharmaLog AI)
 
-### Windows (แนะนำ)
-
-ดับเบิลคลิก `launch_streamlit_emr_app.bat` ที่โฟลเดอร์โปรเจกต์ — สคริปต์จะเปลี่ยนไปโฟลเดอร์ที่ถูกต้อง ใช้ Python จาก `.venv`/`venv` ถ้ามี ติดตั้งแพ็กเกจอัตโนมัติเมื่อยังไม่มี Streamlit แล้วเปิดแอปที่ `http://localhost:8501`
-
-### Command line
-
-```bash
-cd result_record
-python -m pip install -r demo_app/requirements.txt
-set GEMINI_API_KEY=your_key
-set HF_TOKEN=your_huggingface_token
-streamlit run streamlit_emr_app.py
-```
-
-ทางเลือกเทียบเท่า: `streamlit run demo_app/app.py` (เรียกโค้ดจาก `streamlit_emr_app.py`)
-
-รายละเอียด: [demo_app/README.md](demo_app/README.md)
+สำหรับการใช้งานเว็บแอปพลิเคชัน ให้รันจากโฟลเดอร์หลักของโปรเจกต์ `PharmaLog/`:
+- **Pharmacist Portal**: `streamlit run pharmacist_app.py --server.port 8501`
+- **Unified Back-Office**: `streamlit run unified_app/app.py --server.port 8515`
+- **PharmaLog AI Lab**: `streamlit run lab/app.py --server.port 8525` (หรือรัน `run_lab.bat`)
 
 ## สคริปต์ Pipeline (รันแยก)
 
