@@ -26,7 +26,13 @@ try:
 except Exception:
   upload_file_to_storage = None
 
-if not st.session_state.get("is_backoffice", False) or st.session_state.get("audio_task_id"):
+should_autorefresh = False
+if st.session_state.get("audio_task_id"):
+    should_autorefresh = True
+elif not st.session_state.get("is_backoffice", False) and not st.session_state.get("pending_audio"):
+    should_autorefresh = True
+
+if should_autorefresh:
     st_autorefresh(interval=2000, key="recorder_state_refresh")
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -92,18 +98,6 @@ with t1L:
                 # Pharmacist app uses shared state from consent app
                 current_state = get_state()
                 active_set_state = set_state
-                
-                if current_state == "WAITING":
-                    st.markdown('''
-                    <div class="record-callout warning">
-                      <span class="material-symbols-rounded">privacy_tip</span>
-                      <div>
-                        <strong>รอการยืนยันความยินยอม</strong>
-                        <div>กรุณาให้คนไข้กดยืนยันในหน้า Consent (หน้าจอด้านนอก) ก่อน ระบบจึงจะเปิดให้บันทึกเสียง</div>
-                      </div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                    return
 
             task_id = st.session_state.get("audio_task_id")
             if task_id:
@@ -145,7 +139,6 @@ with t1L:
                     st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
                     return
 
-
             if current_state == "FINISHED":
                 st.markdown('''
                 <div class="record-callout success">
@@ -157,15 +150,73 @@ with t1L:
                 </div>
                 ''', unsafe_allow_html=True)
                 if st.button("บันทึกผู้ป่วยรายใหม่", icon=":material/refresh:", type="primary", use_container_width=True):
+                    st.session_state.pending_audio = None
                     active_set_state("READY" if is_backoffice else "WAITING")
                     st.rerun()
                 st.markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
                 return
 
+            pending_audio = st.session_state.get("pending_audio")
+            if pending_audio:
+                st.markdown('''
+                <div class="record-callout info">
+                  <span class="material-symbols-rounded">check_circle</span>
+                  <div>
+                    <strong>บันทึกเสียงเสร็จสิ้นแล้ว</strong>
+                    <div>ระบบบันทึกไฟล์เสียงไว้ในเครื่องเรียบร้อยแล้ว ตรวจสอบเสียงและกดปุ่ม <b>อัปโหลดเพื่อประมวลผล</b> เพื่อเริ่มขั้นตอนถอดเสียงและสรุปเวชระเบียน</div>
+                  </div>
+                </div>
+                ''', unsafe_allow_html=True)
+
+                if Path(pending_audio.get("path", "")).exists():
+                    st.audio(str(pending_audio["path"]))
+                elif pending_audio.get("bytes"):
+                    st.audio(pending_audio["bytes"], format="audio/wav")
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                col_up, col_cancel = st.columns([3, 2], gap="small")
+                with col_up:
+                    if st.button("อัปโหลดเพื่อประมวลผล (STT & EMR)", icon=":material/cloud_upload:", type="primary", use_container_width=True):
+                        try:
+                            task_id = queue_audio(pending_audio["bytes"], pending_audio["filename"])
+                            st.session_state.audio_task_id = task_id
+                            st.session_state.last_audio_task_id = task_id
+                            st.session_state.pending_audio = None
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(f"ส่งงานไป Core API ไม่สำเร็จ: {exc}")
+                with col_cancel:
+                    if st.button("อัดใหม่ (ยกเลิกไฟล์นี้)", icon=":material/refresh:", use_container_width=True):
+                        try:
+                            Path(pending_audio.get("path", "")).unlink(missing_ok=True)
+                        except Exception:
+                            pass
+                        st.session_state.pending_audio = None
+                        st.session_state.last_saved_path = None
+                        st.session_state.last_audio_hash = None
+                        st.session_state.audio_key_counter = st.session_state.get('audio_key_counter', 0) + 1
+                        active_set_state("READY" if is_backoffice else "READY")
+                        st.rerun()
+                st.markdown("<div style='min-height: 80px;'></div>", unsafe_allow_html=True)
+                return
+
+            if not is_backoffice and current_state == "WAITING":
+                st.markdown('''
+                <div class="record-callout warning">
+                  <span class="material-symbols-rounded">privacy_tip</span>
+                  <div>
+                    <strong>รอการยืนยันความยินยอม</strong>
+                    <div>กรุณาให้คนไข้กดยืนยันในหน้า Consent (หน้าจอด้านนอก) ก่อน ระบบจึงจะเปิดให้บันทึกเสียง</div>
+                  </div>
+                </div>
+                ''', unsafe_allow_html=True)
+                return
+
             st.markdown('''
             <div class="workflow-guide">
-              <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 1</strong><small>กดอัดเสียงและรอระบบถอดเสียง</small></div></div>
-              <div class="workflow-step"><span class="material-symbols-rounded">arrow_forward</span><div><strong>ขั้นที่ 2</strong><small>ไปที่หน้าเวชระเบียนเพื่อดูสรุปผล</small></div></div>
+              <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 1</strong><small>กดอัดเสียงสนทนา</small></div></div>
+              <div class="workflow-step"><span class="material-symbols-rounded">cloud_upload</span><div><strong>ขั้นที่ 2</strong><small>ตรวจสอบเสียงและกดยืนยันอัปโหลด</small></div></div>
+              <div class="workflow-step"><span class="material-symbols-rounded">assignment</span><div><strong>ขั้นที่ 3</strong><small>ดูผลสรุปในหน้าเวชระเบียน</small></div></div>
             </div>
             ''', unsafe_allow_html=True)
 
@@ -218,14 +269,11 @@ with t1L:
 
                     audio_path.write_bytes(audio_bytes)
                     st.session_state.last_saved_path = str(audio_path)
-
-                    try:
-                      st.session_state.audio_task_id = queue_audio(audio_bytes, audio_filename)
-                      st.session_state.last_audio_task_id = st.session_state.audio_task_id
-                      st.info("บันทึกไฟล์ในเครื่องแล้ว และส่งงานไปประมวลผลเบื้องหลัง")
-                    except Exception as exc:
-                      st.error(f"ส่งงานไป Core API ไม่สำเร็จ: {exc}")
-                      st.warning(f"ไฟล์ถูกเก็บไว้ในเครื่องแล้ว: {audio_filename}")
+                    st.session_state.pending_audio = {
+                        "bytes": audio_bytes,
+                        "filename": audio_filename,
+                        "path": str(audio_path),
+                    }
                     st.session_state.audio_key_counter = st.session_state.get('audio_key_counter', 0) + 1
                     st.rerun()
 
