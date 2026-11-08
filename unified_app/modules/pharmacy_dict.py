@@ -236,9 +236,11 @@ def clean_thai_unicode(text: str) -> Tuple[str, List[Dict[str, Any]]]:
     text = single_token_loop.sub(r"\1", text)
 
     # 10. ตัดตัวอักษรไทยเดี่ยวที่เบิ้ลซ้ำผิดปกติจากการลากเสียง (เช่น มอลลลลล -> มอล, ครับบบบบ -> ครับ)
-    if re.search(r"([ก-๙])\1{2,}", text):
-        cnt = len(re.findall(r"([ก-๙])\1{2,}", text))
-        text = re.sub(r"([ก-๙])\1{2,}", r"\1", text)
+    # ไม่รวมเลขไทย (๐-๙) และไม้ยมก เพื่อไม่ให้ "๑๐๐๐" กลายเป็น "๑๐"
+    _repeat_char = r"([\u0e01-\u0e45\u0e47-\u0e4e])\1{2,}"
+    if re.search(_repeat_char, text):
+        cnt = len(re.findall(_repeat_char, text))
+        text = re.sub(_repeat_char, r"\1", text)
         changes.append({
             "tier": "0-repetition",
             "original": "ตัวอักษรเบิ้ลซ้ำ",
@@ -326,6 +328,8 @@ def _load_dosage_and_sig() -> Dict[str, List[Dict[str, Any]]]:
 _CONTEXT_ONLY_SIG_WORDS = {
     "เมตร", "สอง", "ส่อง", "แพง", "คดี", "โมชั่น",
     "มก.", "mg", "มล.", "ml", "cc", "c.c.", "g", "gm", "tsp", "tbsp", "IU", "unit",
+    # "รถ..." ต้องผ่านกฎ Layer 3 ที่กันบริบทยานพาหนะ (ขับรถ/เมารถ) เท่านั้น
+    "รถกด", "รถไข้", "รถน้ำมูก", "รถน้ํามูก", "รถปวด", "รถอาการปวด",
 }
 
 
@@ -367,9 +371,13 @@ SAFE_DRUG_NAMES: Dict[str, str] = {
     "เซทิริซีน":            "Cetirizine",
     "เซทิริซิน":            "Cetirizine",
     "อม็อกซี่คือดิน":        "Amoxicillin-Clavulanate",
-    "อมซี่คอมโมโดนิก":      "Amoxicillin-Clavulanic",
+    "อมซี่คอมโมโดนิก":      "Amoxicillin-Clavulanate",
     "อัมซี่ลิน":            "Amoxicillin",
     "อะม็อกซี่":            "Amoxicillin",
+    "อะม็อกซี่ซิลลิน":       "Amoxicillin",
+    "อะม็อกซีซิลลิน":        "Amoxicillin",
+    "อะม็อกซิซิลลิน":        "Amoxicillin",
+    "เครมิล":               "Kremil-S",
     "โคชีซีน":              "Colchicine",
     "โคซีซีน":              "Colchicine",
     "โคซีม":               "Colchicine",
@@ -392,9 +400,9 @@ SAFE_DRUG_NAMES: Dict[str, str] = {
     "เด็กโตเมอร์":         "Dextromethorphan",
     "อีโดลิค":             "Etodolac",
     "อีโตลิค":             "Etodolac",
-    "ไอฟีลีน":             "Difelene",
-    "โอฟี่ลั่น":            "Difelene",
-    "ไดฟีลีน":             "Diclofenac",
+    "ไอฟีลีน":             "Difelene (Diclofenac)",
+    "โอฟี่ลั่น":            "Difelene (Diclofenac)",
+    "ไดฟีลีน":             "Difelene (Diclofenac)",
     "ไดโคฟีน":             "Diclofenac",
     "ไดโคลฟีแนค":          "Diclofenac",
     "ไดโคลฟี":             "Diclofenac",
@@ -402,24 +410,24 @@ SAFE_DRUG_NAMES: Dict[str, str] = {
     "ไพรอกซีแคม":          "Piroxicam",
     "ล็อกซีแคมป์":          "Piroxicam",
     "ไพร็อกซิแคมป์":        "Piroxicam",
-    "ไดแคม":               "Dicam",
+    "ไดแคม":               "Dicam (Piroxicam)",
     "เบียร์แพงป์":          "Dicam (Piroxicam)",
-    "เบียร์แพง":           "Dicam (Piroxicam)",
     "ค่าเชื้อ":            "ฆ่าเชื้อ",
     "มิติกรรม":            "มิลลิกรัม",
+    "ห้ามรอมิติกรรม":       "ห้าร้อยมิลลิกรัม",
+    "ห้ามมิติกรรม":         "ห้ามิลลิกรัม",
     "ขมุดขมุด":            "ขวดละ",
     "เป็นพผง":             "เป็นแผง",
     "ทานตามประกัน":         "ทานตามอาการ",
     "ของแถลง":             "ของแสลง",
     "ปวดฝัน":              "ปวดฟัน",
     "ไปทอนออก":            "ไปถอนออก",
-    "เคมีล":               "เคมิล (Kremil)",
-    "เคมิล็อต":            "เคมิล (Kremil)",
-    "โอมิคราโซ":           "โอเมพราโซล",
-    "โอมิปาโซ":            "โอเมพราโซล",
-    "โอมิโฟ":              "โอเมพราโซล",
+    "เคมีล":               "Kremil-S",
+    "เคมิล็อต":            "Kremil-S",
+    "โอมิคราโซ":           "Omeprazole",
+    "โอมิปาโซ":            "Omeprazole",
+    "โอมิโฟ":              "Omeprazole",
     "ยาฆ่าเชื้อราษฎร์":       "ยาฆ่าเชื้อรา",
-    "ยาฆ่าเชื้ออาหาร":       "ยาฆ่าเชื้อรา",
     "กลอนอาหาร":           "ก่อนอาหาร",
     "ต่อมือ":              "ต่อมื้อ",
     "หล่อใหญ่":            "หลอดใหญ่",
@@ -428,18 +436,17 @@ SAFE_DRUG_NAMES: Dict[str, str] = {
     "ลดการรังกด":          "ลดการหลั่งกรด",
     "ยศยามรถ":             "ตัวยาลด",
     "ตัวยอด":              "ตัวยา",
-    "ตีม่า":               "ซีม่า",
-    "ทีม่า":               "ซีม่า",
-    "ดีมาน":               "ซีม่า",
-    "ตีมาน":               "ซีม่า",
+    "ตีม่า":               "Zema",
+    "ทีม่า":               "Zema",
+    "ดีมาน":               "Zema",
+    "ตีมาน":               "Zema",
     "วีแคป":               "บีแคป",
     "ตัวVแคป":             "บีแคป",
     "มีฉายาอะไร":          "มีใช้ยาอะไร",
-    "แผลยังไม่มีเลย":       "แพ้ยาไม่มีเลย",
     "ริมผีป่า":             "ริมฝีปาก",
     "ป่านกกระจอก":          "ปากนกกระจอก",
     "ใช้ยาฆ่าฝาด":         "ใช้ยารักษา",
-    "คาบูโลนิค":           "คลาวูลานิก",
+    "คาบูโลนิค":           "Clavulanate",
     "รอบไซน์":             "ดรอปไซส์",
 }
 
@@ -500,7 +507,12 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
 
     # "หนึ่งเมตร/สองเมตร" -> "หนึ่งเม็ด/สองเม็ด" (กัน "มิลลิเมตร" ไว้ให้กฎหน่วยยาด้านล่าง)
     (
-        re.compile(rf"(?<!มิลลิ)({_THAI_NUM_WORDS})\s*เมตร"),
+        re.compile(rf"(?:(?<=ทาน)|(?<=กิน)|(?<=ครั้งละ)|(?<=มื้อละ)|(?<=เอา)|(?<=ยา))(\s*{_THAI_NUM_WORDS})\s*เมตร"),
+        r"\1เม็ด",
+        "เมตร -> เม็ด (จำนวนยา)"
+    ),
+    (
+        re.compile(rf"({_THAI_NUM_WORDS})\s*เมตร(?=\s*(?:ก่อน|หลัง|เช้า|กลางวัน|เย็น|ต่อ|วันละ|ครั้ง|ทุก|ตอน))"),
         r"\1เม็ด",
         "เมตร -> เม็ด (จำนวนยา)"
     ),
@@ -521,7 +533,10 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
 
     # "รถอาการปวด" / "รถปวด" / "รถอักเสบ" / "รถไข้" / "รถกรด" / "รถน้ำมูก" -> "ลด..."
     (
-        re.compile(r"รถ\s*(อาการ)?\s*(ปวด|อักเสบ|บวม|ไข้|กรด|กด|น้ำมูก|น้ํามูก)"),
+        re.compile(
+            r"(?<!ขับ)(?<!นั่ง)(?<!ขึ้น)(?<!ลง)(?<!จอด)(?<!ชน)(?<!เมา)(?<!ซ้อน)(?<!บน)(?<!ใน)(?<!ตก)(?<!ทาง)(?<!โดยสาร)"
+            r"รถ\s*(อาการ)?\s*(ปวด|อักเสบ|บวม|ไข้|กรด|กด|น้ำมูก|น้ํามูก)"
+        ),
         lambda m: f"ลด{m.group(1) or ''}{'กรด' if m.group(2) == 'กด' else ('น้ำมูก' if m.group(2) == 'น้ํามูก' else m.group(2))}",
         "รถปวด/รถไข้/รถกรด -> ลดปวด/ลดไข้/ลดกรด"
     ),
@@ -533,11 +548,11 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
         "ที่ป่วน -> ที่ปวด"
     ),
 
-    # "ปวดเก๋า/ปวดเกา/เป็นเก๋า/โรคเก๋า" -> "ปวดเก๊า/เป็นเก๊า/โรคเก๊า"
+    # "ปวดเก๋า/ปวดเกา/เป็นเก๊าท์/โรคเกาท์" -> "ปวดเกาต์/เป็นเกาต์/โรคเกาต์" (ไม่แตะ เกาะ / เกาหลี / เกาต์)
     (
-        re.compile(r"(ปวด|เป็น|โรค)\s*เก๋?า(?!ต์)"),
-        r"\1เก๊า",
-        "เก๋า/เกา -> เก๊า (โรคเก๊าท์)"
+        re.compile(r"(ปวด|เป็น|โรค)\s*เก(?:[๋๊]า(?:ท์|ต์)?|าท์|า(?!ต์))(?!ะ|หลี)"),
+        r"\1เกาต์",
+        "เก๋า/เกา -> เกาต์ (โรคเกาต์)"
     ),
 
     # "เด็กโตกดอาการ/เด็กโตกดอากาศ" -> "Dextromethorphan (กดอาการ)"
@@ -547,30 +562,16 @@ REGEX_PATTERNS: List[Tuple[re.Pattern, str, str]] = [
         "เด็กโตกด -> Dextromethorphan"
     ),
 
-    # "ห้ามรอมิติกรรม" -> "ห้าร้อยมิลลิกรัม"
-    (
-        re.compile(r"ห้ามรอมิติกรรม"),
-        "ห้าร้อยมิลลิกรัม",
-        "ห้ามรอมิติกรรม -> ห้าร้อยมิลลิกรัม"
-    ),
-
-    # "ห้ามมิติกรรม" -> "ห้ามิลลิกรัม"
-    (
-        re.compile(r"ห้ามมิติกรรม"),
-        "ห้ามิลลิกรัม",
-        "ห้ามมิติกรรม -> ห้ามิลลิกรัม"
-    ),
-
     # "ได้ครบไปไหน/ได้ครบทีไหนห้าสิบมิลลิกรัม" -> "ไดโคลฟีแนค 50 มิลลิกรัม"
     (
         re.compile(r"ได้ครบ(?:ไป|ที)ไหน\s*(ห้าสิบ|50)\s*มิลลิกรัม"),
-        r"ไดโคลฟีแนค \1มิลลิกรัม",
+        r"Diclofenac \1 มิลลิกรัม",
         "ได้ครบไปไหน -> ไดโคลฟีแนค"
     ),
 
     # "นักเลิศแม่งแบบสีขาว..." -> "ตัวสีขาวอันนี้"
     (
-        re.compile(r"นักเลิศ.*แบบสีขาว[^\s]*"),
+        re.compile(r"นักเลิศ\S{0,15}?แบบสีขาว\S*"),
         "ตัวสีขาวอันนี้",
         "นักเลิศแบบสีขาว -> ตัวสีขาว (ลักษณะเม็ดยา)"
     ),
@@ -618,6 +619,9 @@ COMMON_THAI_STOPWORDS = {
     "ถ่ายเหลว", "อาเจียน", "คลื่นไส้", "เวียนหัว", "หน้ามืด", "ความดัน", "เบาหวาน",
     "โรคประจำตัว", "แพ้ยา", "ไม่มี", "ไม่ใช่", "ถูกต้อง", "นิดนึง", "หน่อย",
 }
+
+# A wrong drug name is worse than a misspelt one: only accept close sound-alike matches (was 0.60).
+PHONETIC_MIN_SIM = float(os.environ.get("PHARMALOG_PHONETIC_MIN_SIM", "0.80"))
 
 _PHONETIC_INDEX: Optional[Dict[str, List[str]]] = None
 _KNOWN_DRUG_WORDS: Optional[set] = None
@@ -727,7 +731,7 @@ def apply_phonetic_matching(text: str) -> Tuple[str, List[Dict[str, Any]]]:
                 continue
 
             span = "".join(span_tokens).strip()
-            if len(span) < 3 or span in COMMON_THAI_STOPWORDS or span in MEDICAL_ANCHORS:
+            if len(span) < 4 or span in COMMON_THAI_STOPWORDS or span in MEDICAL_ANCHORS:
                 continue
 
             if span in _KNOWN_DRUG_WORDS:
@@ -753,7 +757,7 @@ def apply_phonetic_matching(text: str) -> Tuple[str, List[Dict[str, Any]]]:
                 for cand in candidates:
                     if abs(len(span) - len(cand)) <= 3 or (0.7 <= len(span) / len(cand) <= 1.3):
                         sim = _char_similarity(span, cand)
-                        if sim >= 0.60 and sim > best_sim:
+                        if sim >= PHONETIC_MIN_SIM and sim > best_sim:
                             best_sim = sim
                             best_target = cand
 

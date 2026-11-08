@@ -1,78 +1,77 @@
+"""
+EMR extraction for PharmaLog (Groq).
+
+How it works
+  1. The transcript is cut into short numbered utterances (segment_utterances).
+  2. ONE LLM call returns a speaker label for every utterance number plus the clinical fields.
+     The dialogue is then rebuilt from the ORIGINAL utterances, so the LLM can never change what was said.
+  3. Calls have a hard overall deadline and fall back across models on rate limits.
+
+Few-shot examples below are synthetic (written for this prompt), not taken from the evaluation set.
+"""
 import json
-import re
 import os
+import re
 import time
-from typing import Any, List, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 try:
     from groq import Groq
 except ImportError:
     Groq = None  # type: ignore
 
-# ── Constants ────────────────────────────────────────────────────
+DIALOGUE_FIELD = "บทสนทนาที่จัดเรียงแล้ว"
+SAFETY_FIELD = "ข้อควรระวังด้านความปลอดภัยของยา"
 EMR_FIELDS = [
-    "บทสนทนาที่จัดเรียงแล้ว",
+    DIALOGUE_FIELD,
     "ประวัติการแพ้ยา",
     "โรคประจำตัว",
     "ประวัติการจ่ายยา",
     "บันทึกทางการแพทย์",
     "คำแนะนำจากเภสัช",
+    SAFETY_FIELD,
 ]
+CLINICAL_FIELDS = [f for f in EMR_FIELDS if f != DIALOGUE_FIELD]
 
-# ── Dynamic Clinical Domain Exemplars ──
-CLINICAL_EXEMPLARS = {
-    "gi": """ตัวอย่างการแยกผู้พูด (กรณีท้องเสีย / ถ่ายเหลว / ทางเดินอาหาร):
-[เภสัชกร] หรือเป็นมาสองวันเนอะ
-[ผู้ป่วย] เมื่อเช้าถ่ายเหลวมาสองครั้งแล้วเนอะ
-[เภสัชกร] ช่วงนี้มีไข้ด้วยไหม
-[ผู้ป่วย] ไม่มี ไม่ค่อยมี
-[เภสัชกร] ถ่ายเหลวเป็นน้ำ อาหารทานได้ปกติไหม
-[ผู้ป่วย] ปกติ ปกติ
-[เภสัชกร] อาเจียนไม่มีเนอะ เดี๋ยวให้ยาแก้ท้องเสีย จะเป็นไนฟูรอกซาไซด์ ทานเช้า กลางวัน เย็น ก่อนนอน 4 เวลานะ อันนี้สามสิบห้าบาทครับ""",
+MODELS = [m.strip() for m in os.environ.get(
+    "PHARMALOG_EMR_MODELS", "openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/gpt-oss-20b").split(",") if m.strip()]
+DEADLINE_S = float(os.environ.get("PHARMALOG_EMR_DEADLINE_S", "180"))
+REQUEST_TIMEOUT_S = float(os.environ.get("PHARMALOG_EMR_REQUEST_TIMEOUT_S", "60"))
+# Groq on-demand tier: every model allows 8000 tokens per minute, and a request's prompt + max_completion_tokens
+# must fit inside that budget (otherwise 413). Thai is ~2 characters per token for gpt-oss.
+TPM_LIMIT = int(os.environ.get("PHARMALOG_EMR_TPM", "8000"))
+CHARS_PER_TOKEN = 1.8          # conservative estimate
+MAX_PROMPT_TOKENS = int(os.environ.get("PHARMALOG_EMR_MAX_PROMPT_TOKENS", "5000"))  # longer -> split into windows
+USE_ROLE_RULES = os.environ.get("PHARMALOG_ROLE_RULES", "0").strip() in ("1", "true", "yes")
 
-    "pain": """ตัวอย่างการแยกผู้พูด (กรณีปวดฟัน / แผล / ปวดเมื่อย / ฆ่าเชื้อ / เกาต์):
-[เภสัชกร] เป็นยาแก้ปวดฟันนะ แพ้ยาไม่มีนะ
-[ผู้ป่วย] ไม่มีครับ
-[เภสัชกร] เป็นมากี่วันแล้วครับ
-[ผู้ป่วย] เพิ่งเป็นได้เมื่อคืนครับ
-[เภสัชกร] มีใช้อะไรมาก่อนหน้านี้ไหมครับ
-[ผู้ป่วย] ก็ยาพารา
-[เภสัชกร] เดี๋ยวจะเป็นฆ่าเชื้อนะครับ เพิ่ม Metronidazole ทานติดต่อกันจนหมดหน่อย เช้าเย็นนะครับ สามสิบบาทครับ
-[ผู้ป่วย] โอนครับ""",
-
-    "cold": """ตัวอย่างการแยกผู้พูด (กรณีไข้หวัด / ไอ / เสมหะ / ไซนัส / เจ็บคอ):
-[เภสัชกร] เป็นไข้หวัดเนอะ
-[ผู้ป่วย] เป็นไข้วันจันทร์ ได้พาราอย่างเดียว สองวันยังมีไข้อยู่
-[เภสัชกร] ไปโรงพยาบาลได้สวอปอะไรให้ไหม
-[ผู้ป่วย] อาการที่เหลือคือมีไข้แต่ไม่สูง แล้วก็ไอ คันคอ เจ็บคอ
-[เภสัชกร] เดี๋ยวให้ยาแก้ไอขับเสมหะ ทานครั้งละ 1 เม็ด 3 เวลานะครับ""",
-
-    "gerd": """ตัวอย่างการแยกผู้พูด (กรณีลดกรด / กระเพาะ / กรดไหลย้อน):
-[เภสัชกร] ยาลดกรดทานปกติเช้าก่อนนอนไหมครับ หรือเช้าเย็น
-[ผู้ป่วย] ไม่รู้จำไม่ได้เลย
-[เภสัชกร] ทานเช้าก่อนนอนสองตัวนี้นะ เคมิลทานตามอาการ 1-2 เม็ด ให้เขียนแยกไปไหมฮะ
-[ผู้ป่วย] เขียนไม่แยกค่ะ""",
-
-    "pediatric": """ตัวอย่างการแยกผู้พูด (กรณีเด็ก / วัคซีน / จัดยาตามน้ำหนัก):
-[ผู้ป่วย] ฉีดวัคซีนอนามัยก็เลยจะซื้อยาแก้ปวดติดไปก่อน
-[เภสัชกร] น้องน้ำหนักประมาณเท่าไหร่ครับ
-[ผู้ป่วย] อ๋อห้าโลครับ
-[เภสัชกร] ห้าโล ทานครั้งละ 0.5 ซีซี ตามอาการทุก 4-6 ชั่วโมง ถ้าไข้ไม่มีก็หยุดใช้ได้ สี่สิบห้าบาทครับ""",
-}
+SYNTHETIC_EXAMPLE = """ตัวอย่าง (สมมติ ไม่ใช่ข้อมูลจริง)
+ประโยค:
+[1] สวัสดีครับ วันนี้มีอาการอะไรครับ
+[2] มีน้ำมูกไหลจามบ่อยค่ะ
+[3] เป็นมาสามวันแล้ว
+[4] มีไข้หรือเจ็บคอด้วยไหมครับ
+[5] ไม่มีค่ะ
+[6] แพ้ยาอะไรไหมครับ
+[7] แล้วมีโรคประจำตัวหรือเปล่า
+[8] แพ้อะม็อกซีซิลลินค่ะ ขึ้นผื่น เป็นหอบหืดด้วย
+[9] ก่อนหน้านี้ทานยาอะไรมาบ้างครับ
+[10] ทานคลอเฟนมาสองวันแต่ง่วงมาก
+[11] งั้นเปลี่ยนเป็นลอราทาดีนนะครับ
+[12] ทานวันละหนึ่งเม็ดก่อนนอน
+[13] ถ้าห้าวันไม่ดีขึ้นหรือมีไข้ให้ไปพบแพทย์
+[14] เท่าไหร่คะ
+[15] หกสิบบาทครับ
+คำตอบ:
+{"turns":[[1,1,"P"],[2,3,"C"],[4,4,"P"],[5,5,"C"],[6,7,"P"],[8,8,"C"],[9,9,"P"],[10,10,"C"],[11,13,"P"],[14,14,"C"],[15,15,"P"]],
+ "ประวัติการแพ้ยา":"อะม็อกซีซิลลิน (ผื่น)",
+ "โรคประจำตัว":"หอบหืด",
+ "ประวัติการจ่ายยา":"คลอเฟนิรามีน 2 วัน (ง่วงมาก)",
+ "บันทึกทางการแพทย์":"น้ำมูกไหล จาม 3 วัน ไม่มีไข้ ไม่เจ็บคอ",
+ "คำแนะนำจากเภสัช":"ลอราทาดีน วันละ 1 เม็ด ก่อนนอน; ถ้า 5 วันไม่ดีขึ้นหรือมีไข้ให้พบแพทย์",
+ "ข้อควรระวังด้านความปลอดภัยของยา":"-"}"""
 
 
-def pick_few_shot_exemplar(text: str) -> str:
-    t = (text or "").lower()
-    if re.search(r"ถ่าย|ท้องเสีย|เหลว|เกลือแร่|คาร์บอน|ไนฟูรอก|อาเจียน", t):
-        return CLINICAL_EXEMPLARS["gi"]
-    elif re.search(r"ฟัน|ปวดฟัน|แผล|อักเสบ|ฆ่าเชื้อ|เมโทรนิดา|metronidazole|difelene|กล้ามเนื้อ|เกาต์|เก๊า|colchicine", t):
-        return CLINICAL_EXEMPLARS["pain"]
-    elif re.search(r"ลดกรด|หลั่งกรด|กรดไหลย้อน|กระเพาะ|เคมิล|โอเมพราโซล", t):
-        return CLINICAL_EXEMPLARS["gerd"]
-    elif re.search(r"เด็ก|น้อง|ขวบ|วัคซีน|กิโล|ห้าโล|ไซริ้ง|ติดเจล", t):
-        return CLINICAL_EXEMPLARS["pediatric"]
-    return CLINICAL_EXEMPLARS["cold"]
-
-
+# ─────────────────────────────────────────────────────────────── legacy regex helpers (kept for the Lab and optional role rules)
 def pre_segment_conversational_text(text: str) -> str:
     """
     Splits continuous Thai ASR output (both spaced and zero-space streams)
@@ -242,7 +241,7 @@ def validate_speaker_roles(role_text: str) -> str:
         re.compile(r"(?:อาการ|ปวด|ดีขึ้น|หาย|ทุเลา).*(?:ไหม|มั้ย|หรือเปล่า|ดีขึ้นไหม|หายไหม)"),
         re.compile(r"(?:ตัวเดิม|ตัวเก่า|ตัวนี้|ใช้ตัว).*(?:ก็ได้|ดีกว่า|นะ)"),
         re.compile(r"(?:เกาต์|ของแสลง|ปัจจัยกระตุ้น|พยายามเลี่ยงของแสลง|สัมผัสสารก่อ)"),
-        re.compile(r"(?:โคลชิซีน|Colchicine|ไดฟีลีน|Difelene|ไดโคลฟีแนค|Diclofenac|ไพรอกซีแคม|Piroxicam|Metronidazole).*(?:มั้ย|ไหม|มิลลิกรัม|เม็ด|ทันที|เช้าเย็น)"),
+        re.compile(r"(?:โคลชิซีน|Colchicine|ไดฟีลีน|Difelene|ไดโคลฟีแนค|Diclofenac|ไพรอกซีแคม|ไพรอกซิแคม|Piroxicam|Dicam|Metronidazole|เมโทรนิดาโซล|Nifuroxazide|ไนฟูรอกซาไซด์|Omeprazole|Kremil).*(?:มั้ย|ไหม|มิลลิกรัม|เม็ด|ทันที|เช้าเย็น)"),
         re.compile(r"\b(?:ปกติใช้|ใช้อยู่).*(?:กี่ครั้ง|กี่เม็ด|วันละ)"),
         re.compile(r"(?:ได้ตรวจไข้หวัด|ยกของยกของไหม|เมื่อวานมีทำกิจกรรมอะไรไหม|หมายถึงว่ากระดูก.*หักตั้งแต่มีนา|ปวด(?:ขณะ|ขนาด)เคลื่อนไหวใช่ไหม|แต่ปวดอย่างเดียวเนาะ|ช่วงนี้.*(?:พักผ่อน|มีไข้|อากาศ)|แต่แสบเป็นหลักใช่ไหม|แต่เจ็บ(?:โพรง|พง|พวง)จมูกเป็นหลักใช่ไหม|เจ็บ(?:คง|พวง)เจ็บคอมีไหม|เป็นมากี่วันแล้ว|มีใช้ยาอะไรมาก่อนหน้านี้)"),
     ]
@@ -326,17 +325,83 @@ def validate_speaker_roles(role_text: str) -> str:
     return "\n".join(validated_lines)
 
 
+
+
+# ─────────────────────────────────────────────────────────────── segmentation
+def _sent_tokenize(text: str, target: int = 45) -> List[str]:
+    """Split a long unspaced Thai run into sentence-ish pieces.
+    crfcut sentence model if available, otherwise group dictionary words into ~target-character pieces."""
+    try:
+        from pythainlp.tokenize import sent_tokenize
+        parts = [s.strip() for s in sent_tokenize(text, engine="crfcut") if s.strip()]
+        if len(parts) > 1 and max(len(p) for p in parts) <= 2 * target:
+            return parts
+    except Exception:
+        pass
+    try:
+        from pythainlp.tokenize import word_tokenize
+        words = word_tokenize(text, engine="newmm", keep_whitespace=False)
+    except Exception:
+        words = [text[i:i + target] for i in range(0, len(text), target)]
+    out, cur = [], ""
+    for w in words:
+        if cur and len(cur) + len(w) > target:
+            out.append(cur); cur = w
+        else:
+            cur += w
+    if cur:
+        out.append(cur)
+    return out
+
+
+def segment_utterances(text: str, max_segments: int = 260) -> List[str]:
+    """Cut a transcript into short utterances that are each spoken by one person (best effort)."""
+    text = (text or "").replace("--- ส่วนที่ 1: ข้อความเนื้อหาภาษาไทย ---", "").strip()
+    if not text:
+        return []
+    pieces: List[str] = []
+    for line in pre_segment_conversational_text(text).splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        for part in re.split(r"\s{1,}", line) if " " in line else [line]:
+            part = part.strip()
+            if not part:
+                continue
+            if len(part) > 90:
+                pieces.extend(p.strip() for p in _sent_tokenize(part) if p.strip())
+            else:
+                pieces.append(part)
+    merged: List[str] = []
+    for p in pieces:  # glue fragments that are too short to judge on their own
+        if merged and (len(p) < 4 or len(merged[-1]) < 4):
+            merged[-1] = merged[-1] + " " + p
+        else:
+            merged.append(p)
+    while len(merged) > max_segments:
+        merged = [" ".join(merged[i:i + 2]) for i in range(0, len(merged), 2)]
+    return merged
+
+
+def build_dialogue(segments: List[str], roles: List[str]) -> str:
+    lines: List[Tuple[str, str]] = []
+    for seg, r in zip(segments, roles):
+        who = "เภสัชกร" if r == "P" else "ผู้ป่วย"
+        if lines and lines[-1][0] == who:
+            lines[-1] = (who, lines[-1][1] + " " + seg)
+        else:
+            lines.append((who, seg))
+    return "\n".join(f"{w}: {t}" for w, t in lines)
+
+
+# ─────────────────────────────────────────────────────────────── credentials
 def get_groq_key() -> str:
     api_key = os.environ.get("GROQ_API_KEY", "").strip()
     if not api_key:
         try:
             from unified_app.modules.config import ROOT
-            candidates = [
-                ROOT / ".groq_api_key",
-                ROOT / "pharmalog_offline_assets" / ".groq_api_key",
-                ROOT / "pharmalog_offline_assets" / "api_keys" / ".groq_api_key",
-            ]
-            for p in candidates:
+            for p in (ROOT / ".groq_api_key", ROOT / "pharmalog_offline_assets" / ".groq_api_key",
+                      ROOT / "pharmalog_offline_assets" / "api_keys" / ".groq_api_key"):
                 if p.exists():
                     api_key = p.read_text(encoding="utf-8").strip()
                     if api_key:
@@ -346,207 +411,310 @@ def get_groq_key() -> str:
     return api_key or ""
 
 
-def get_groq_client():
-    if Groq is None:
-        raise RuntimeError("ยังไม่ได้ติดตั้งแพ็กเกจ groq (pip install groq)")
-    api_key = get_groq_key()
-    if not api_key:
-        raise RuntimeError("ไม่พบ Groq API Key (ตั้งค่า GROQ_API_KEY หรือ .groq_api_key)")
-    return Groq(api_key=api_key)
-
-
-def check_credentials() -> tuple[bool, str]:
+def check_credentials() -> Tuple[bool, str]:
     if get_groq_key():
         return True, "Groq API Key is configured."
     return False, "Groq API Key is missing."
 
 
-_RETRY_COUNT = 3
-_RETRY_BASE_SEC = 2.0
+# ─────────────────────────────────────────────────────────────── prompt
+def _build_prompt(segments, retry_note: str = "") -> str:
+    if isinstance(segments, str):  # backward compatible: accept a raw conversation string
+        segments = segment_utterances(segments)
+    numbered = "\n".join(f"[{i}] {s}" for i, s in enumerate(segments, 1))
+    n = len(segments)
+    return f"""คุณเป็นผู้ช่วยเภสัชกรที่สรุปบทสนทนาในร้านยาเป็นเวชระเบียน (EMR)
+ข้อความด้านล่างถอดจากเสียงอัตโนมัติ จึงอาจสะกดผิดหรือคำเพี้ยน และถูกแบ่งเป็นประโยคย่อยมีหมายเลข
 
+งานที่ 1 แบ่งช่วงผู้พูด ตอบเป็น "turns" = รายการ [ประโยคแรก, ประโยคสุดท้าย, ผู้พูด] เรียงตั้งแต่ประโยค 1 ถึง {n} ต่อเนื่องไม่ข้าม
+  ประโยคที่คนเดียวพูดต่อกันให้รวมเป็นช่วงเดียว เช่น [12,15,"P"]
+  "P" = เภสัชกร (ซักประวัติ ถามอาการ ถามแพ้ยา จ่ายยา อธิบายวิธีใช้ บอกราคา)
+  "C" = ผู้ป่วยหรือผู้มาซื้อยาแทน (เล่าอาการ ตอบคำถาม ถามราคา จ่ายเงิน)
+  เภสัชกรพูดต่อกันหลายประโยคได้ ไม่ต้องสลับกันทีละประโยค
 
-# ── Prompt ───────────────────────────────────────────────────────
-def _build_prompt(conversation: str, retry: bool = False) -> str:
-    system = (
-        "คุณเป็นผู้ช่วยเภสัชกรสำหรับสรุปบทสนทนาเป็นเวชระเบียน EMR\n"
-        "ให้สกัดข้อมูลเฉพาะจากบทสนทนา ห้ามเดาข้อมูลที่ไม่มีในบทสนทนา\n"
-        "ถ้าไม่พบข้อมูลให้ใส่ '-' และตอบเป็น JSON เท่านั้น\n"
-    )
-    retry_note = (
-        "\nรอบนี้เป็นการวิเคราะห์ซ้ำเพราะรอบแรกข้อมูลน้อยเกินไป: "
-        "ให้ตรวจบทสนทนาอย่างละเอียดและเติมช่องบันทึกทางการแพทย์/คำแนะนำจากเภสัชถ้ามีหลักฐานในบทสนทนา\n"
-        if retry else ""
-    )
-    segmented_conv = pre_segment_conversational_text(conversation)
-    few_shot = pick_few_shot_exemplar(segmented_conv)
+งานที่ 2 สกัดข้อมูลเฉพาะที่มีในบทสนทนา ห้ามเดา ถ้าไม่มีให้ใส่ "-"
+  - ประวัติการแพ้ยา: ยาหรือสารที่แพ้และอาการ ถ้าผู้ป่วยตอบว่าไม่แพ้ให้ใส่ "ปฏิเสธการแพ้ยา"
+  - โรคประจำตัว: โรคเดิมหรือภาวะประจำตัว ถ้าตอบว่าไม่มีให้ใส่ "ปฏิเสธโรคประจำตัว"
+  - ประวัติการจ่ายยา: ยาที่ใช้อยู่หรือใช้มาก่อนการมาครั้งนี้ (ไม่ใช่ยาที่จ่ายครั้งนี้)
+  - บันทึกทางการแพทย์: อาการสำคัญ ระยะเวลา ความรุนแรง อาการร่วม และข้อมูลที่ใช้ตัดสินใจจ่ายยา
+  - คำแนะนำจากเภสัช: ยาที่จ่ายครั้งนี้ ขนาด วิธีใช้ คำเตือน การติดตามหรือการส่งต่อ
+  - ข้อควรระวังด้านความปลอดภัยของยา: ตรวจว่ายาที่จ่ายครั้งนี้ขัดกับประวัติแพ้ยา (รวมยากลุ่มเดียวกัน) โรคประจำตัว ยาที่ใช้อยู่ อายุ หรือการตั้งครรภ์หรือไม่ เขียนสั้นๆ ให้เภสัชกรทบทวน ถ้าไม่พบให้ใส่ "-"
 
-    user_prompt = f"""{system}
-คุณจะได้รับ "ข้อความเนื้อหาภาษาไทย" ที่ผ่านการตัดแบ่งประโยคเบื้องต้นแล้ว
+ตอบเป็น JSON object เดียวเท่านั้น (ไม่มีข้อความอื่น) ใช้ key: "turns", "ประวัติการแพ้ยา", "โรคประจำตัว", "ประวัติการจ่ายยา", "บันทึกทางการแพทย์", "คำแนะนำจากเภสัช", "ข้อควรระวังด้านความปลอดภัยของยา"
 
-หน้าที่ของคุณ:
-1. จำแนกแต่ละประโยคว่าเป็นของ `เภสัชกร:` หรือ `ผู้ป่วย:` ตามบริบททางคลินิก (หากบรรทัดใดมีคำตอบของผู้ป่วยติดอยู่กับคำถามหรือคำแนะนำของเภสัชกร ให้ตัดแยกเป็นคนละบรรทัด):
-   - **เภสัชกร**: ผู้ซักประวัติคัดกรอง ('เป็นมากี่วันแล้ว', 'มีไข้ด้วยไหม', 'แพ้ยาไม่มีนะ'), ผู้สั่งจ่ายยาและบอกวิธีทาน ('เดี๋ยวให้ยา...', 'ทานเช้าเย็น', 'ติดต่อกันจนหมด'), ผู้แจ้งราคาและเงินทอน ('สามสิบบาทครับ')
-   - **ผู้ป่วย**: ผู้บอกอาการตนเอง ('เมื่อวาน', 'ปวดฟัน', 'ถ่ายเหลว'), ผู้ตอบรับ/ปฏิเสธ ('ไม่มีครับ', 'ปกติ', 'อ๋อห้าโลครับ'), ผู้ถามราคาหรือวิธีจ่ายเงิน ('เท่าไหร่ครับ', 'สแกนได้ไหมครับ', 'โอนครับ')
-   - ห้ามสลับบทบาทแบบปิงปองอัตโนมัติ เภสัชกรสามารถซักถามหรืออธิบายติดต่อกันหลายประโยคได้
-
-{few_shot}
-
-2. สกัดข้อมูลและสรุปเป็น JSON ภาษาไทยตาม key ต่อไปนี้เท่านั้น:
-
-{{
-  "บทสนทนาที่จัดเรียงแล้ว": "เภสัชกร: ...\\nผู้ป่วย: ...\\nเภสัชกร: ...",
-  "ประวัติการแพ้ยา": "...",
-  "โรคประจำตัว": "...",
-  "ประวัติการจ่ายยา": "...",
-  "บันทึกทางการแพทย์": "...",
-  "คำแนะนำจากเภสัช": "..."
-}}
-
-หลักการ:
-- บทสนทนาที่จัดเรียงแล้ว: ต้องเป็นเนื้อหาจากข้อความที่ได้รับ ที่นำมาหั่นและใส่ "เภสัชกร:" / "ผู้ป่วย:" นำหน้าประโยคตามบริบท ห้ามเพิ่มหรือลดเนื้อหา
-- ประวัติการแพ้ยา: ยาหรือสารที่ผู้ป่วยแพ้ พร้อมอาการแพ้ถ้ามี
-- โรคประจำตัว: โรคเดิม/ภาวะประจำตัว/ยาที่สัมพันธ์กับโรคประจำตัว
-- ประวัติการจ่ายยา: ยาที่เคยได้รับหรือกำลังใช้อยู่ก่อนการจ่ายครั้งนี้
-- บันทึกทางการแพทย์: อาการสำคัญ ระยะเวลา ความรุนแรง ข้อมูลที่เกี่ยวกับการพิจารณาจ่ายยา
-- คำแนะนำจากเภสัช: ยาที่แนะนำ วิธีใช้ คำเตือน การติดตามอาการ หรือการส่งต่อ
-- ถ้าไม่มีข้อมูลในช่องใดให้ใส่ "-"
+{SYNTHETIC_EXAMPLE}
 {retry_note}
-บทสนทนา:
-{segmented_conv}"""
-    return user_prompt
+ประโยค ({n} ประโยค):
+{numbered}"""
 
 
-# ── JSON extraction helpers ──────────────────────────────────────
-def _extract_json(raw: str) -> dict[str, Any]:
+def _extract_json(raw: str) -> Dict[str, Any]:
     raw = (raw or "").strip()
     raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
     raw = re.sub(r"\s*```$", "", raw)
-    try:
-        v = json.loads(raw)
-        return v if isinstance(v, dict) else {}
-    except json.JSONDecodeError:
-        pass
     m = re.search(r"\{[\s\S]*\}", raw)
-    if m:
+    for candidate in (raw, m.group(0) if m else ""):
+        if not candidate:
+            continue
         try:
-            c = re.sub(r",\s*([}\]])", r"\1", m.group(0))
-            v = json.loads(c)
-            return v if isinstance(v, dict) else {}
+            v = json.loads(re.sub(r",\s*([}\]])", r"\1", candidate))
+            if isinstance(v, dict):
+                return v
         except json.JSONDecodeError:
-            pass
+            continue
     return {}
 
 
-def _parse_fields(raw: str) -> dict[str, str]:
-    data = _extract_json(raw)
-    if data:
-        return {f: str(data.get(f) or "-").strip() or "-" for f in EMR_FIELDS}
-
-    # Fallback: regex parse
-    text = (raw or "").strip()
-    if not text:
-        return {}
-    result: dict[str, str] = {}
-    field_pattern = "|".join(re.escape(f) for f in EMR_FIELDS)
-    for field in EMR_FIELDS:
-        pattern = (
-            rf'[""]?{re.escape(field)}[""]?\s*[:：]\s*'
-            rf'(?P<value>[\s\S]*?)'
-            rf'(?=\n\s*(?:[""]?(?:{field_pattern})[""]?\s*[:：])|\Z)'
-        )
-        m = re.search(pattern, text)
-        if m:
-            value = m.group("value").strip().strip(',"\' \n\r\t')
-            value = re.sub(r"\n+", " ", value).strip()
-            result[field] = value or "-"
-    return result
-
-
-def _is_sparse(result: dict[str, str], conversation: str) -> bool:
-    if len(conversation.strip()) < 80:
-        return False
-    vals = {f: str(result.get(f, "")).strip() for f in EMR_FIELDS}
-    empty = sum(1 for v in vals.values() if v in ("", "-"))
-    missing_core = vals.get("บันทึกทางการแพทย์", "-") in ("", "-") and vals.get("คำแนะนำจากเภสัช", "-") in ("", "-")
-    return empty >= 3 or missing_core
+def _roles_from_turns(turns: Any, n: int) -> Optional[List[str]]:
+    """[[from, to, "P"|"C"], ...] -> one role per sentence (gaps take the previous speaker)."""
+    if not isinstance(turns, list) or not turns:
+        return None
+    roles: List[Optional[str]] = [None] * n
+    for t in turns:
+        try:
+            if isinstance(t, dict):
+                a, b, who = t.get("from"), t.get("to", t.get("from")), t.get("who") or t.get("speaker")
+            else:
+                a, b, who = (t[0], t[1], t[2]) if len(t) >= 3 else (t[0], t[0], t[1])
+            a, b = int(a), int(b)
+        except (TypeError, ValueError, IndexError, KeyError):
+            continue
+        w = str(who).strip().upper()
+        r = "P" if w.startswith("P") or "เภสัช" in w else "C"
+        for i in range(max(1, a), min(n, b) + 1):
+            roles[i - 1] = r
+    if all(r is None for r in roles):
+        return None
+    last = next(r for r in roles if r is not None)
+    out: List[str] = []
+    for r in roles:
+        last = r or last; out.append(last)
+    return out
 
 
-# ── API call ──────────────────────────────────────────────────
-def _call_groq(api_key: str, model_name: str, prompt: str) -> str:
+def _turns_coverage(turns: Any, n: int) -> float:
+    covered = set()
+    for t in turns if isinstance(turns, list) else []:
+        try:
+            a, b = (int(t.get("from")), int(t.get("to", t.get("from")))) if isinstance(t, dict) else (int(t[0]), int(t[1]))
+            covered.update(range(max(1, a), min(n, b) + 1))
+        except (TypeError, ValueError, IndexError, AttributeError):
+            continue
+    return len(covered) / max(1, n)
+
+
+def _normalize_roles(roles: Any, n: int, turns: Any = None) -> Tuple[List[str], str]:
+    from_turns = _roles_from_turns(turns, n)
+    if from_turns:
+        cov = _turns_coverage(turns, n)
+        return from_turns, ("" if cov >= 0.95 else f"ช่วงผู้พูดครอบคลุม {cov:.0%} ของประโยค")
+    out: List[str] = []
+    for r in roles if isinstance(roles, list) else []:
+        s = str(r).strip().upper()
+        out.append("P" if s.startswith("P") or "เภสัช" in s else "C")
+    if len(out) == n:
+        return out, ""
+    warn = f"จำนวนป้ายผู้พูด {len(out)} ไม่ตรงกับ {n} ประโยค"
+    if len(out) > n:
+        return out[:n], warn
+    return out + [out[-1] if out else "P"] * (n - len(out)), warn
+
+
+# ─────────────────────────────────────────────────────────────── Groq call
+def _is_capacity_error(exc: Exception) -> bool:
+    s = str(exc).lower()
+    return any(k in s for k in ("429", "413", "rate limit", "rate_limit", "too large", "tokens per", "decommissioned", "model_not_found", "does not exist"))
+
+
+def _failed_generation(exc: Exception) -> str:
+    """Groq returns the model's text in error.failed_generation when its JSON check fails; often it is usable."""
+    try:
+        body = getattr(exc, "body", None) or {}
+        err = body.get("error", body) if isinstance(body, dict) else {}
+        return str(err.get("failed_generation") or "")
+    except Exception:
+        return ""
+
+
+def _est_tokens(text: str) -> int:
+    return int(len(text) / CHARS_PER_TOKEN) + 50
+
+
+def _retry_after(exc: Exception) -> float:
+    """Seconds Groq asks us to wait on a 429 ("Please try again in 12.5s" / "1m3s" / retry-after header)."""
+    try:
+        h = getattr(getattr(exc, "response", None), "headers", None) or {}
+        if h.get("retry-after"):
+            return float(h["retry-after"])
+    except Exception:
+        pass
+    m = re.search(r"try again in (?:(\d+)m)?([\d.]+)(ms|s)", str(exc))
+    if m:
+        v = float(m.group(2)) / (1000 if m.group(3) == "ms" else 1)
+        return v + 60 * int(m.group(1) or 0)
+    return 20.0
+
+
+def _call_llm(prompt: str, deadline: float, accept=None) -> Tuple[str, str]:
+    """Try each model; wait out 429s (per-minute token budget) while the deadline allows."""
     if Groq is None:
         raise RuntimeError("ยังไม่ได้ติดตั้งแพ็กเกจ groq (pip install groq)")
-    client = Groq(api_key=api_key)
-    models_to_try = [
-        model_name,
-        "llama-3.3-70b-versatile",
-        "qwen/qwen3.8-27b",
-        "openai/gpt-oss-20b",
-    ]
-    seen = set()
-    ordered_models = []
-    for m in models_to_try:
-        if m not in seen:
-            seen.add(m)
-            ordered_models.append(m)
-
-    last_exc = None
-    for m_name in ordered_models:
-        for attempt in range(max(1, _RETRY_COUNT)):
-            try:
-                chat_completion = client.chat.completions.create(
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": prompt,
-                        }
-                    ],
-                    model=m_name,
-                    response_format={"type": "json_object"},
-                    temperature=0.1,
-                )
-                if chat_completion and chat_completion.choices:
-                    return chat_completion.choices[0].message.content or ""
-            except Exception as exc:
-                last_exc = exc
-                if "429" in str(exc):
-                    break
-                if attempt < _RETRY_COUNT - 1:
-                    time.sleep(min(_RETRY_BASE_SEC * (2 ** attempt), 12.0))
-                    continue
-
-    raise RuntimeError(f"เรียก Groq API ไม่สำเร็จ: {last_exc}") from last_exc
-
-
-# ── Public API ───────────────────────────────────────────────────
-def extract_emr(conversation: str) -> dict[str, str]:
-    """
-    Main entry point: extract EMR fields from a conversation string using Groq,
-    with pre-segmentation, dynamic clinical few-shot exemplars, and deterministic
-    post-processing speaker role validation.
-    """
-    if not conversation or not conversation.strip():
-        return {f: "-" for f in EMR_FIELDS}
-
-    api_key = get_groq_key()
-    model_name = "openai/gpt-oss-120b"  # Primary model on Groq with automatic fallback
-
-    if not api_key:
+    key = get_groq_key()
+    if not key:
         raise RuntimeError("ไม่พบ Groq API Key (ตั้งค่า GROQ_API_KEY หรือ .groq_api_key)")
+    client = Groq(api_key=key, timeout=REQUEST_TIMEOUT_S, max_retries=0)
+    max_out = min(3000, TPM_LIMIT - _est_tokens(prompt) - 300)
+    if max_out < 1000:
+        raise RuntimeError(f"ข้อความยาวเกินงบโทเคนต่อครั้ง ({_est_tokens(prompt)} tokens)")
+    errors: List[str] = []
+    dead = set()  # models that do not exist / reject the request size
+    while time.time() < deadline:
+        waits: List[float] = []
+        for model in MODELS:
+            if model in dead:
+                continue
+            for attempt in range(2):
+                if time.time() > deadline:
+                    break
+                kw: Dict[str, Any] = {"reasoning_effort": "low"} if "gpt-oss" in model else {}
+                try:
+                    resp = client.chat.completions.create(
+                        model=model, messages=[{"role": "user", "content": prompt}],
+                        temperature=0.1, max_completion_tokens=max_out, **kw)
+                    content = (resp.choices[0].message.content or "") if resp and resp.choices else ""
+                    if content.strip() and (accept is None or accept(content)):
+                        return content, model
+                    errors.append(f"{model}: {'empty' if not content.strip() else 'unusable'} response")
+                    print(f"[EMR] {errors[-1]}", flush=True)
+                    break  # a model that gave a lazy/empty answer is unlikely to do better on retry
+                except Exception as exc:
+                    msg = str(exc)
+                    errors.append(f"{model}: {type(exc).__name__}: {msg[:160]}")
+                    print(f"[EMR] {errors[-1]}", flush=True)
+                    failed = _failed_generation(exc)
+                    if failed and _extract_json(failed) and (accept is None or accept(failed)):
+                        return failed, model
+                    if "request too large" in msg.lower() or "per day" in msg.lower() or "(tpd)" in msg.lower():
+                        dead.add(model); break                          # daily quota used up / larger than the whole budget
+                    if "429" in msg or "rate limit" in msg.lower():
+                        waits.append(_retry_after(exc)); break          # budget used up: try another model
+                    if _is_capacity_error(exc):
+                        dead.add(model); break                          # 404 / 413: never works for this request
+                    time.sleep(1)                                       # e.g. 400 "failed to generate JSON": retry once
+        if not waits or all(m in dead for m in MODELS):
+            break
+        pause = min(min(waits), 65.0)
+        if time.time() + pause > deadline:
+            break
+        print(f"[EMR] all models rate-limited, waiting {pause:.0f}s", flush=True)
+        time.sleep(pause + 0.5)
+    raise RuntimeError("เรียก LLM ไม่สำเร็จทุกโมเดล: " + " | ".join(errors[-4:]))
 
-    prompt = _build_prompt(conversation)
-    raw = _call_groq(api_key, model_name, prompt)
-    data = _parse_fields(raw)
 
-    if data and _is_sparse(data, conversation):
-        prompt2 = _build_prompt(conversation, retry=True)
-        raw2 = _call_groq(api_key, model_name, prompt2)
-        data = _parse_fields(raw2)
+def _call_groq(api_key: str, model_name: str, prompt: str) -> str:
+    """Backward-compatible helper used by older test scripts."""
+    if Groq is None:
+        raise RuntimeError("ยังไม่ได้ติดตั้งแพ็กเกจ groq (pip install groq)")
+    client = Groq(api_key=api_key, timeout=REQUEST_TIMEOUT_S, max_retries=1)
+    resp = client.chat.completions.create(model=model_name, messages=[{"role": "user", "content": prompt}], temperature=0.1)
+    return resp.choices[0].message.content or ""
 
-    if not data:
-        raise RuntimeError("Groq ไม่คืนข้อมูลในรูปแบบที่อ่านได้")
 
-    formatted = {f: str(data.get(f) or "-").strip() or "-" for f in EMR_FIELDS}
-    conv_sorted = formatted.get("บทสนทนาที่จัดเรียงแล้ว", "-")
-    if conv_sorted and conv_sorted != "-":
-        formatted["บทสนทนาที่จัดเรียงแล้ว"] = validate_speaker_roles(conv_sorted)
-    return formatted
+# ─────────────────────────────────────────────────────────────── public API
+def _windows(segments: List[str]) -> List[List[str]]:
+    """Split segments so each prompt stays under MAX_PROMPT_TOKENS (long talks exceed the per-request budget)."""
+    if _est_tokens(_build_prompt(segments)) <= MAX_PROMPT_TOKENS:
+        return [segments]
+    budget = (MAX_PROMPT_TOKENS - _est_tokens(_build_prompt([]))) * CHARS_PER_TOKEN
+    out: List[List[str]] = [[]]
+    used = 0.0
+    for seg in segments:
+        if out[-1] and used + len(seg) + 8 > budget:
+            out.append([]); used = 0.0
+        out[-1].append(seg); used += len(seg) + 8
+    return out
+
+
+def _extract_window(segments: List[str], deadline: float, conversation_len: int) -> Tuple[Dict[str, Any], str]:
+    data: Dict[str, Any] = {}
+    model = ""
+    for attempt in range(2):
+        note = ""
+        if attempt == 1:
+            note = (f"\nหมายเหตุ: คำตอบรอบก่อน{'ไม่ครบ' if data else 'อ่านไม่ได้'} ต้องมี turns ครอบคลุมประโยค 1 ถึง {len(segments)} "
+                    "และตรวจบทสนทนาอีกครั้งเพื่อเติมบันทึกทางการแพทย์และคำแนะนำถ้ามีหลักฐาน\n")
+        try:
+            raw, model = _call_llm(_build_prompt(segments, note), deadline, accept=lambda r: _usable(_extract_json(r), len(segments)))
+        except RuntimeError:
+            if data:      # keep the first (imperfect) answer rather than failing the whole task
+                break
+            raise
+        new = _extract_json(raw)
+        if new or not data:
+            data = new
+        roles_ok = (_turns_coverage(data.get("turns"), len(segments)) >= 0.95 or
+                    (isinstance(data.get("roles"), list) and len(data["roles"]) == len(segments)))
+        sparse = conversation_len > 80 and all(
+            str(data.get(f, "-")).strip() in ("", "-") for f in ("บันทึกทางการแพทย์", "คำแนะนำจากเภสัช"))
+        if data and roles_ok and not sparse:
+            break
+        if time.time() > deadline - 30:
+            break
+    return data, model
+
+
+def _usable(d: Dict[str, Any], n: int) -> bool:
+    """Reject empty/lazy answers: need speaker turns for most sentences or at least one clinical field."""
+    if not d:
+        return False
+    filled = any(str(d.get(f, "-")).strip() not in ("", "-") for f in CLINICAL_FIELDS)
+    has_roles = _turns_coverage(d.get("turns"), n) >= 0.5 or (isinstance(d.get("roles"), list) and len(d["roles"]) >= n // 2)
+    return has_roles and (filled or n < 6)
+
+
+def _merge_field(values: List[str]) -> str:
+    seen: List[str] = []
+    for v in values:
+        v = str(v).strip()
+        if v and v != "-" and v not in seen:
+            seen.append(v)
+    if len(seen) > 1:  # "ปฏิเสธการแพ้ยา" from one window must not hide a real allergy found in another
+        seen = [v for v in seen if not v.startswith("ปฏิเสธ")] or seen[:1]
+    return "; ".join(seen) or "-"
+
+
+def extract_emr(conversation: str) -> Dict[str, Any]:
+    """Returns {field: text} for every EMR_FIELDS entry plus "_meta" (model, warnings, timings)."""
+    t0 = time.time()
+    segments = segment_utterances(conversation)
+    if not segments:
+        return {**{f: "-" for f in EMR_FIELDS}, "_meta": {"segments": 0}}
+    wins = _windows(segments)
+    deadline = t0 + DEADLINE_S * len(wins)
+    warnings: List[str] = []
+    if len(wins) > 1:
+        warnings.append(f"บทสนทนายาว แบ่งสรุปเป็น {len(wins)} ช่วงแล้วรวมผล")
+    all_roles: List[str] = []
+    parts: List[Dict[str, Any]] = []
+    models: List[str] = []
+    for w in wins:
+        data, model = _extract_window(w, deadline, len(conversation.strip()))
+        if not data:
+            raise RuntimeError("LLM ไม่คืนข้อมูลในรูปแบบ JSON ที่อ่านได้")
+        roles, warn = _normalize_roles(data.get("roles"), len(w), data.get("turns"))
+        if warn:
+            warnings.append(warn)
+        all_roles += roles; parts.append(data); models.append(model)
+    dialogue = build_dialogue(segments, all_roles)
+    if USE_ROLE_RULES:
+        dialogue = validate_speaker_roles(dialogue)
+    out: Dict[str, Any] = {DIALOGUE_FIELD: dialogue}
+    for f in CLINICAL_FIELDS:
+        vals = []
+        for d in parts:
+            v = d.get(f, "-")
+            vals.append("; ".join(str(x) for x in v) if isinstance(v, list) else str(v))
+        out[f] = _merge_field(vals)
+    out["_meta"] = {"model": ",".join(dict.fromkeys(models)), "segments": len(segments), "windows": len(wins),
+                    "warnings": warnings, "elapsed_s": round(time.time() - t0, 2), "role_rules": USE_ROLE_RULES}
+    return out

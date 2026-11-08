@@ -9,3 +9,8 @@ textColor = "#1E3146"
 borderColor = "#E6EEF7"
 baseRadius = "12px"
 font = "Noto Sans Thai:https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap, sans-serif"
+
+[server]
+# The recorder sends the whole WAV (base64) in one WebSocket message. Default limit is 25 MB (~9.5 min of 16 kHz audio);
+# the recorder allows up to 20 min (~51 MB base64), so raise it.
+maxWidgetStateSize = 120

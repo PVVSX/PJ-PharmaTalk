@@ -22,7 +22,7 @@ def format_with_llm(api_key: str, raw_transcript: str) -> str:
 """
     try:
         # Using a model that groq supports for quick reasoning
-        response = _call_groq(api_key, "llama3-70b-8192", prompt)
+        response = _call_groq(api_key, "openai/gpt-oss-120b", prompt)
         # fallback to formatting if response format was forced to json in _call_groq, wait _call_groq has response_format={"type": "json_object"}
         # Ah, _call_groq is hardcoded to return JSON object. We should not use _call_groq directly if it forces JSON.
         pass

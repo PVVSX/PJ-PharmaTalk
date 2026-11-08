@@ -86,6 +86,22 @@ with t4R:
         </div>
         """, unsafe_allow_html=True)
         
+        try:
+            _h = get_core_health()
+        except Exception:
+            _h = {}
+        _rows = [
+            ("โมเดลถอดเสียงที่ใช้", f"{_h.get('stt_model', '-')} ({_h.get('stt_engine', '-')}, {_h.get('stt_device', '-')})"),
+            ("บันทึกผลขึ้น Cloud (Firestore)", "เปิด" if _h.get("cloud_enabled") else "ปิด"),
+        ]
+        for _k, _v in _rows:
+            st.markdown(f"""
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--grey-200);">
+          <span style="font-weight:500;">{_k}</span><span>{_v}</span>
+        </div>""", unsafe_allow_html=True)
+        if _h.get("stt_error"):
+            st.error(f"โหลดโมเดลถอดเสียงไม่สำเร็จ: {_h['stt_error']}")
+
         # Check API
         api_ok, api_msg = check_credentials()
         st.markdown(f"""

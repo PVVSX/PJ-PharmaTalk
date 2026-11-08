@@ -585,12 +585,9 @@ function renderPopup(cfg, from, to){
         consentButton.disabled=true;
         result.textContent='กำลังบันทึกการยินยอม...';
         try {
-          let consentId=sessionStorage.getItem('pharmalog_consent_id') || sessionStorage.getItem('pharmatalk_consent_id');
-          if(!consentId){
-            consentId=crypto.randomUUID();
-            sessionStorage.setItem('pharmalog_consent_id',consentId);
-          }
-          const response=await fetch('http://localhost:8500/api/state',{
+          // A brand-new id for every patient; never reused from sessionStorage.
+          const consentId=newConsentId();
+          const response=await fetch(PHARMALOG_API+'/api/state',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
@@ -602,22 +599,34 @@ function renderPopup(cfg, from, to){
               }
             })
           });
-          if(!response.ok) throw new Error(`API returned ${response.status}`);
+          if(!response.ok){ let msg=''; try{ msg=(await response.json()).detail||''; }catch(_){} throw new Error(msg||`API returned ${response.status}`); }
           popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#E8FDF0] text-[#23804A] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">check_circle</span></div><h3 class="mt-4 text-[20px] font-extrabold">บันทึกความยินยอมแล้ว</h3><p class="mt-2 text-[14px] text-[#5A6B80]">กำลังเปิดหน้าใหม่...</p></div>`;
           setTimeout(()=>openNextPage('agree'), 1200);
         } catch(error) {
           console.error('Could not save recording consent',error);
-          result.textContent='บันทึกไม่ได้ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง';
+          result.textContent='บันทึกไม่ได้: '+(error && error.message ? error.message : 'กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง');
           consentButton.disabled=false;
         }
       }
       else if(act==='declineConsent'){
+        // Tell the bridge explicitly: clears any consent left from a previous patient and locks the recorder.
+        try{ await fetch(PHARMALOG_API+'/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'WAITING',reason:'declined'})}); }catch(err){ console.error('Could not send decline',err); }
         popupContent.innerHTML=`<div class="text-center py-5"><div class="mx-auto w-16 h-16 rounded-full bg-[#F2F6FB] text-[#5A6B80] flex items-center justify-center"><span class="material-symbols-rounded text-[38px]">mic_off</span></div><h3 class="mt-4 text-[20px] font-extrabold">จะไม่เริ่มบันทึกเสียง</h3><p class="mt-2 text-[14px] text-[#5A6B80]">กำลังเปิดหน้าใหม่...</p></div>`;
         setTimeout(()=>openNextPage('decline'), 1200);
       }
       else if(act==='next'){ closePopupAndGo(); }
     });
   });
+}
+// Same-origin when served by the bridge (http://host:8500); fallback for file:// previews.
+const PHARMALOG_API = location.protocol.startsWith('http') ? '' : 'http://localhost:8500';
+function newConsentId(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  // crypto.randomUUID needs a secure context; plain http over LAN falls back to getRandomValues.
+  const b = new Uint8Array(16); (window.crypto||window.msCrypto).getRandomValues(b);
+  b[6]=(b[6]&0x0f)|0x40; b[8]=(b[8]&0x3f)|0x80;
+  const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
 }
 function openNextPage(decision='agree'){
   const target=new URL('./index-popup-scenes.html', window.location.href);

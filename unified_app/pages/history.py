@@ -77,15 +77,18 @@ def _render_record_card(rec: dict) -> None:
     ts_full = bkk_dt.strftime("%d/%m/%Y %H:%M:%S") if bkk_dt else "ไม่ระบุเวลา"
 
     stt_text = rec.get("stt_text", "")
-    emr_data = rec.get("emr_data", {})
+    emr_data = rec.get("confirmed_emr") or rec.get("emr_data", {})
+    is_confirmed = bool(rec.get("confirmed_emr"))
     audio_filename = rec.get("audio_filename", "")
     task_status = rec.get("status", "")
     has_stt = bool(stt_text)
     has_emr = bool(emr_data)
 
     # ── Status badge ──
-    if has_emr or task_status == "COMPLETED":
-        badge = '<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>วิเคราะห์ EMR สมบูรณ์</span>'
+    if is_confirmed:
+        badge = '<span class="status-pill pill-ok"><span class="status-dot dot-green"></span>เภสัชกรยืนยันแล้ว</span>'
+    elif has_emr or task_status == "COMPLETED":
+        badge = '<span class="status-pill pill-warn"><span class="status-dot dot-amber"></span>AI สรุปแล้ว รอตรวจทาน</span>'
     elif task_status in _ERROR_STATUSES:
         badge = '<span class="status-pill pill-err"><span class="status-dot dot-red"></span>ประมวลผลไม่สำเร็จ</span>'
     else:
@@ -140,7 +143,7 @@ def _render_record_card(rec: dict) -> None:
               <span class="material-symbols-rounded history-card-icon">description</span>
               <div>
                 <div class="history-file-name">เคส {time_str}</div>
-                <div class="history-card-meta">{ts_full} &middot; ID: {task_id[:8]}</div>
+                <div class="history-card-meta">{ts_full} &middot; ID: {task_id[:8]} &middot; {html_lib.escape(str(rec.get("source") or "-"))}{" &middot; consent ✓" if rec.get("consent_id") else ""}</div>
               </div>
             </div>""", unsafe_allow_html=True)
         with h2:
@@ -210,7 +213,7 @@ def _render_record_card(rec: dict) -> None:
             with st.expander("ผลวิเคราะห์เวชระเบียน (EMR)", expanded=False):
                 if isinstance(emr_data, dict):
                     for key, value in emr_data.items():
-                        if key == "บทสนทนาที่จัดเรียงแล้ว":
+                        if key == "บทสนทนาที่จัดเรียงแล้ว" or str(key).startswith("_"):
                             continue
                         st.markdown(f"**{key}**")
                         if isinstance(value, list):
@@ -290,7 +293,7 @@ try:
     query = (
         db.collection("patients_emr")
         .order_by("created_at", direction="DESCENDING")
-        .limit(100)
+        .limit(300)
     )
     raw_docs = list(query.stream())
 except Exception as e:

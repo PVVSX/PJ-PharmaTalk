@@ -107,6 +107,13 @@ class PharmaLogEMRPDF(FPDF):
             self.add_font("Sarabun", "I", SARABUN_ITALIC if os.path.exists(SARABUN_ITALIC) else SARABUN_REGULAR)
             self.add_font("KanitMedium", "", SARABUN_REGULAR)
 
+        # Thai needs OpenType shaping so vowels/tone marks sit on the right consonant (requires uharfbuzz).
+        try:
+            import uharfbuzz  # noqa: F401
+            self.set_text_shaping(True)
+        except Exception:
+            pass
+
         self.set_margins(left=14, top=13, right=14)
         self.set_auto_page_break(auto=True, margin=16)
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="utf-8">
   <style>
@@ -13,167 +13,126 @@
     button:disabled { background: #C8D6E8; box-shadow: none; cursor: default; }
     .status { font-size: 14px; color: #5A6B80; }
     .status.recording { color: #C2415A; font-weight: 700; }
+    .status.error { color: #B42318; font-weight: 600; }
   </style>
 </head>
 <body>
   <div class="recorder">
     <button id="toggle" type="button">เริ่มอัดเสียง</button>
-    <span id="status" class="status">ระบบจะเริ่มอัดอัตโนมัติใน 30 วินาที</span>
+    <span id="status" class="status">พร้อมบันทึกเสียง</span>
   </div>
   <script>
+    const TARGET_RATE = 16000;            // what the ASR models use; 3x smaller than 48 kHz
     const toggle = document.getElementById("toggle");
     const status = document.getElementById("status");
-    let cooldownTimer = null;
-    let countdownTimer = null;
-    let apiUrl = "http://localhost:8500/api/state";
-    let stream = null;
-    let audioContext = null;
-    let processor = null;
-    let input = null;
-    let samples = [];
-    let sampleRate = 44100;
-    let startedAt = 0;
-    let isRecording = false;
-    let automaticStart = false;
-    let initialized = false;
+    let apiUrl = "";
+    let maxSeconds = 1200;
+    let stream = null, audioContext = null, processor = null, input = null;
+    let samples = [], sampleRate = 44100, startedAt = 0, timer = null;
+    let isRecording = false, starting = false, initialized = false;
 
-    function sendMessage(type, data = {}) {
-      window.parent.postMessage({ isStreamlitMessage: true, type, ...data }, "*");
+    function sendMessage(type, data = {}) { window.parent.postMessage({ isStreamlitMessage: true, type, ...data }, "*"); }
+    function setHeight() { sendMessage("streamlit:setFrameHeight", { height: document.body.scrollHeight }); }
+    function setStatus(message, cls = "") { status.textContent = message; status.className = "status " + cls; setHeight(); }
+    function fmt(s) { const m = Math.floor(s / 60), r = s % 60; return `${m}:${String(r).padStart(2, "0")}`; }
+
+    function downsample(chunks, fromRate) {
+      const length = chunks.reduce((t, c) => t + c.length, 0);
+      const all = new Float32Array(length); let o = 0;
+      chunks.forEach(c => { all.set(c, o); o += c.length; });
+      if (fromRate === TARGET_RATE) return all;
+      const ratio = fromRate / TARGET_RATE, outLen = Math.floor(length / ratio), out = new Float32Array(outLen);
+      for (let i = 0; i < outLen; i++) {        // average the source samples covered by each output sample (anti-alias)
+        const a = Math.floor(i * ratio), b = Math.min(length, Math.floor((i + 1) * ratio));
+        let sum = 0; for (let j = a; j < b; j++) sum += all[j];
+        out[i] = b > a ? sum / (b - a) : all[a] || 0;
+      }
+      return out;
     }
 
-    function setHeight() {
-      sendMessage("streamlit:setFrameHeight", { height: document.body.scrollHeight });
-    }
-
-    function setStatus(message, recording = false) {
-      status.textContent = message;
-      status.classList.toggle("recording", recording);
-      setHeight();
-    }
-
-    function encodeWav(chunks, rate) {
-      const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
-      const buffer = new ArrayBuffer(44 + length * 2);
-      const view = new DataView(buffer);
-      const writeText = (offset, text) => [...text].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
-      let offset = 44;
-      writeText(0, "RIFF");
-      view.setUint32(4, 36 + length * 2, true);
-      writeText(8, "WAVE");
-      writeText(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 1, true);
-      view.setUint32(24, rate, true);
-      view.setUint32(28, rate * 2, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeText(36, "data");
-      view.setUint32(40, length * 2, true);
-      chunks.forEach((chunk) => chunk.forEach((sample) => {
-        const clamped = Math.max(-1, Math.min(1, sample));
-        view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
-        offset += 2;
-      }));
+    function encodeWav(data, rate) {
+      const buffer = new ArrayBuffer(44 + data.length * 2), view = new DataView(buffer);
+      const w = (off, t) => [...t].forEach((ch, i) => view.setUint8(off + i, ch.charCodeAt(0)));
+      w(0, "RIFF"); view.setUint32(4, 36 + data.length * 2, true); w(8, "WAVE"); w(12, "fmt ");
+      view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      w(36, "data"); view.setUint32(40, data.length * 2, true);
+      let off = 44;
+      for (let i = 0; i < data.length; i++) { const s = Math.max(-1, Math.min(1, data[i])); view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true); off += 2; }
       return new Uint8Array(buffer);
     }
 
     function toBase64(bytes) {
-      let binary = "";
-      const chunkSize = 0x8000;
-      for (let index = 0; index < bytes.length; index += chunkSize) {
-        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-      }
+      let binary = ""; const n = 0x8000;
+      for (let i = 0; i < bytes.length; i += n) binary += String.fromCharCode(...bytes.subarray(i, i + n));
       return btoa(binary);
     }
 
-    async function startRecording(isAutomatic) {
-      if (isRecording) return;
+    async function claimConsent() {
+      // Pharmacist mode: the bridge must accept RECORDING (valid, unexpired consent) before any audio is captured.
+      if (!apiUrl) return { ok: true };
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const r = await fetch(apiUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "RECORDING" }) });
+        if (r.ok) return { ok: true };
+        let detail = ""; try { detail = (await r.json()).detail || ""; } catch (_) {}
+        return { ok: false, msg: detail || `ระบบยืนยันความยินยอมปฏิเสธ (${r.status})` };
+      } catch (e) {
+        return { ok: false, msg: "เชื่อมต่อระบบยืนยันความยินยอมไม่ได้ (พอร์ต 8500)" };
+      }
+    }
+
+    async function startRecording() {
+      if (isRecording || starting) return;
+      starting = true; toggle.disabled = true;
+      const claim = await claimConsent();
+      if (!claim.ok) { setStatus(claim.msg, "error"); starting = false; toggle.disabled = false; return; }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         sampleRate = audioContext.sampleRate;
         input = audioContext.createMediaStreamSource(stream);
         processor = audioContext.createScriptProcessor(4096, 1, 1);
-        processor.onaudioprocess = (event) => {
-          if (isRecording) samples.push(new Float32Array(event.inputBuffer.getChannelData(0)));
-        };
-        input.connect(processor);
-        processor.connect(audioContext.destination);
-        samples = [];
-        startedAt = Date.now();
-        automaticStart = isAutomatic;
-        isRecording = true;
-        
-        if (apiUrl) {
-          fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'RECORDING' })
-          }).catch(e => console.error(e));
-        }
-        
-        toggle.textContent = "หยุดอัดเสียง";
-        toggle.classList.add("stop");
-        setStatus(isAutomatic ? "กำลังอัดเสียงอัตโนมัติ" : "กำลังอัดเสียง", true);
+        processor.onaudioprocess = (ev) => { if (isRecording) samples.push(new Float32Array(ev.inputBuffer.getChannelData(0))); };
+        input.connect(processor); processor.connect(audioContext.destination);
+        samples = []; startedAt = Date.now(); isRecording = true;
+        toggle.textContent = "หยุดอัดเสียง"; toggle.classList.add("stop");
+        timer = setInterval(() => {
+          const s = Math.round((Date.now() - startedAt) / 1000);
+          setStatus(`● กำลังอัดเสียง ${fmt(s)}`, "recording");
+          if (s >= maxSeconds) stopRecording();
+        }, 500);
+        setStatus("● กำลังอัดเสียง 0:00", "recording");
       } catch (error) {
-        setStatus("เปิดไมโครโฟนไม่ได้ กรุณาอนุญาตการใช้งานแล้วกดเริ่มอัดอีกครั้ง");
-      }
+        const secure = window.isSecureContext ? "" : " (ต้องเปิดผ่าน localhost หรือ https)";
+        setStatus("เปิดไมโครโฟนไม่ได้ กรุณาอนุญาตการใช้ไมโครโฟน" + secure, "error");
+      } finally { starting = false; toggle.disabled = false; }
     }
 
     function stopRecording() {
       if (!isRecording) return;
-      isRecording = false;
-      if (processor) processor.disconnect();
-      if (input) input.disconnect();
-      if (stream) stream.getTracks().forEach((track) => track.stop());
+      isRecording = false; clearInterval(timer);
+      try { processor && processor.disconnect(); input && input.disconnect(); } catch (_) {}
+      if (stream) stream.getTracks().forEach(t => t.stop());
       if (audioContext) audioContext.close();
-      const wav = encodeWav(samples, sampleRate);
-      sendMessage("streamlit:setComponentValue", { value: {
-        audio_base64: toBase64(wav),
-        duration_seconds: Math.round((Date.now() - startedAt) / 1000),
-        automatic: automaticStart,
-      }});
-      toggle.textContent = "เริ่มอัดเสียง";
-      toggle.classList.remove("stop");
-      setStatus("บันทึกเสียงแล้ว กำลังส่งไปประมวลผล");
+      const seconds = Math.round((Date.now() - startedAt) / 1000);
+      if (seconds < 1 || !samples.length) { setStatus("เสียงสั้นเกินไป กรุณาอัดใหม่", "error"); toggle.textContent = "เริ่มอัดเสียง"; toggle.classList.remove("stop"); return; }
+      setStatus("กำลังเตรียมไฟล์เสียง...");
+      const wav = encodeWav(downsample(samples, sampleRate), TARGET_RATE);
+      samples = [];
+      sendMessage("streamlit:setComponentValue", { value: { audio_base64: toBase64(wav), duration_seconds: seconds, automatic: false, sample_rate: TARGET_RATE } });
+      toggle.textContent = "เริ่มอัดเสียง"; toggle.classList.remove("stop");
+      setStatus(`บันทึกแล้ว ${fmt(seconds)} นาที`);
     }
 
-    function scheduleAutomaticStart(seconds) {
-      let remaining = seconds;
-      setStatus(`ระบบจะเริ่มอัดอัตโนมัติใน ${remaining} วินาที`);
-      countdownTimer = setInterval(() => {
-        remaining -= 1;
-        if (remaining <= 0) {
-          clearInterval(countdownTimer);
-          return;
-        }
-        setStatus(`ระบบจะเริ่มอัดอัตโนมัติใน ${remaining} วินาที`);
-      }, 1000);
-      cooldownTimer = setTimeout(() => startRecording(true), seconds * 1000);
-    }
-
-    toggle.addEventListener("click", () => {
-      if (isRecording) stopRecording();
-      else {
-        clearTimeout(cooldownTimer);
-        clearInterval(countdownTimer);
-        startRecording(false);
-      }
-    });
+    toggle.addEventListener("click", () => { if (isRecording) stopRecording(); else startRecording(); });
 
     window.addEventListener("message", (event) => {
       if (!event.data || event.data.type !== "streamlit:render" || initialized) return;
       initialized = true;
-      const seconds = Number(event.data.args.cooldown_seconds || 0);
-      if ("api_url" in event.data.args) apiUrl = event.data.args.api_url;
-      
-      if (seconds > 0) {
-        scheduleAutomaticStart(seconds);
-      } else {
-        setStatus("พร้อมบันทึกเสียง กดปุ่มเพื่อเริ่มอัด");
-      }
-      setHeight();
+      const args = event.data.args || {};
+      apiUrl = args.api_url || "";
+      if (args.max_seconds) maxSeconds = Number(args.max_seconds);
+      setStatus("พร้อมบันทึกเสียง กดปุ่มเพื่อเริ่มอัด");
     });
     sendMessage("streamlit:componentReady", { apiVersion: 1 });
     setTimeout(setHeight, 0);

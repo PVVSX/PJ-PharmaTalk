@@ -199,6 +199,19 @@ def prf(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
     return p, r, f1
 
 
+_DENIAL_RE = re.compile(r"^(ไม่มี|ไม่แพ้|ไม่เคย|ปฏิเสธ|ไม่ได้|ไม่ทราบ|ไม่ระบุ|ไม่พบ|-)")
+
+
+def _is_finding(s: str) -> bool:
+    """True when the text states something (not empty, not a denial like 'ไม่แพ้ยา')."""
+    t = normalize_text(s).strip()
+    return bool(t) and not is_empty_value(t) and not _DENIAL_RE.match(re.sub(r"^(ผู้ป่วย|คนไข้|น้อง|สามี|ภรรยา)", "", t))
+
+
+def _f1(r: float, p: float) -> float:
+    return 2 * p * r / (p + r) if (p + r) else 0.0
+
+
 def multilabel_f1(gold: frozenset[str], pred: frozenset[str]) -> tuple[int, int, int]:
     return len(gold & pred), len(pred - gold), len(gold - pred)
 
@@ -212,6 +225,9 @@ def evaluate_field(
     ner_tp = ner_fp = ner_fn = 0
     chunks: list[float] = []
     lenient_scores: list[float] = []
+    lenient_prec: list[float] = []   # how much of the prediction is supported by GT (penalises invented content)
+    unsupported = 0                  # GT empty/denial but prediction states a finding
+    judged = 0
     row_exact = 0
     type_tp = type_fp = type_fn = 0
 
@@ -260,6 +276,15 @@ def evaluate_field(
         lenient = lenient_chunk_score(gt_text, pred_text)
         if lenient is not None:
             lenient_scores.append(lenient)
+        judged += 1
+        if _is_finding(pred_text):
+            if _is_finding(gt_text):
+                rp = lenient_chunk_score(pred_text, gt_text)
+                if rp is not None:
+                    lenient_prec.append(rp)
+            else:
+                unsupported += 1
+                lenient_prec.append(0.0)
 
     if field == "ประเภท":
         p, r, f1 = prf(type_tp, type_fp, type_fn)
@@ -284,6 +309,12 @@ def evaluate_field(
         "lenient_score": (
             sum(lenient_scores) / len(lenient_scores) if lenient_scores else 0.0
         ),
+        "lenient_precision": (sum(lenient_prec) / len(lenient_prec) if lenient_prec else 0.0),
+        "lenient_f1": _f1(
+            sum(lenient_scores) / len(lenient_scores) if lenient_scores else 0.0,
+            sum(lenient_prec) / len(lenient_prec) if lenient_prec else 0.0,
+        ),
+        "unsupported_rate": unsupported / judged if judged else 0.0,
         "row_exact_match": row_exact / len(gt_by_key) if gt_by_key else 0.0,
     }
 
@@ -482,6 +513,9 @@ def write_outputs(metrics: dict[str, dict[str, float]], payload: dict) -> None:
         cols = [
             "field",
             "lenient_score",
+            "lenient_precision",
+            "lenient_f1",
+            "unsupported_rate",
             "token_f1",
             "ner_f1",
             "chunk_recall",
@@ -495,6 +529,9 @@ def write_outputs(metrics: dict[str, dict[str, float]], payload: dict) -> None:
                 {
                     "field": field,
                     "lenient_score": m.get("lenient_score", ""),
+                    "lenient_precision": m.get("lenient_precision", ""),
+                    "lenient_f1": m.get("lenient_f1", ""),
+                    "unsupported_rate": m.get("unsupported_rate", ""),
                     "token_f1": m.get("token_f1", ""),
                     "ner_f1": m.get("ner_f1", ""),
                     "chunk_recall": m.get("chunk_recall", ""),
@@ -514,13 +551,15 @@ def write_outputs(metrics: dict[str, dict[str, float]], payload: dict) -> None:
         "",
         "## Metrics",
         "",
-        "| Field | Lenient Score | Type/Token F1 | Strict NER F1 | Chunk Recall | Exact Row Match |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Field | Lenient Recall | Lenient Precision | Lenient F1 | Unsupported rate | Type/Token F1 | Strict NER F1 | Chunk Recall | Exact Row Match |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for field, m in metrics.items():
         f1 = m.get("token_f1", m.get("f1", 0.0))
         lines.append(
             f"| {field} | {m.get('lenient_score', m.get('f1', 0.0)):.3f} | "
+            f"{m.get('lenient_precision', m.get('precision', 0.0)):.3f} | {m.get('lenient_f1', m.get('f1', 0.0)):.3f} | "
+            f"{m.get('unsupported_rate', 0.0):.3f} | "
             f"{f1:.3f} | {m.get('ner_f1', m.get('f1', 0.0)):.3f} | "
             f"{m.get('chunk_recall', m.get('row_exact_match', 0.0)):.3f} | "
             f"{m.get('row_exact_match', 0.0):.3f} |"
@@ -561,6 +600,10 @@ def argv_int(flag: str, default: int) -> int:
 
 
 def main() -> None:
+    if "-h" in sys.argv or "--help" in sys.argv:
+        print(__doc__ or "evaluate_500_ground_truth.py [--gemini-judge N]")
+        print("Writes metrics to", OUT_DIR)
+        return
     if not PRED_CSV.is_file():
         raise SystemExit(f"Missing prediction CSV: {PRED_CSV}")
     if not GT_CSV.is_file():

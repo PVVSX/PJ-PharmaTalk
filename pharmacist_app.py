@@ -73,9 +73,10 @@ wav_count = len(list((RECORD_DIR / "audio").glob("*.wav"))) if (RECORD_DIR / "au
 # ── Pages (Hidden Native Nav) ──
 p_rec = st.Page(str(UNIFIED / "pages/recorder.py"),  title="อัดเสียง",      icon=":material/mic:")
 p_hist = st.Page(str(UNIFIED / "pages/history.py"),   title="ประวัติข้อมูล", icon=":material/history:")
+p_emr = st.Page(str(UNIFIED / "pages/emr.py"),        title="วิเคราะห์ EMR", icon=":material/medical_services:")
 
 pages = {
-    "เมนูหลัก": [p_rec, p_hist]
+    "เมนูหลัก": [p_rec, p_emr, p_hist]
 }
 
 pg = st.navigation(pages, position="hidden")
@@ -108,6 +109,7 @@ with st.sidebar:
     # 2. Custom Navigation
     st.markdown("<div class='sidebar-section-label'>เมนูหลัก</div>", unsafe_allow_html=True)
     _nav_link(p_rec, label="อัดเสียง", icon=":material/mic:")
+    _nav_link(p_emr, label="วิเคราะห์ EMR", icon=":material/medical_services:")
     _nav_link(p_hist, label="ประวัติข้อมูล", icon=":material/history:")
     
     st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)

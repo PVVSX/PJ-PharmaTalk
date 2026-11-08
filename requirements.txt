@@ -1,0 +1,27 @@
+# PharmaLog AI — all components (Core API, Bridge API, Streamlit apps, Lab)
+# Python 3.10–3.12 (NeMo does not support 3.13 yet). Install: python3.11 -m venv venv && venv/bin/pip install -r requirements.txt
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+pydantic
+requests
+firebase-admin
+groq>=1.0
+streamlit>=1.40
+streamlit-autorefresh
+pythainlp>=5.0
+python-crfsuite        # pythainlp sentence splitter (crfcut)
+numpy
+soundfile
+librosa
+pandas
+openpyxl
+matplotlib
+fpdf2>=2.7.8
+uharfbuzz              # correct Thai vowel/tone placement in PDFs
+torch
+torchaudio
+nemo_toolkit[asr]      # Typhoon ASR Realtime
+transformers           # Typhoon Whisper Large v3
+accelerate

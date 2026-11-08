@@ -33,7 +33,14 @@ def init_firebase():
         else:
             print(f"Warning: Firebase credentials not found at {cred_path}. Firestore features will not work until this is provided.")
             
+def cloud_disabled() -> bool:
+    """PHARMALOG_DISABLE_CLOUD=1 turns off every Firestore/Storage write (used by tests)."""
+    return os.environ.get("PHARMALOG_DISABLE_CLOUD", "").strip().lower() in ("1", "true", "yes")
+
+
 def get_firestore_client():
+    if cloud_disabled():
+        return None
     if not firebase_admin._apps:
         init_firebase()
     
@@ -44,6 +51,8 @@ def get_firestore_client():
 
 def upload_file_to_storage(file_path: str, destination: str) -> str:
     """Upload one local file to Firebase Storage on explicit user request."""
+    if cloud_disabled():
+        raise RuntimeError("Cloud ถูกปิดอยู่ (PHARMALOG_DISABLE_CLOUD=1)")
     if not firebase_admin._apps:
         init_firebase()
     if not firebase_admin._apps:

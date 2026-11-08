@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Page 3 — EMR Analysis (วิเคราะห์ EMR)"""
+"""Page — EMR review (วิเคราะห์ EMR): read the AI summary, correct it, and confirm it."""
 from __future__ import annotations
 
 import html
 import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import text
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
@@ -16,137 +14,106 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from unified_app.modules.emr_groq import EMR_FIELDS
-from unified_app.modules.task_api import get_task
-from core_api.database import SessionLocal, TaskTracker
+from unified_app.modules.emr_groq import DIALOGUE_FIELD, EMR_FIELDS, SAFETY_FIELD
+from unified_app.modules.task_api import confirm_task, get_task, list_tasks, retry_task
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  PAGE CONTENT
-# ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class="page-header">
   <span class="material-symbols-rounded page-header-icon">medical_services</span>
   <div>
     <h2 class="page-title">วิเคราะห์เวชระเบียน</h2>
-    <p class="page-subtitle">EMR Viewer — ข้อมูลประวัติคนไข้ที่สรุปโดย AI</p>
+    <p class="page-subtitle">EMR Review — ตรวจทาน แก้ไข และยืนยันข้อมูลที่ AI สรุป</p>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Auto Fetch Latest Task ──
-task_id = st.session_state.get("last_audio_task_id")
-if task_id and not st.session_state.get(f"emr_loaded_{task_id}"):
+try:
+    tasks = list_tasks(30)
+except Exception as exc:
+    st.error(f"เชื่อมต่อ Core API ไม่ได้: {exc}")
+    st.stop()
+
+if not tasks:
+    st.markdown('<div class="record-empty-state" style="min-height:220px;"><span class="material-symbols-rounded">inbox</span><div>ยังไม่มีเคส</div></div>', unsafe_allow_html=True)
+    st.stop()
+
+
+def _label(t: dict) -> str:
+    when = (t.get("created_at") or "")[:16].replace("T", " ")
+    flag = {"COMPLETED": "✓ ยืนยันแล้ว" if t.get("confirmed_at") else "รอตรวจทาน", "ERROR": "ผิดพลาด"}.get(t["status"], "กำลังประมวลผล")
+    who = {"pharmacist": "เภสัชกร", "backoffice": "หลังบ้าน"}.get(t.get("source") or "", t.get("source") or "-")
+    return f"{when} UTC · {t['task_id'][:8]} · {who} · {flag}"
+
+
+ids = [t["task_id"] for t in tasks]
+default = st.session_state.get("last_audio_task_id")
+idx = ids.index(default) if default in ids else 0
+sel = st.selectbox("เลือกเคส", options=ids, index=idx, format_func=lambda i: _label(next(t for t in tasks if t["task_id"] == i)))
+st.session_state.last_audio_task_id = sel
+task = get_task(sel)
+
+if task["status"] not in ("COMPLETED", "ERROR"):
     st_autorefresh(interval=2000, key="emr_task_refresh")
-    try:
-        task = get_task(task_id)
-        task_status = task.get("status", "UNKNOWN")
-        if task_status not in ("COMPLETED", "ERROR"):
-            st.info(f"ระบบหลังบ้านกำลังประมวลผลเวชระเบียน: {task_status}...", icon=":material/hourglass_top:")
-        elif task_status == "ERROR":
-            st.error(f"งานประมวลผลไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}", icon=":material/error:")
-        elif task.get("emr_json"):
-            st.session_state.emr_result = json.loads(task["emr_json"])
-            st.session_state.emr_conv_input = task.get("stt_text", "")
-            st.session_state[f"emr_loaded_{task_id}"] = True
-            st.success("โหลดข้อมูลจากระบบหลังบ้านสำเร็จ!", icon=":material/check_circle:")
-    except Exception as exc:
-        st.warning(f"เชื่อมต่อระบบหลังบ้านไม่ได้: {exc}")
+    st.info(f"กำลังประมวลผล: {task['status']} …", icon=":material/hourglass_top:")
+    st.stop()
+if task["status"] == "ERROR":
+    st.error(f"งานนี้ประมวลผลไม่สำเร็จ: {task.get('error_message')}")
+    if task.get("can_retry") and st.button("ลองประมวลผลใหม่", icon=":material/replay:", type="primary"):
+        retry_task(sel); st.rerun()
+    st.stop()
 
-st.markdown("<br>", unsafe_allow_html=True)
-t3L, t3R = st.columns([1, 1], gap="large")
+emr = json.loads(task.get("emr_json") or "{}")
+confirmed = json.loads(task.get("confirmed_emr_json") or "null")
+meta = json.loads(task.get("stt_meta") or "{}")
+current = confirmed or emr
 
-# ── LEFT: Transcript Viewer ──
-with t3L:
+L, R = st.columns([1, 1], gap="large")
+with L:
     with st.container(border=True):
-        st.markdown("""
-        <div class="card-accent-bar accent-blue"></div>
-        <div class="section-header">
+        st.markdown("""<div class="card-accent-bar accent-blue"></div><div class="section-header">
             <div class="sh-icon sh-blue"><span class="material-symbols-rounded">chat</span></div>
-            <span class="section-title">บทสนทนา (Transcript)</span>
-        </div>""", unsafe_allow_html=True)
-        
-        # Load latest 20 tasks from local DB ordered newest-first by SQLite rowid
-        db = SessionLocal()
-        try:
-            tasks = db.query(TaskTracker).order_by(text("rowid DESC")).limit(20).all()
-        finally:
-            db.close()
-        
-        task_options = {"--- งานล่าสุดที่กำลังทำ ---": None}
-        for t in tasks:
-            if t.emr_json:
-                label = f"เคสที่แล้ว - {t.id[:8]}"
-                task_options[label] = t
+            <span class="section-title">บทสนทนา (แยกผู้พูดโดย AI จากข้อความถอดเสียงจริง)</span></div>""", unsafe_allow_html=True)
+        dialogue = emr.get(DIALOGUE_FIELD, "-")
+        rows = []
+        for line in str(dialogue).splitlines():
+            who, _, txt = line.partition(":")
+            cls = "#E8F0FE" if "เภสัช" in who else "#F1F5F9"
+            rows.append(f"<div style='background:{cls};padding:6px 10px;border-radius:8px;margin-bottom:4px;'><b>{html.escape(who)}</b>: {html.escape(txt.strip())}</div>")
+        st.markdown("<div style='max-height:420px;overflow:auto'>" + "".join(rows) + "</div>", unsafe_allow_html=True)
+        e_meta = emr.get("_meta") or {}
+        st.caption(f"ถอดเสียง: {meta.get('engine', '-')} · {meta.get('duration_s', '-')} วินาที · ใช้เวลา {meta.get('elapsed_s', '-')} วินาที · "
+                   f"สรุปโดย {e_meta.get('model', '-')}" + (f" · ⚠ {'; '.join(e_meta.get('warnings', []))}" if e_meta.get("warnings") else ""))
+        with st.expander("ข้อความถอดเสียงดิบ (ก่อนแก้ด้วยพจนานุกรมยา)"):
+            st.text(task.get("raw_stt_text") or "-")
+        changes = meta.get("changes") or []
+        with st.expander(f"คำที่พจนานุกรมยาแก้ไข ({len(changes)})"):
+            for c in changes:
+                st.markdown(f"- `{html.escape(str(c.get('original')))}` → `{html.escape(str(c.get('corrected')))}` ({c.get('tier')})")
+        if task.get("consent_id"):
+            st.caption(f"Consent ID: {task['consent_id']}")
 
-        selected_label = st.selectbox("เลือกดูประวัติ", options=list(task_options.keys()))
-        
-        if selected_label != "--- งานล่าสุดที่กำลังทำ ---":
-            t = task_options[selected_label]
-            if t:
-                st.session_state.emr_conv_input = t.stt_text
-                st.session_state.emr_result = json.loads(t.emr_json) if t.emr_json else {}
-                st.session_state.last_audio_task_id = t.id # Update focus
-                
-        st.markdown('''
-        <div class="record-callout info">
-            <span class="material-symbols-rounded">info</span>
-            <div>
-            <strong>โหมดอ่านอย่างเดียว (Read-only)</strong>
-            <div>ระบบหลังบ้านได้ทำการวิเคราะห์ข้อมูลเรียบร้อยแล้ว ไม่ต้องกดปุ่มวิเคราะห์ซ้ำ</div>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
-
-        st.text_area(
-            "บทสนทนาที่ถูกจัดเรียงแล้ว",
-            value=st.session_state.get("emr_conv_input", ""),
-            height=300,
-            disabled=True
-        )
-
-
-# ── RIGHT: EMR Form Output ──
-with t3R:
+with R:
     with st.container(border=True):
-        st.markdown("""
-        <div class="card-accent-bar accent-teal"></div>
-        <div class="section-header">
+        st.markdown("""<div class="card-accent-bar accent-teal"></div><div class="section-header">
             <div class="sh-icon sh-teal"><span class="material-symbols-rounded">assignment</span></div>
-            <span class="section-title">ฟอร์มเวชระเบียน</span>
-        </div>""", unsafe_allow_html=True)
-
-        emr_data = st.session_state.get("emr_result", {})
-
-        if not emr_data:
-            st.markdown('''
-            <div class="record-empty-state" style="min-height: 220px; margin-bottom: 14px;">
-                <span class="material-symbols-rounded">hourglass_empty</span>
-                <div>กำลังรอข้อมูลประวัติการรักษา...</div>
-            </div>
-            ''', unsafe_allow_html=True)
-        else:
-            for field in EMR_FIELDS:
-                label = html.escape(str(field))
-                val = emr_data.get(field, "-")
-                if isinstance(val, list):
-                    val = "\n".join(f"- {x}" for x in val)
-                elif isinstance(val, dict):
-                    val = json.dumps(val, ensure_ascii=False, indent=2)
-                else:
-                    val = str(val)
-
-                if val != "-" and val.strip():
-                    rendered_val = html.escape(val).replace("\n", "<br>")
-                else:
-                    rendered_val = "<span style='color:var(--grey-400);font-style:italic;'>ไม่มีข้อมูล</span>"
-
-                st.markdown(f"""
-                <div class="emr-field">
-                    <div class="emr-field-label">{label}</div>
-                    <div class="emr-field-value">{rendered_val}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-        st.markdown("<hr style='margin: 1.5rem 0;'>", unsafe_allow_html=True)
-        if st.button("ยืนยันและบันทึกลงระบบร้านยา", icon=":material/save:", use_container_width=True, type="primary", disabled=not emr_data):
-            st.success("บันทึกเวชระเบียนเสร็จสิ้น!")
+            <span class="section-title">ฟอร์มเวชระเบียน (แก้ไขได้ก่อนยืนยัน)</span></div>""", unsafe_allow_html=True)
+        if confirmed:
+            st.success(f"ยืนยันแล้วเมื่อ {str(task.get('confirmed_at'))[:19].replace('T', ' ')} UTC — แก้ไขแล้วกดยืนยันซ้ำได้")
+        safety = str(current.get(SAFETY_FIELD, "-")).strip()
+        if safety not in ("", "-"):
+            st.warning(f"**ข้อควรระวังด้านความปลอดภัยของยา (AI แจ้งเตือน ต้องให้เภสัชกรทบทวน):** {safety}")
+        edited = {}
+        with st.form(f"emr_form_{sel}"):
+            for f in EMR_FIELDS:
+                if f == DIALOGUE_FIELD:
+                    continue
+                edited[f] = st.text_area(f, value=str(current.get(f, "-")), height=90 if f != "บันทึกทางการแพทย์" else 120, key=f"{sel}_{f}")
+            ok = st.form_submit_button("ยืนยันและบันทึกเวชระเบียน", icon=":material/save:", type="primary", use_container_width=True)
+        if ok:
+            edited[DIALOGUE_FIELD] = emr.get(DIALOGUE_FIELD, "-")
+            try:
+                confirm_task(sel, edited)
+                st.success("บันทึกเวชระเบียนที่ตรวจทานแล้วเรียบร้อย (เก็บทั้งฉบับ AI และฉบับที่ยืนยัน)")
+                st.rerun()
+            except Exception as exc:
+                st.error(f"บันทึกไม่สำเร็จ: {exc}")

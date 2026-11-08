@@ -1,263 +1,116 @@
 # PharmaLog AI System Guide: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์
 
+> ปรับปรุงล่าสุด 2026-11-07 ให้ตรงกับระบบหลังการแก้ไข (consent ใหม่, STT 2 engine, EMR แบบแยกผู้พูดตามหมายเลขประโยค, หน้าตรวจทาน/ยืนยัน EMR)
+
 ## ภาพรวม
 
-ระบบ PharmaLog AI: ระบบสรุปบทสนทนาเภสัชกรรมด้วยปัญญาประดิษฐ์ แบ่งการทำงานเป็น 3 ส่วนหลัก:
-
 ```text
-Consent Page -> Bridge API -> Recorder
-                         -> Core API -> ASR -> EMR
+คนไข้ ──▶ หน้า Consent + Bridge API (8500) ──สถานะ──▶ หน้าเภสัชกร (8501) / หน้าหลังบ้าน (8515)
+                                                          │ อัดเสียง WAV 16 kHz → ฟังทวน → ส่ง
+                                                          ▼
+                                             Core API (8080) — คิวงานเบื้องหลัง
+                                       ถอดเสียง → พจนานุกรมยา → Groq LLM สรุป EMR
+                                                          │
+                                                          ▼
+                                 หน้า "วิเคราะห์ EMR": ตรวจทาน แก้ไข ยืนยัน  → (ถ้าเปิด Cloud) Firestore
 ```
-
-- หน้า Consent ขอความยินยอมและส่งสถานะ `READY`
-- Bridge API รับสถานะและบันทึก consent ลง SQLite
-- หน้า Recorder รับเสียงและบันทึกไฟล์ local
-- Core API ประมวลผล ASR และ EMR แบบ background task
-- Cloud upload ทำเมื่อผู้ใช้กดปุ่มเท่านั้น
-
-## URL สำหรับใช้งาน
 
 | ส่วนงาน | URL | หน้าที่ |
 |---|---|---|
-| Consent | `http://127.0.0.1:8500` | แบบฟอร์มยินยอม |
-| Recorder | `http://127.0.0.1:8515` | อัดเสียงและดูประวัติ |
-| Core API | `http://127.0.0.1:8080` | ประมวลผล task |
-| API Docs | `http://127.0.0.1:8080/docs` | Swagger UI |
-| API Health | `http://127.0.0.1:8080/health` | ตรวจสถานะ ASR |
+| Consent (คนไข้) | `http://localhost:8500` | หน้าขอความยินยอม + Bridge API (`/api/state`, `/api/consents`) |
+| เภสัชกร | `http://127.0.0.1:8501` | อัดได้เมื่อคนไข้ยินยอม, วิเคราะห์ EMR, ประวัติ |
+| หลังบ้าน | `http://127.0.0.1:8515` | อัดได้ทันที, วิเคราะห์ EMR, ประวัติ, ตั้งค่า |
+| Core API | `http://127.0.0.1:8080/docs` | Swagger UI |
+| Health | `http://127.0.0.1:8080/health` | สถานะโมเดลถอดเสียง (`asr_loaded`, `stt_engine`, `stt_device`, `cloud_enabled`) |
 
 ## วิธีรันระบบ
 
-เปิดเทอร์มินัลแยก 3 หน้าต่าง และรันคำสั่งจาก root ของโปรเจกต์:
+**macOS:** ดับเบิลคลิก `start_pharmalog.command` (เปิดทุกส่วน อ่านค่าจาก `pharmalog.env` และเขียน log ไว้ที่ `logs/`)
+สคริปต์จะหยุดถ้ามีโปรแกรมอื่นใช้พอร์ต 8500/8080/8501/8515 อยู่ และเตือนถ้า RAM ไม่พอสำหรับ Whisper Large v3
 
-### 1. Bridge API และหน้า Consent (พอร์ต 8500)
-
-**macOS / Linux:**
+**รันแยกเอง (ทุกระบบปฏิบัติการ)** — เปิดจากโฟลเดอร์ root ของโปรเจกต์ หลัง activate venv:
 ```bash
-python3 api.py
+python api.py                                   # 1) Bridge + Consent (8500)
+cd core_api && python main.py                   # 2) Core API (8080) — รอจน /health ได้ asr_loaded: true
+streamlit run pharmacist_app.py --server.address 127.0.0.1 --server.port 8501   # 3) เภสัชกร
+streamlit run unified_app/app.py --server.address 127.0.0.1 --server.port 8515  # 4) หลังบ้าน
 ```
-
-**Windows (PowerShell / CMD):**
-```powershell
-python api.py
-```
-
-เปิดใช้งานได้ที่:
-```text
-http://127.0.0.1:8500
-```
-
----
-
-### 2. Core API (พอร์ต 8080)
-
-**macOS / Linux:**
-```bash
-cd core_api
-python3 main.py
-```
-
-**Windows (PowerShell / CMD):**
-```powershell
-cd core_api
-python main.py
-```
-
-ตรวจสอบสถานะ:
-- **macOS / Linux:** `curl http://127.0.0.1:8080/health`
-- **Windows (PowerShell):** `Invoke-RestMethod http://127.0.0.1:8080/health`
-
-ผลที่ควรได้ต้องมี: `asr_available: true` และ `asr_loaded: true`
-
----
-
-### 3. Streamlit Recorder (พอร์ต 8515)
-
-**macOS / Linux:**
-```bash
-python3 -m streamlit run unified_app/app.py --server.address 127.0.0.1 --server.port 8515
-```
-
-**Windows (PowerShell / CMD):**
-```powershell
-python -m streamlit run unified_app\app.py --server.address 127.0.0.1 --server.port 8515
-```
-
-เปิดใช้งานได้ที่:
-```text
-http://127.0.0.1:8515
-```
+ระหว่างทดสอบให้ตั้ง `PHARMALOG_DISABLE_CLOUD=1` ทุกครั้ง (ไม่เขียน Firestore/Storage)
 
 ## Flow การใช้งาน
 
-1. เปิดหน้า Consent
-2. อ่านเอกสารและติ๊กยืนยัน
-3. กดยินยอม
-4. ระบบส่งสถานะ `READY` ไปยัง Bridge API
-5. หน้า Recorder ตรวจสถานะและปลดล็อกการบันทึกเสียง
-6. กดเริ่มบันทึกและพูดผ่านไมโครโฟน
-7. ไฟล์เสียงถูกเก็บไว้ที่ `record/audio/`
-8. Recorder ส่งไฟล์ไป Core API ที่ `/upload-audio`
-9. Core API สร้าง `task_id` และประมวลผลเบื้องหลัง
-10. Recorder ตรวจสอบสถานะ task
-11. เมื่อถอดเสียงเสร็จ transcript ถูกเก็บที่ `record/stt/`
-12. หน้า EMR อ่านผล task และแสดงผลลัพธ์เมื่อมีข้อมูลครบ
+1. คนไข้กด **ยินยอมให้บันทึกเสียง** → หน้า Consent สร้าง `consent_id` ใหม่ (UUID) ส่ง `READY` ไป Bridge
+   - กด **ไม่ยินยอม** → `WAITING` และล้าง consent; หน้าเภสัชกรล็อก
+2. หน้าเภสัชกรปลดล็อก แสดงเวลาที่เหลือ (consent หมดอายุใน `PHARMALOG_CONSENT_TTL` วินาที ถ้ายังไม่เริ่มอัด)
+3. กด **เริ่มอัดเสียง** → ตัวอัดขอ `RECORDING` จาก Bridge ก่อน ถ้าถูกปฏิเสธจะไม่อัด
+4. กด **หยุด** → ฟังทวน → **ส่งประมวลผล** หรือ **อัดใหม่** (ไฟล์เก็บที่ `record/audio/`)
+5. Core API: ตรวจไฟล์ → ถอดเสียง (ตัดช่วง ≤ 25 วิ ตรงช่วงเงียบ ข้ามช่วงเงียบ) → พจนานุกรมยา → LLM
+6. เสร็จแล้ว Bridge เป็น `FINISHED` และผูก consent กับ `task_id` + ชื่อไฟล์เสียง
+7. หน้า **วิเคราะห์ EMR**: แก้ไขฟอร์ม → **ยืนยันและบันทึกเวชระเบียน** (เก็บทั้งฉบับ AI และฉบับยืนยัน)
+8. **บันทึกผู้ป่วยรายใหม่** → `WAITING`
 
-## API Endpoints
+กรณีผิดพลาด: งานที่ล้มเหลวกด **ลองประมวลผลใหม่** ได้ (ไฟล์เสียงเก็บไว้จนงานสำเร็จ); ถ้า Core API ปิดกลางงาน
+งานนั้นจะถูกตั้งเป็น `ERROR` ตอนเปิดใหม่; ถ้าเบราว์เซอร์เภสัชกรปิดกลางการอัด สถานะ `RECORDING` จะถูกปลดเองหลัง
+`PHARMALOG_RECORDING_MAX_S` วินาที (ค่าเริ่มต้น 30 นาที) และ consent นั้นถูกบันทึกเป็น `abandoned`
 
-### `GET /`
+## สถานะของ Bridge (`record/shared_state.json`)
 
-แสดงข้อมูล service และลิงก์เอกสาร API
+| สถานะ | เข้าได้จาก | หมายเหตุ |
+|---|---|---|
+| `WAITING` | ทุกสถานะ | ล้าง consent เสมอ (reason: `declined`, `new_patient`, `expired`) |
+| `READY` | ต้องมี `consent_id` ใหม่ที่ไม่เคยใช้ | ใช้ซ้ำได้ 409, ขณะมีคนอัดอยู่ 409, หมดอายุตาม TTL |
+| `RECORDING` | จาก `READY` ที่ยังไม่หมดอายุเท่านั้น | ไม่มี consent → 409 |
+| `FINISHED` | หลังงานประมวลผลเสร็จ | ผูก `task_id` และ `audio_filename` |
 
-### `GET /health`
+## Core API Endpoints
 
-ตรวจสถานะ Core API และ ASR:
+| Method | Path | หน้าที่ |
+|---|---|---|
+| GET | `/health` | สถานะโมเดลและ Cloud |
+| POST | `/upload-audio` | multipart `file` (+ `consent_id`, `source`) → `task_id`; ไฟล์ว่าง/ไม่ใช่เสียง → 400 |
+| GET | `/task/{id}` | สถานะ + `stt_text`, `raw_stt_text`, `stt_meta`, `emr_json`, `confirmed_emr_json`, `can_retry` |
+| GET | `/tasks?limit=20` | งานล่าสุด (ซ่อนงานทดสอบอัตโนมัติ เว้นแต่ `include_test=1`) |
+| POST | `/task/{id}/retry` | ลองใหม่เฉพาะงาน `ERROR` |
+| POST | `/task/{id}/confirm` | บันทึก EMR ที่เภสัชกรยืนยัน (body `{"emr": {...}}`) |
 
-```json
-{
-  "status": "ok",
-  "asr_available": true,
-  "asr_loaded": true
-}
-```
-
-### `POST /upload-audio`
-
-รับไฟล์เสียงแบบ multipart และคืนค่า `task_id`:
-
-```json
-{
-  "message": "Audio received and queued",
-  "task_id": "..."
-}
-```
-
-### `GET /task/{task_id}`
-
-อ่านสถานะ task เช่น:
-
-- `UPLOADED`
-- `STT_PROCESSING`
-- `STT_DONE`
-- `EMR_PROCESSING`
-- `COMPLETED`
-- `ERROR`
+สถานะงาน: `UPLOADED` → `STT_PROCESSING` → `STT_DONE` → `EMR_PROCESSING` (→ `RETRYING_EMR_IN_10S`) → `COMPLETED` / `ERROR`
 
 ## การจัดเก็บข้อมูล
 
-### Consent SQLite
+| ที่เก็บ | เนื้อหา |
+|---|---|
+| `record/pharmalog.db` | `consent_records` (consent_id, version, consented_at, recorded_at, status, task_id, audio_filename) และ `consent_events` (ประวัติทุกการเปลี่ยนสถานะ) |
+| `core_api/api_queue.db` | ตาราง `tasks` (สร้าง/เพิ่มคอลัมน์ใหม่อัตโนมัติ) |
+| `core_api/temp_audio/` | ไฟล์เสียงของงานที่ยังไม่สำเร็จ (ลบเมื่อสำเร็จ) |
+| `record/audio/`, `record/stt/` | ไฟล์เสียงที่อัดในเครื่องและข้อความถอดเสียง |
+| Firestore `patients_emr/{task_id}` | เมื่อเปิด Cloud เท่านั้น |
 
-ไฟล์ฐานข้อมูล:
+## Cloud
 
-```text
-record/pharmalog.db
-```
+- Core API เขียนผล EMR ลง Firestore อัตโนมัติ **เมื่อไม่ได้ตั้ง** `PHARMALOG_DISABLE_CLOUD=1`
+- ไฟล์เสียงขึ้น Storage เฉพาะเมื่อผู้ใช้กดปุ่ม **อัปโหลด Cloud** เท่านั้น
+- ต้องมี `core_api/serviceAccountKey.json` (หรือ `FIREBASE_CREDENTIALS=path`) และตั้ง `FIREBASE_STORAGE_BUCKET` ถ้าไม่ใช่ค่าเดิม
 
-ตาราง:
+## โมเดล
 
-```text
-consent_records
-```
-
-ข้อมูลหลัก:
-
-- `consent_id`
-- `consent_version`
-- `consented_at`
-- `recorded_at`
-
-### Core API Task SQLite
-
-ไฟล์ฐานข้อมูล:
-
-```text
-core_api/api_queue.db
-```
-
-ตาราง:
-
-```text
-tasks
-```
-
-ใช้ติดตาม task เสียง, transcript, EMR และ error
-
-### ไฟล์เสียงและ transcript
-
-```text
-record/audio/*.wav
-record/stt/*_stt.txt
-record/emr/*.json
-```
-
-## การอัปโหลด Cloud
-
-ระบบจะไม่อัปโหลดเสียงขึ้น Cloud อัตโนมัติ
-
-ผู้ใช้ต้องกดปุ่ม `อัปโหลดขึ้น Cloud` ในหน้า Recorder เองเท่านั้น
-
-ต้องตั้งค่า Firebase ก่อนใช้งาน:
-
-```text
-FIREBASE_CREDENTIALS=path/to/serviceAccountKey.json
-FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-```
-
-หากไม่มี credential ไฟล์เสียงจะยังอยู่ในเครื่อง และระบบจะแจ้งเตือนเมื่อกดปุ่มอัปโหลด
-
-## Gemini EMR
-
-ระบบ Core API ใช้ Gemini สำหรับวิเคราะห์ EMR ต้องสร้างไฟล์ที่ root โปรเจกต์:
-
-```text
-.gemini_api_key
-```
-
-ภายในไฟล์ใส่ API key เพียงบรรทัดเดียว และห้าม commit ไฟล์นี้ขึ้น Git
-
-```text
-YOUR_GEMINI_API_KEY
-```
+- ถอดเสียง: `PHARMALOG_STT_ENGINE=whisper` (Typhoon Whisper Large v3, ค่าหลัก — ต้องการ RAM ~7 GB หรือ GPU) หรือ `realtime` (Typhoon ASR Realtime, เบา)
+  ผลวัดและวิธีทดสอบดู `README.md` ส่วนที่ 5 และ `WHISPER_TEST_GUIDE.md`
+- สรุป EMR: Groq — ต้องมีไฟล์ `.groq_api_key` ที่ root (หรือ `GROQ_API_KEY`) ลำดับโมเดล `PHARMALOG_EMR_MODELS`
+  (`openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/gpt-oss-20b`) บัญชีฟรีจำกัด 8,000 โทเคน/นาที และ 200,000 โทเคน/วัน ต่อโมเดล
 
 ## ตรวจสอบปัญหาเบื้องต้น
 
-### เปิด `http://127.0.0.1:8080/` แล้วได้ 404
-
-ให้ตรวจว่า Core API เป็นเวอร์ชันล่าสุดและ restart service แล้ว จากนั้นควรเห็น JSON ข้อมูล service
-
-### หน้า Recorder ไม่ปลดล็อก
-
-ตรวจตามลำดับ:
-
-1. หน้า Consent แสดงผลสำเร็จหรือไม่
-2. ตรวจ `http://127.0.0.1:8500/api/state`
-3. ตรวจว่าได้สถานะ `READY`
-4. ตรวจหน้า Core API `/health`
-5. ดู log ของ Streamlit และ Core API
-
-### ASR ไม่พร้อม
-
-ตรวจ:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8080/health
-```
-
-ต้องมี:
-
-```text
-asr_available = true
-asr_loaded = true
-```
-
-### EMR ไม่ทำงาน
-
-ตรวจว่ามีไฟล์ `.gemini_api_key` และ API key ใช้งานได้
+| อาการ | ตรวจ |
+|---|---|
+| เปิด 8501 แล้วเจอหน้าเก่า/ชื่อโปรแกรมอื่น | มีโปรแกรมเก่าใช้พอร์ตอยู่: `lsof -nP -iTCP:8501 -sTCP:LISTEN` แล้วปิดโปรแกรมนั้น |
+| หน้าเภสัชกรไม่ปลดล็อก | `curl http://127.0.0.1:8500/api/state` ต้องเป็น `READY`; ถ้าเป็น `RECORDING` ค้างให้กด "บันทึกผู้ป่วยรายใหม่" |
+| "ระบบถอดเสียงยังไม่พร้อม" | `curl http://127.0.0.1:8080/health` ดู `stt_error`; Whisper ครั้งแรกต้องดาวน์โหลด ~6.2 GB |
+| EMR ล้มเหลว "เรียก LLM ไม่สำเร็จทุกโมเดล" | โควตา Groq รายวันหมด/ไม่มี `.groq_api_key` — รอแล้วกด "ลองประมวลผลใหม่" |
+| อัดเสียงยาวแล้วไฟล์ไม่ขึ้น | ต้องมี `.streamlit/config.toml` ที่ตั้ง `maxWidgetStateSize = 120` และรัน streamlit จาก root ของโปรเจกต์ |
+| ดู log | `logs/api.log`, `logs/core_api.log`, `logs/pharmacist_app.log`, `logs/unified_app.log` |
 
 ## ข้อควรระวัง
 
-- อย่าเปิด static server แยกที่พอร์ต `8520` เพราะไม่มี API เชื่อมต่อกับ Recorder
-- ใช้ `api.py` ที่พอร์ต `8500` สำหรับหน้า Consent
-- อย่าลบ `record/pharmalog.db` หากต้องการเก็บประวัติ consent
-- ไฟล์ฐานข้อมูลและไฟล์เสียงเป็นข้อมูล runtime ไม่ควร commit โดยไม่จำเป็น
-- Cloud upload ต้องเกิดจากการกดปุ่มของผู้ใช้เท่านั้น
-- การรัน Core API ครั้งแรกอาจใช้เวลาหลายวินาทีเพราะต้องโหลดโมเดล ASR
+- ห้ามขึ้น Cloud ระหว่างทดสอบ และห้าม commit `*.wav`, `*.db`, API keys
+- ไฟล์ในโฟลเดอร์ `ไฟล์เสียงทั้งหมด/` และ `ground_truth/` เป็นข้อมูลจริงของผู้รับบริการ
+- อย่าลบ `record/pharmalog.db` ถ้าต้องการเก็บหลักฐานการยินยอม

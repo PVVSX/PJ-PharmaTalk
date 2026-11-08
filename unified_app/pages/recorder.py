@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Page 1 — Audio Recorder (อัดเสียง)"""
+"""Page — Audio Recorder (อัดเสียง). Shared by the pharmacist portal (consent required) and the back-office (no consent gate)."""
 from __future__ import annotations
 
 import hashlib
-import json
+import html
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -11,70 +11,216 @@ from pathlib import Path
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
-# ── Shared references from app.py context ──
 ROOT = Path(__file__).resolve().parent.parent.parent
 RECORD_DIR = ROOT / "record"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from unified_app.modules.state_manager import get_state, set_state
-from unified_app.modules.task_api import get_core_health, get_task, queue_audio
+from unified_app.modules.state_manager import BRIDGE_PUBLIC_URL, get_state_full, set_state
+from unified_app.modules.task_api import get_core_health, get_task, queue_audio, retry_task
 from unified_app.components.auto_recorder import auto_recorder
 
 try:
-  from core_api.firebase_config import upload_file_to_storage
+    from core_api.firebase_config import upload_file_to_storage
 except Exception:
-  upload_file_to_storage = None
+    upload_file_to_storage = None
 
-should_autorefresh = False
-if st.session_state.get("audio_task_id"):
-    should_autorefresh = True
-elif not st.session_state.get("is_backoffice", False) and not st.session_state.get("pending_audio"):
-    should_autorefresh = True
+AUDIO_DIR = RECORD_DIR / "audio"
+STT_DIR = RECORD_DIR / "stt"
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+STT_DIR.mkdir(parents=True, exist_ok=True)
+IS_BACKOFFICE = bool(st.session_state.get("is_backoffice", False))
+SOURCE = "backoffice" if IS_BACKOFFICE else "pharmacist"
 
-if should_autorefresh:
+# Refresh while a task runs, or while the pharmacist waits for the patient's consent.
+if st.session_state.get("audio_task_id") or (not IS_BACKOFFICE and not st.session_state.get("pending_audio")):
     st_autorefresh(interval=2000, key="recorder_state_refresh")
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  PAGE CONTENT
-# ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class="page-header">
   <span class="material-symbols-rounded page-header-icon">mic</span>
   <div>
     <h2 class="page-title">เครื่องบันทึกเสียง</h2>
-    <p class="page-subtitle">Audio Recorder — ระบบบันทึกเสียงอัตโนมัติ</p>
+    <p class="page-subtitle">Audio Recorder — บันทึกบทสนทนาและส่งถอดเสียง/สรุปเวชระเบียน</p>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Status Banner ──
-status_col1, status_col2, status_col3 = st.columns([2, 1, 1], gap="small")
 try:
-  core_health = get_core_health()
-  core_asr_ready = bool(core_health.get("asr_loaded"))
+    core_health = get_core_health()
 except Exception:
-  core_asr_ready = False
-with status_col1:
-  if core_asr_ready:
-        st.markdown('<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span><span>โมเดล ASR พร้อมใช้งาน</span></div>', unsafe_allow_html=True)
-  else:
-        st.markdown('<div class="record-status-banner warn"><span class="material-symbols-rounded">warning</span><span>ยังเชื่อมต่อ Core API หรือโมเดล ASR ไม่ได้ (ตรวจว่า Core API รันอยู่ที่พอร์ต 8080)</span></div>', unsafe_allow_html=True)
-with status_col2:
-  if core_asr_ready:
-        st.markdown('<div class="record-mini-stat"><span class="label">สถานะ</span><strong>พร้อมใช้งาน</strong></div>', unsafe_allow_html=True)
-  else:
-        st.markdown('<div class="record-mini-stat"><span class="label">สถานะ</span><strong>ไม่พร้อม</strong></div>', unsafe_allow_html=True)
-with status_col3:
-    audio_total = len(sorted((RECORD_DIR / "audio").glob("*.wav"), key=lambda p: p.stat().st_mtime, reverse=True)) if (RECORD_DIR / "audio").exists() else 0
-    st.markdown(f'<div class="record-mini-stat"><span class="label">ไฟล์เสียง</span><strong>{audio_total}</strong></div>', unsafe_allow_html=True)
+    core_health = {}
+core_ready = bool(core_health.get("asr_loaded"))
+cloud_on = bool(core_health.get("cloud_enabled"))
+
+c1, c2, c3 = st.columns([2, 1, 1], gap="small")
+with c1:
+    if core_ready:
+        st.markdown(f'<div class="record-status-banner ok"><span class="material-symbols-rounded">check_circle</span>'
+                    f'<span>ระบบถอดเสียงพร้อม ({html.escape(str(core_health.get("stt_engine", "")))} บน {html.escape(str(core_health.get("stt_device", "")))})</span></div>',
+                    unsafe_allow_html=True)
+    else:
+        why = core_health.get("stt_error") or "ตรวจว่า Core API รันอยู่ที่พอร์ต 8080 และโหลดโมเดลเสร็จแล้ว"
+        st.markdown(f'<div class="record-status-banner warn"><span class="material-symbols-rounded">warning</span><span>ระบบถอดเสียงยังไม่พร้อม: {html.escape(why)}</span></div>', unsafe_allow_html=True)
+with c2:
+    mode = "หลังบ้าน (ไม่ต้องรอยินยอม)" if IS_BACKOFFICE else "เภสัชกร (ต้องมีความยินยอม)"
+    st.markdown(f'<div class="record-mini-stat"><span class="label">โหมด</span><strong>{mode}</strong></div>', unsafe_allow_html=True)
+with c3:
+    n_audio = len(list(AUDIO_DIR.glob("*.wav")))
+    st.markdown(f'<div class="record-mini-stat"><span class="label">ไฟล์เสียงในเครื่อง</span><strong>{n_audio}</strong></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
+left, right = st.columns([3, 2], gap="large")
 
-t1L, t1R = st.columns([3, 2], gap="large")
 
-# ── LEFT: Native Audio Recorder ───────────────────────────────────
-with t1L:
+def _callout(kind: str, icon: str, title: str, body: str) -> None:
+    st.markdown(f'<div class="record-callout {kind}"><span class="material-symbols-rounded">{icon}</span>'
+                f'<div><strong>{title}</strong><div>{body}</div></div></div>', unsafe_allow_html=True)
+
+
+def _reset_for_next_patient() -> None:
+    for k in ("pending_audio", "audio_task_id", "last_saved_path", "last_audio_hash", "finished_task"):
+        st.session_state[k] = None
+    st.session_state.audio_key_counter = st.session_state.get("audio_key_counter", 0) + 1
+    if not IS_BACKOFFICE:
+        set_state("WAITING", reason="new_patient")
+
+
+def render_task_progress(task_id: str) -> bool:
+    """Show the running/finished task. Returns True when the page should stop here."""
+    try:
+        task = get_task(task_id)
+    except Exception as exc:
+        st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
+        return True
+    status = task.get("status", "UNKNOWN")
+    steps = {"UPLOADED": "รอคิว", "STT_PROCESSING": "กำลังถอดเสียง", "STT_DONE": "ถอดเสียงเสร็จ",
+             "EMR_PROCESSING": "กำลังสรุปเวชระเบียน (AI)"}
+    if status not in ("COMPLETED", "ERROR"):
+        st.info(f"กำลังประมวลผล: {steps.get(status, status)} …", icon=":material/hourglass_top:")
+        return True
+    if status == "ERROR":
+        st.error(f"ประมวลผลไม่สำเร็จ: {task.get('error_message') or 'ไม่ทราบสาเหตุ'}")
+        b1, b2 = st.columns(2)
+        with b1:
+            if task.get("can_retry") and st.button("ลองประมวลผลใหม่", icon=":material/replay:", type="primary", use_container_width=True):
+                try:
+                    retry_task(task_id)
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"ลองใหม่ไม่ได้: {exc}")
+        with b2:
+            if st.button("ยกเลิกและเริ่มใหม่", icon=":material/refresh:", use_container_width=True):
+                _reset_for_next_patient(); st.rerun()
+        return True
+    # COMPLETED (handle once)
+    if st.session_state.get("finished_task") != task_id:
+        saved = st.session_state.get("last_saved_path")
+        if saved:
+            (STT_DIR / (Path(saved).stem + "_stt.txt")).write_text(task.get("stt_text") or "", encoding="utf-8")
+        st.session_state.emr_conv_input = task.get("stt_text") or ""
+        st.session_state.last_audio_task_id = task_id
+        st.session_state.finished_task = task_id
+        if not IS_BACKOFFICE:
+            ok, msg = set_state("FINISHED", consent={"consent_id": task.get("consent_id")} if task.get("consent_id") else None,
+                                task_id=task_id, audio_filename=task.get("audio_filename"))
+            if not ok:
+                st.warning(f"บันทึกการปิดงานในระบบยินยอมไม่สำเร็จ: {msg}")
+    where = "และบันทึกผลขึ้นฐานข้อมูล Cloud (Firestore) แล้ว" if cloud_on else "(เก็บในเครื่องเท่านั้น ระบบ Cloud ปิดอยู่)"
+    _callout("success", "check_circle", "ถอดเสียงและสรุปเวชระเบียนเสร็จแล้ว",
+             f"{where} — ไฟล์เสียงเก็บไว้ในเครื่อง กด 'อัปโหลด Cloud' ทางขวาถ้าต้องการสำรองเสียง "
+             "จากนั้นไปที่หน้า <b>วิเคราะห์ EMR</b> เพื่อตรวจทานและยืนยัน")
+    if st.button("บันทึกผู้ป่วยรายใหม่", icon=":material/person_add:", type="primary", use_container_width=True):
+        _reset_for_next_patient(); st.rerun()
+    return True
+
+
+def render_recorder() -> None:
+    task_id = st.session_state.get("audio_task_id")
+    if task_id and render_task_progress(task_id):
+        return
+
+    consent_id = None
+    if not IS_BACKOFFICE:
+        state = get_state_full()
+        status = state.get("status", "WAITING")
+        consent_id = (state.get("consent") or {}).get("consent_id")
+        if state.get("_source") == "file":
+            st.warning("เชื่อมต่อระบบยืนยันความยินยอม (พอร์ต 8500) ไม่ได้ — ต้องเปิด api.py ก่อน")
+        if status == "WAITING" and not st.session_state.get("pending_audio"):
+            _callout("warning", "privacy_tip", "รอการยืนยันความยินยอม",
+                     "ให้คนไข้กดยินยอมที่หน้าจอ Consent ก่อน ระบบจึงจะเปิดให้บันทึกเสียง (ถ้าคนไข้ไม่ยินยอม ระบบจะไม่บันทึก)")
+            return
+        if status == "FINISHED" and not st.session_state.get("pending_audio"):
+            _callout("info", "task_alt", "เคสก่อนหน้าปิดงานแล้ว", "กดปุ่มด้านล่างเพื่อรอคนไข้รายถัดไป")
+            if st.button("รอคนไข้รายใหม่", icon=":material/person_add:", type="primary", use_container_width=True):
+                _reset_for_next_patient(); st.rerun()
+            return
+
+    pending = st.session_state.get("pending_audio")
+    if pending:
+        _callout("info", "check_circle", "บันทึกเสียงเสร็จแล้ว",
+                 "ฟังทวนแล้วกด <b>ส่งประมวลผล</b> เพื่อถอดเสียงและสรุปเวชระเบียน หรือกด <b>อัดใหม่</b>")
+        st.audio(pending["bytes"], format="audio/wav")
+        u, c = st.columns([3, 2], gap="small")
+        with u:
+            if st.button("ส่งประมวลผล (ถอดเสียง + สรุป EMR)", icon=":material/send:", type="primary", use_container_width=True, disabled=not core_ready):
+                try:
+                    st.session_state.audio_task_id = queue_audio(pending["bytes"], pending["filename"],
+                                                                 consent_id=pending.get("consent_id"), source=SOURCE)
+                    st.session_state.pending_audio = None
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"ส่งงานไป Core API ไม่สำเร็จ: {exc}")
+        with c:
+            if st.button("อัดใหม่ (ทิ้งไฟล์นี้)", icon=":material/refresh:", use_container_width=True):
+                Path(pending.get("path", "")).unlink(missing_ok=True)
+                st.session_state.pending_audio = None
+                st.session_state.last_saved_path = None
+                st.session_state.audio_key_counter = st.session_state.get("audio_key_counter", 0) + 1
+                st.rerun()
+        return
+
+    st.markdown('''
+    <div class="workflow-guide">
+      <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 1</strong><small>กดอัดเสียงสนทนา</small></div></div>
+      <div class="workflow-step"><span class="material-symbols-rounded">send</span><div><strong>ขั้นที่ 2</strong><small>ฟังทวนแล้วกดส่งประมวลผล</small></div></div>
+      <div class="workflow-step"><span class="material-symbols-rounded">assignment</span><div><strong>ขั้นที่ 3</strong><small>ตรวจทานและยืนยันในหน้า EMR</small></div></div>
+    </div>''', unsafe_allow_html=True)
+    if IS_BACKOFFICE:
+        _callout("info", "mic_external_on", "พร้อมบันทึกเสียง (โหมดหลังบ้าน)", "บันทึกได้ทันทีโดยไม่ต้องรอหน้าจอขอความยินยอม")
+    else:
+        state = get_state_full()
+        left_s = state.get("expires_in")
+        extra = f" (เหลือเวลาเริ่มอัดอีก {left_s} วินาที)" if state.get("status") == "READY" and left_s is not None else ""
+        _callout("info", "mic_external_on", "คนไข้ยินยอมแล้ว พร้อมบันทึกเสียง",
+                 f"กด <b>เริ่มอัดเสียง</b>{extra} ถ้าเกินเวลาต้องให้คนไข้กดยินยอมใหม่")
+
+    value = auto_recorder(key=f"rec_{st.session_state.get('audio_key_counter', 0)}",
+                          api_url="" if IS_BACKOFFICE else f"{BRIDGE_PUBLIC_URL}/api/state")
+    if not value:
+        return
+    audio_bytes = value["audio_bytes"]
+    h = hashlib.md5(audio_bytes).hexdigest()
+    if st.session_state.get("last_audio_hash") == h:
+        return
+    st.session_state.last_audio_hash = h
+    if not IS_BACKOFFICE:
+        state = get_state_full()
+        consent_id = (state.get("consent") or {}).get("consent_id")
+        if state.get("status") != "RECORDING" or not consent_id:
+            st.error("ไม่มีความยินยอมที่ใช้ได้ระหว่างอัดเสียง ไฟล์นี้ถูกทิ้งและจะไม่ถูกส่งประมวลผล")
+            return
+    name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ("_bo" if IS_BACKOFFICE else "_ph") + ".wav"
+    path = AUDIO_DIR / name
+    path.write_bytes(audio_bytes)
+    st.session_state.last_saved_path = str(path)
+    st.session_state.pending_audio = {"bytes": audio_bytes, "filename": name, "path": str(path), "consent_id": consent_id}
+    st.session_state.audio_key_counter = st.session_state.get("audio_key_counter", 0) + 1
+    st.rerun()
+
+
+with left:
     with st.container(border=True):
         st.markdown("""
         <div class="card-accent-bar accent-blue"></div>
@@ -82,269 +228,51 @@ with t1L:
           <div class="sh-icon sh-blue"><span class="material-symbols-rounded">graphic_eq</span></div>
           <span class="section-title">อัดเสียงสนทนา</span>
         </div>""", unsafe_allow_html=True)
-
-        def render_recorder():
-            is_backoffice = st.session_state.get("is_backoffice", False)
-            
-            if is_backoffice:
-                # Back-office uses isolated local session state so it won't conflict with pharmacist app
-                if "bo_state" not in st.session_state:
-                    st.session_state.bo_state = "READY"
-                current_state = st.session_state.bo_state
-                
-                def active_set_state(s):
-                    st.session_state.bo_state = s
-            else:
-                # Pharmacist app uses shared state from consent app
-                current_state = get_state()
-                active_set_state = set_state
-
-            task_id = st.session_state.get("audio_task_id")
-            if task_id:
-                try:
-                    task = get_task(task_id)
-                    task_status = task.get("status", "UNKNOWN")
-                    if task_status not in ("COMPLETED", "ERROR"):
-                        st.info(f"กำลังประมวลผลเสียง: {task_status}")
-                        return
-                    if task_status == "ERROR":
-                        st.error(f"ประมวลผลเสียงไม่สำเร็จ: {task.get('error_message', 'ไม่ทราบสาเหตุ')}")
-                        stt_text = task.get("stt_text")
-                        if stt_text:
-                            if st.session_state.get("last_saved_path"):
-                                saved_path = Path(st.session_state.last_saved_path)
-                                stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
-                                stt_path.parent.mkdir(parents=True, exist_ok=True)
-                                stt_path.write_text(stt_text, encoding="utf-8")
-                            st.session_state.emr_conv_input = stt_text
-                            st.warning("ระบบสามารถถอดเสียงได้สำเร็จ แต่มีข้อผิดพลาดบางอย่างในขั้นตอนถัดไป คุณสามารถตรวจสอบข้อความได้")
-                        st.session_state.audio_task_id = None
-                        return
-
-                    stt_text = task.get("stt_text") or ""
-                    if st.session_state.get("audio_task_completed") != task_id:
-                        if st.session_state.get("last_saved_path"):
-                            saved_path = Path(st.session_state.last_saved_path)
-                            stt_path = RECORD_DIR / "stt" / (saved_path.stem + "_stt.txt")
-                            stt_path.parent.mkdir(parents=True, exist_ok=True)
-                            stt_path.write_text(stt_text, encoding="utf-8")
-                        st.session_state.emr_conv_input = stt_text
-                        st.session_state.audio_task_completed = task_id
-                        st.session_state.last_audio_task_id = task_id
-                        st.session_state.audio_task_id = None
-                        active_set_state("FINISHED")
-                        st.success("ประมวลผลเวชระเบียนและแบ็คอัปเสร็จสมบูรณ์ สามารถดูสรุปได้ที่หน้า 'วิเคราะห์เวชระเบียน'", icon=":material/check_circle:")
-                        return
-                except Exception as exc:
-                    st.warning(f"ยังเชื่อมต่อ Core API ไม่ได้: {exc}")
-                    return
-
-            if current_state == "FINISHED":
-                st.markdown('''
-                <div class="record-callout success">
-                  <span class="material-symbols-rounded">check_circle</span>
-                  <div>
-                    <strong>ประมวลผลเสร็จสมบูรณ์</strong>
-                    <div>ระบบดึงข้อมูลลง EMR และแบ็คอัปขึ้น Cloud เรียบร้อยแล้ว ไปที่หน้าเวชระเบียนได้เลย</div>
-                  </div>
-                </div>
-                ''', unsafe_allow_html=True)
-                if st.button("บันทึกผู้ป่วยรายใหม่", icon=":material/refresh:", type="primary", use_container_width=True):
-                    st.session_state.pending_audio = None
-                    active_set_state("READY" if is_backoffice else "WAITING")
-                    st.rerun()
-                st.markdown("<div style='min-height: 100px;'></div>", unsafe_allow_html=True)
-                return
-
-            pending_audio = st.session_state.get("pending_audio")
-            if pending_audio:
-                st.markdown('''
-                <div class="record-callout info">
-                  <span class="material-symbols-rounded">check_circle</span>
-                  <div>
-                    <strong>บันทึกเสียงเสร็จสิ้นแล้ว</strong>
-                    <div>ระบบบันทึกไฟล์เสียงไว้ในเครื่องเรียบร้อยแล้ว ตรวจสอบเสียงและกดปุ่ม <b>อัปโหลดเพื่อประมวลผล</b> เพื่อเริ่มขั้นตอนถอดเสียงและสรุปเวชระเบียน</div>
-                  </div>
-                </div>
-                ''', unsafe_allow_html=True)
-
-                if Path(pending_audio.get("path", "")).exists():
-                    st.audio(str(pending_audio["path"]))
-                elif pending_audio.get("bytes"):
-                    st.audio(pending_audio["bytes"], format="audio/wav")
-
-                st.markdown("<br>", unsafe_allow_html=True)
-                col_up, col_cancel = st.columns([3, 2], gap="small")
-                with col_up:
-                    if st.button("อัปโหลดเพื่อประมวลผล (STT & EMR)", icon=":material/cloud_upload:", type="primary", use_container_width=True):
-                        try:
-                            task_id = queue_audio(pending_audio["bytes"], pending_audio["filename"])
-                            st.session_state.audio_task_id = task_id
-                            st.session_state.last_audio_task_id = task_id
-                            st.session_state.pending_audio = None
-                            st.rerun()
-                        except Exception as exc:
-                            st.error(f"ส่งงานไป Core API ไม่สำเร็จ: {exc}")
-                with col_cancel:
-                    if st.button("อัดใหม่ (ยกเลิกไฟล์นี้)", icon=":material/refresh:", use_container_width=True):
-                        try:
-                            Path(pending_audio.get("path", "")).unlink(missing_ok=True)
-                        except Exception:
-                            pass
-                        st.session_state.pending_audio = None
-                        st.session_state.last_saved_path = None
-                        st.session_state.last_audio_hash = None
-                        st.session_state.audio_key_counter = st.session_state.get('audio_key_counter', 0) + 1
-                        active_set_state("READY" if is_backoffice else "READY")
-                        st.rerun()
-                st.markdown("<div style='min-height: 80px;'></div>", unsafe_allow_html=True)
-                return
-
-            if not is_backoffice and current_state == "WAITING":
-                st.markdown('''
-                <div class="record-callout warning">
-                  <span class="material-symbols-rounded">privacy_tip</span>
-                  <div>
-                    <strong>รอการยืนยันความยินยอม</strong>
-                    <div>กรุณาให้คนไข้กดยืนยันในหน้า Consent (หน้าจอด้านนอก) ก่อน ระบบจึงจะเปิดให้บันทึกเสียง</div>
-                  </div>
-                </div>
-                ''', unsafe_allow_html=True)
-                return
-
-            st.markdown('''
-            <div class="workflow-guide">
-              <div class="workflow-step"><span class="material-symbols-rounded">mic</span><div><strong>ขั้นที่ 1</strong><small>กดอัดเสียงสนทนา</small></div></div>
-              <div class="workflow-step"><span class="material-symbols-rounded">cloud_upload</span><div><strong>ขั้นที่ 2</strong><small>ตรวจสอบเสียงและกดยืนยันอัปโหลด</small></div></div>
-              <div class="workflow-step"><span class="material-symbols-rounded">assignment</span><div><strong>ขั้นที่ 3</strong><small>ดูผลสรุปในหน้าเวชระเบียน</small></div></div>
-            </div>
-            ''', unsafe_allow_html=True)
-
-            if is_backoffice:
-                st.markdown('''
-                <div class="record-callout info">
-                  <span class="material-symbols-rounded">mic_external_on</span>
-                  <div>
-                    <strong>พร้อมบันทึกเสียง (โหมด Back-Office)</strong>
-                    <div>กดปุ่ม <b>เริ่มอัดเสียง</b> เพื่อบันทึกบทสนทนาได้ทันทีโดยไม่ต้องรอหน้าจอขอความยินยอม</div>
-                  </div>
-                </div>
-                ''', unsafe_allow_html=True)
-            else:
-                st.markdown('''
-                <div class="record-callout info">
-                  <span class="material-symbols-rounded">mic_external_on</span>
-                  <div>
-                    <strong>พร้อมบันทึกเสียง</strong>
-                    <div>กรุณากดปุ่ม <b>เริ่มอัดเสียง</b> ภายใน 30 วินาที หากเกินเวลาต้องให้คนไข้กดยืนยันใหม่</div>
-                  </div>
-                </div>
-                ''', unsafe_allow_html=True)
-            audio_key = f"native_audio_recorder_{st.session_state.get('audio_key_counter', 0)}"
-            audio_value = auto_recorder(
-                cooldown_seconds=0,
-                api_url="" if is_backoffice else "http://localhost:8500/api/state",
-                key=audio_key,
-            )
-
-            if audio_value:
-                audio_bytes = audio_value.get("audio_bytes", b"")
-                audio_hash = hashlib.md5(audio_bytes).hexdigest()
-
-                if st.session_state.get("last_audio_hash") != audio_hash:
-                    st.session_state.last_audio_hash = audio_hash
-
-                    AUDIO_DIR = RECORD_DIR / "audio"
-                    STT_DIR = RECORD_DIR / "stt"
-                    AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-                    STT_DIR.mkdir(parents=True, exist_ok=True)
-
-                    now = datetime.now()
-                    base_name = now.strftime("%d-%m-%y_%H-%M-%S") + "_000"
-                    audio_filename = f"{base_name}.wav"
-                    stt_filename = f"{base_name}_stt.txt"
-
-                    audio_path = AUDIO_DIR / audio_filename
-                    stt_path = STT_DIR / stt_filename
-
-                    audio_path.write_bytes(audio_bytes)
-                    st.session_state.last_saved_path = str(audio_path)
-                    st.session_state.pending_audio = {
-                        "bytes": audio_bytes,
-                        "filename": audio_filename,
-                        "path": str(audio_path),
-                    }
-                    st.session_state.audio_key_counter = st.session_state.get('audio_key_counter', 0) + 1
-                    st.rerun()
-
         render_recorder()
 
-# ── RIGHT: Saved Recordings ────────────────────────────────
-with t1R:
+with right:
     with st.container(border=True):
-        AUDIO_DIR = RECORD_DIR / "audio"
-        STT_DIR = RECORD_DIR / "stt"
-        AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-        STT_DIR.mkdir(parents=True, exist_ok=True)
-        wav_files = sorted(AUDIO_DIR.glob("*.wav"),
-                           key=lambda p: p.stat().st_mtime, reverse=True)
-
+        wav_files = sorted(AUDIO_DIR.glob("*.wav"), key=lambda p: p.stat().st_mtime, reverse=True)
         st.markdown(f"""
         <div class="card-accent-bar accent-teal"></div>
         <div class="section-header">
           <div class="sh-icon sh-teal"><span class="material-symbols-rounded">folder</span></div>
-          <span class="section-title">ประวัติการบันทึก</span>
+          <span class="section-title">ไฟล์เสียงในเครื่อง</span>
           <span class="section-sub">{len(wav_files)} ไฟล์</span>
         </div>""", unsafe_allow_html=True)
-
-        if wav_files:
-            for wf_path in wav_files:
-                mtime     = wf_path.stat().st_mtime
-                ts_str    = datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
-                size_kb   = wf_path.stat().st_size / 1024
-                rec_id    = hashlib.md5(wf_path.name.encode()).hexdigest()[:16]
-                
-                stt_file = STT_DIR / wf_path.name.replace(".wav", "_stt.txt")
-                is_ready = stt_file.exists()
-
-                with st.container(border=True):
-                    st.markdown(f'''
-                    <div class="record-file-card">
-                      <div class="record-file-header">
-                        <div>
-                          <div class="record-file-name">{wf_path.name}</div>
-                          <div class="record-file-meta">{ts_str} • {size_kb:.1f} KB</div>
-                        </div>
-                        <span class="status-pill {'pill-ok' if is_ready else 'pill-warn'}">
-                          <span class="status-dot {'dot-green' if is_ready else 'dot-amber'}"></span>
-                          {'ถอดเสียงแล้ว' if is_ready else 'รอถอดเสียง'}
-                        </span>
-                      </div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                    st.audio(str(wf_path))
-                    btn_c1, btn_c2 = st.columns(2)
-                    with btn_c1:
-                        if st.button("อัปโหลด Cloud", icon=":material/cloud_upload:", key=f"up_{rec_id}", use_container_width=True):
-                            if upload_file_to_storage is None:
-                                st.error("ระบบ Firebase ยังไม่พร้อมใช้งาน")
-                            else:
-                                try:
-                                    dest = f"recordings/{wf_path.name}"
-                                    upload_file_to_storage(str(wf_path), dest)
-                                    st.success("อัปโหลดขึ้น Cloud สำเร็จแล้ว!")
-                                except Exception as up_err:
-                                    st.error(f"อัปโหลดไม่สำเร็จ: {up_err}")
-                    with btn_c2:
-                        if st.button("ลบไฟล์", icon=":material/delete:", key=f"del_{rec_id}", use_container_width=True):
-                            wf_path.unlink(missing_ok=True)
-                            if stt_file.exists():
-                                stt_file.unlink(missing_ok=True)
+        if not wav_files:
+            st.markdown('<div class="record-empty-state"><span class="material-symbols-rounded">folder_open</span><div>ยังไม่มีไฟล์บันทึก</div></div>', unsafe_allow_html=True)
+        for wf in wav_files[:30]:
+            rec_id = hashlib.md5(wf.name.encode()).hexdigest()[:16]
+            ready = (STT_DIR / (wf.stem + "_stt.txt")).exists()
+            with st.container(border=True):
+                st.markdown(f'''
+                <div class="record-file-card"><div class="record-file-header"><div>
+                  <div class="record-file-name">{html.escape(wf.name)}</div>
+                  <div class="record-file-meta">{datetime.fromtimestamp(wf.stat().st_mtime).strftime("%d/%m/%Y %H:%M")} • {wf.stat().st_size / 1024:.0f} KB</div>
+                </div>
+                <span class="status-pill {'pill-ok' if ready else 'pill-warn'}"><span class="status-dot {'dot-green' if ready else 'dot-amber'}"></span>
+                {'ถอดเสียงแล้ว' if ready else 'ยังไม่ถอดเสียง'}</span></div></div>''', unsafe_allow_html=True)
+                st.audio(str(wf))
+                b1, b2 = st.columns(2)
+                with b1:
+                    if st.button("อัปโหลด Cloud", icon=":material/cloud_upload:", key=f"up_{rec_id}", use_container_width=True):
+                        if upload_file_to_storage is None:
+                            st.error("ระบบ Firebase ยังไม่พร้อมใช้งาน")
+                        else:
+                            try:
+                                upload_file_to_storage(str(wf), f"recordings/{wf.name}")
+                                st.success("อัปโหลดขึ้น Cloud สำเร็จแล้ว")
+                            except Exception as up_err:
+                                st.error(f"อัปโหลดไม่สำเร็จ: {up_err}")
+                with b2:
+                    confirm_key = f"confirm_del_{rec_id}"
+                    if st.session_state.get(confirm_key):
+                        if st.button("ยืนยันลบถาวร", icon=":material/delete_forever:", key=f"del2_{rec_id}", use_container_width=True, type="primary"):
+                            wf.unlink(missing_ok=True)
+                            (STT_DIR / (wf.stem + "_stt.txt")).unlink(missing_ok=True)
+                            st.session_state[confirm_key] = False
                             st.rerun()
-        else:
-            st.markdown('''
-            <div class="record-empty-state">
-              <span class="material-symbols-rounded">folder_open</span>
-              <div>ยังไม่มีไฟล์บันทึก</div>
-            </div>
-            ''', unsafe_allow_html=True)
+                    elif st.button("ลบไฟล์", icon=":material/delete:", key=f"del_{rec_id}", use_container_width=True):
+                        st.session_state[confirm_key] = True
+                        st.rerun()
